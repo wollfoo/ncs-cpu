@@ -1,22 +1,29 @@
-# setup_env.py
+"""
+setup_env.py
+
+Thiết lập môi trường khai thác tiền điện tử.
+"""
 
 import os
 import sys
 import json
-import subprocess
+import time
 import locale
-import psutil
-from pathlib import Path
 import shutil
+import logging
+import subprocess
+from pathlib import Path
+from typing import Dict, Any, List, Optional
 
-# Import cấu hình logging chung
-from .logging_config import setup_logging
+# Thêm import cho InferenceConfigService
+from mining_environment.cpu_plugins.config.inference_config import get_inference_config
 
-# Thêm psutil để đếm số logical cores (auto max_threads)
 try:
-    import psutil  # type: ignore
+    import psutil
 except ImportError:
-    psutil = None  # fallback, sẽ kiểm tra bên dưới
+    psutil = None
+
+from mining_environment.scripts.logging_config import setup_logging
 
 def load_json_config(config_path, logger):
     """
@@ -422,6 +429,45 @@ def setup_gpu_optimization(environmental_limits, logger):
     logger.info("Thiết lập tối ưu hóa GPU dựa trên các ngưỡng đã cấu hình.")
     # Placeholder nếu muốn thực thi thêm logic GPU
 
+def apply_cpu_optimizations(max_threads: int, logger: logging.Logger) -> bool:
+    """
+    Apply CPU optimizations for mining performance.
+    Moved from ml_inference_config.py to setup_env.py.
+    
+    Args:
+        max_threads: Maximum CPU threads to use
+        logger: Logger instance
+        
+    Returns:
+        bool: Success status
+    """
+    try:
+        # Set CPU governor to performance mode
+        try:
+            os.system('echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null 2>&1')
+            logger.info("✅ Set CPU governor to performance mode")
+        except Exception as e:
+            logger.warning(f"Could not set CPU governor: {e}")
+        
+        # Set process limits
+        try:
+            import resource
+            # Set unlimited core dump size
+            resource.setrlimit(resource.RLIMIT_CORE, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+            
+            # Set high file descriptor limit
+            resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
+            
+            logger.info("✅ Applied process resource limits")
+        except Exception as e:
+            logger.warning(f"Could not set process limits: {e}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to apply CPU optimizations: {e}")
+        return False
+
 def setup():
     """
     Hàm chính để thiết lập môi trường khai thác.
@@ -446,8 +492,27 @@ def setup():
     # Xác thực
     validate_configs(resource_config, system_params, environmental_limits, logger)
 
-    # Đặt biến môi trường
+    # Đặt biến môi trường từ environmental_limits
     setup_environment_variables(environmental_limits, logger)
+    
+    # Cấu hình từ InferenceConfigService (ml-inference)
+    try:
+        inference_config = get_inference_config(logger)
+        if inference_config.validate_configuration():
+            # Đặt biến môi trường từ inference_config
+            env_vars = inference_config.get_environment_variables()
+            for key, value in env_vars.items():
+                os.environ[key] = value
+                logger.info(f"Đặt biến môi trường {key}={value}")
+            
+            # Áp dụng tối ưu CPU
+            max_threads = inference_config.get_max_cpu_threads()
+            apply_cpu_optimizations(max_threads, logger)
+            logger.info(f"✅ Áp dụng tối ưu CPU với {max_threads} threads")
+        else:
+            logger.warning("Validation của InferenceConfigService thất bại, sử dụng cấu hình mặc định")
+    except Exception as e:
+        logger.warning(f"Không thể tải InferenceConfigService: {e}")
 
     # Cấu hình hệ thống (múi giờ, locale)
     configure_system(system_params, logger)

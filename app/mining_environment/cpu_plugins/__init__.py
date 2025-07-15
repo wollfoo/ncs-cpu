@@ -31,6 +31,9 @@ from .utils import (
     BackoffStrategy,
 )
 
+# Xuất service cấu hình
+from .config.inference_config import get_inference_config
+
 __version__ = "1.0.0"
 
 __all__ = [
@@ -52,6 +55,9 @@ __all__ = [
     'GPUVendor',
     'retry_with_backoff',
     'BackoffStrategy',
+    
+    # Config service
+    'get_inference_config',
     
     # Version
     '__version__',
