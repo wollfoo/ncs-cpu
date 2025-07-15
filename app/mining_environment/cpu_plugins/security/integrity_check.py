@@ -26,74 +26,74 @@ class FileIntegrityChecker:
         self.verification_cache = {}
         
     def _load_manifest(self) -> Dict[str, str]:
-        """Load danh sách hash từ manifest file"""
+        """**Load** (tải) danh sách **hash** (mã băm) từ **manifest file** (tệp kê khai)"""
         if not self.manifest_path.exists():
-            self.logger.warning(f"Hash manifest not found at {self.manifest_path}")
+            self.logger.warning(f"**Hash manifest** (tệp kê khai mã băm) not found at {self.manifest_path}")
             return {}
         
         try:
             with open(self.manifest_path, 'r') as f:
                 manifest = json.load(f)
-            self.logger.info(f"Loaded {len(manifest)} file hashes from manifest")
+            self.logger.info(f"**Loaded** (đã tải) {len(manifest)} **file hashes** (mã băm tệp) từ **manifest** (tệp kê khai)")
             return manifest
         except Exception as e:
-            self.logger.error(f"Failed to load hash manifest: {e}")
+            self.logger.error(f"**Failed to load** (không thể tải) **hash manifest** (tệp kê khai mã băm): {e}")
             return {}
     
     def calculate_file_hash(self, filepath: Path) -> str:
-        """Tính SHA256 hash của file"""
+        """Tính **SHA256 hash** (mã băm SHA256) của **file** (tệp)"""
         sha256_hash = hashlib.sha256()
         
         try:
             with open(filepath, "rb") as f:
-                # Read file in chunks để xử lý file lớn
+                # **Read file in chunks** (đọc tệp theo khối) để xử lý **large files** (tệp lớn)
                 for byte_block in iter(lambda: f.read(4096), b""):
                     sha256_hash.update(byte_block)
             
             return sha256_hash.hexdigest()
         
         except Exception as e:
-            self.logger.error(f"Failed to calculate hash for {filepath}: {e}")
+            self.logger.error(f"**Failed to calculate hash** (không thể tính mã băm) cho {filepath}: {e}")
             raise
     
     def verify_file(self, filepath: Path) -> Tuple[bool, str]:
         """
-        Xác thực file với hash trong manifest
-        Returns: (is_valid, message)
+        **Verify file** (xác thực tệp) với **hash** (mã băm) trong **manifest** (tệp kê khai)
+        **Returns** (trả về): (is_valid, message)
         """
         filepath = Path(filepath)
         
-        # Check cache first
+        # Kiểm tra **cache** (bộ nhớ đệm) trước tiên
         if str(filepath) in self.verification_cache:
             cached_result = self.verification_cache[str(filepath)]
-            if cached_result['timestamp'] > datetime.now().timestamp() - 3600:  # 1 hour cache
+            if cached_result['timestamp'] > datetime.now().timestamp() - 3600:  # **1 hour cache** (bộ nhớ đệm 1 giờ)
                 return cached_result['valid'], cached_result['message']
         
-        # Get expected hash
+        # Lấy **expected hash** (mã băm dự kiến)
         expected_hash = self.manifest.get(str(filepath))
         if not expected_hash:
-            message = f"No hash found in manifest for {filepath}"
+            message = f"Không tìm thấy **hash** (mã băm) trong **manifest** (tệp kê khai) cho {filepath}"
             self.logger.warning(message)
             return False, message
         
-        # Calculate actual hash
+        # Tính **actual hash** (mã băm thực tế)
         try:
             actual_hash = self.calculate_file_hash(filepath)
         except Exception as e:
-            message = f"Failed to calculate hash: {str(e)}"
+            message = f"**Failed to calculate hash** (không thể tính mã băm): {str(e)}"
             return False, message
         
-        # Compare hashes
+        # So sánh **hashes** (mã băm)
         is_valid = actual_hash == expected_hash
         
         if is_valid:
-            message = f"File {filepath} verified successfully"
+            message = f"**File** (tệp) {filepath} **verified successfully** (xác thực thành công)"
             self.logger.info(message)
         else:
-            message = f"Hash mismatch for {filepath}: expected {expected_hash}, got {actual_hash}"
+            message = f"**Hash mismatch** (mã băm không khớp) cho {filepath}: **expected** (dự kiến) {expected_hash}, **got** (nhận được) {actual_hash}"
             self.logger.error(message)
         
-        # Cache result
+        # **Cache result** (lưu kết quả vào bộ nhớ đệm)
         self.verification_cache[str(filepath)] = {
             'valid': is_valid,
             'message': message,
@@ -103,10 +103,10 @@ class FileIntegrityChecker:
         return is_valid, message
     
     def verify_critical_files(self) -> Dict[str, bool]:
-        """Xác thực tất cả critical files"""
+        """**Verify** (xác thực) tất cả **critical files** (tệp quan trọng)"""
         critical_files = [
-            # CPU throttle eBPF has been removed
-            "/app/mining_environment/cpu_plugins/csrc/libcloak.so",
+            # **CPU throttle eBPF** (eBPF điều chỉnh CPU) đã bị loại bỏ
+            "/app/mining_environment/cpu_plugins/cloaking_lib/libcloak.so",
             "/app/mining_environment/cuda/libgpuhook.so"
         ]
         
@@ -120,65 +120,65 @@ class FileIntegrityChecker:
                 results[filepath] = is_valid
                 if not is_valid:
                     all_valid = False
-                    self.logger.critical(f"SECURITY: Critical file failed verification: {filepath}")
+                    self.logger.critical(f"**SECURITY** (bảo mật): **Critical file** (tệp quan trọng) **failed verification** (xác thực thất bại): {filepath}")
             else:
                 results[filepath] = False
-                self.logger.warning(f"Critical file not found: {filepath}")
+                self.logger.warning(f"**Critical file** (tệp quan trọng) **not found** (không tìm thấy): {filepath}")
         
         if not all_valid:
-            self.logger.critical("SECURITY ALERT: One or more critical files failed integrity check!")
+            self.logger.critical("**SECURITY ALERT** (cảnh báo bảo mật): Một hoặc nhiều **critical files** (tệp quan trọng) **failed integrity check** (kiểm tra tính toàn vẹn thất bại)!")
         
         return results
     
     def generate_manifest(self, directories: List[str], output_path: Optional[str] = None) -> Dict[str, str]:
         """
-        Generate hash manifest cho các file trong directories
-        Dùng để tạo manifest ban đầu hoặc update
+        **Generate hash manifest** (tạo tệp kê khai mã băm) cho các **files** (tệp) trong **directories** (thư mục)
+        Dùng để tạo **manifest** (tệp kê khai) ban đầu hoặc **update** (cập nhật)
         """
         manifest = {}
         
         for directory in directories:
             dir_path = Path(directory)
             if not dir_path.exists():
-                self.logger.warning(f"Directory not found: {directory}")
+                self.logger.warning(f"**Directory** (thư mục) **not found** (không tìm thấy): {directory}")
                 continue
             
-            # Find all .so, .o, and .py files
+            # Tìm tất cả **files** (tệp) **.so, .o, và .py**
             for pattern in ['*.so', '*.o', '*.py']:
                 for filepath in dir_path.rglob(pattern):
                     try:
                         file_hash = self.calculate_file_hash(filepath)
                         manifest[str(filepath)] = file_hash
-                        self.logger.info(f"Hashed {filepath}: {file_hash}")
+                        self.logger.info(f"**Hashed** (đã tạo mã băm) {filepath}: {file_hash}")
                     except Exception as e:
-                        self.logger.error(f"Failed to hash {filepath}: {e}")
+                        self.logger.error(f"**Failed to hash** (không thể tạo mã băm) {filepath}: {e}")
         
-        # Save manifest if output path provided
+        # **Save manifest** (lưu tệp kê khai) nếu **output path** (đường dẫn đầu ra) được cung cấp
         if output_path:
             with open(output_path, 'w') as f:
                 json.dump(manifest, f, indent=2, sort_keys=True)
-            self.logger.info(f"Manifest saved to {output_path}")
+            self.logger.info(f"**Manifest** (tệp kê khai) **saved** (đã lưu) vào {output_path}")
         
         return manifest
 
-# Helper function để verify trước khi load
+# **Helper function** (hàm hỗ trợ) để **verify** (xác thực) trước khi **load** (tải)
 def verify_before_load(filepath: str, checker: FileIntegrityChecker) -> bool:
     """
-    Verify file integrity trước khi load
-    Throw exception nếu verification fail
+    **Verify file integrity** (xác thực tính toàn vẹn tệp) trước khi **load** (tải)
+    **Throw exception** (ném ngoại lệ) nếu **verification fail** (xác thực thất bại)
     """
     is_valid, message = checker.verify_file(Path(filepath))
     
     if not is_valid:
-        raise SecurityError(f"File integrity check failed: {message}")
+        raise SecurityError(f"**File integrity check** (kiểm tra tính toàn vẹn tệp) **failed** (thất bại): {message}")
     
     return True
 
 class SecurityError(Exception):
-    """Custom exception cho security violations"""
+    """**Custom exception** (ngoại lệ tùy chỉnh) cho **security violations** (vi phạm bảo mật)"""
     pass
 
-# Script để generate hash manifest
+# **Script** (kịch bản) để **generate hash manifest** (tạo tệp kê khai mã băm)
 if __name__ == "__main__":
     import sys
     
@@ -196,4 +196,4 @@ if __name__ == "__main__":
         
         output_path = sys.argv[2] if len(sys.argv) > 2 else "file_hashes.json"
         manifest = checker.generate_manifest(directories, output_path)
-        print(f"Generated manifest with {len(manifest)} file hashes") 
+        print(f"**Generated manifest** (đã tạo tệp kê khai) với {len(manifest)} **file hashes** (mã băm tệp)") 

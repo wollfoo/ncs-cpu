@@ -12,7 +12,7 @@ from .interfaces import ICpuTechnique
 from .config import CpuPluginConfig, PluginConfig
 
 
-# Registry lưu trữ trong bộ nhớ (thay thế bằng entry-points trong tương lai)
+# **Registry** (sổ đăng ký) lưu trữ trong **memory** (bộ nhớ) - thay thế bằng **entry-points** (điểm vào) trong tương lai
 _plugin_registry: Dict[str, Type[ICpuTechnique]] = {}
 
 
@@ -31,7 +31,7 @@ class PluginRegistry:
             return cls._instance
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        # Chỉ khởi tạo một lần, ngay cả khi __new__ được gọi nhiều lần
+        # Chỉ **initialize** (khởi tạo) một lần, ngay cả khi **__new__** được gọi nhiều lần
         if getattr(self, "_initialized", False):
             return
             
@@ -116,7 +116,7 @@ def discover_plugins(
     for plugin_name, plugin_cls in _plugin_registry.items():
         plugin_config = config_map.get(plugin_name)
         
-        # Bỏ qua nếu YAML vô hiệu hóa
+        # **Skip** (bỏ qua) nếu **YAML** **disabled** (vô hiệu hóa)
         if plugin_config and not plugin_config.enabled:
             logger.info(f"[CPU] Plugin {plugin_name} bị vô hiệu hóa qua YAML")
             continue
@@ -124,7 +124,7 @@ def discover_plugins(
         try:
             plugin_obj = plugin_cls()
             
-            # Truyền dict cấu hình nếu có
+            # **Pass** (truyền) **config dict** (từ điển cấu hình) nếu có
             config_dict = plugin_config.config if plugin_config else None
             success = plugin_obj.init(engine, config_dict)
             
@@ -132,21 +132,21 @@ def discover_plugins(
                 logger.warning(f"[CPU] Khởi tạo plugin {plugin_name} không thành công")
                 continue
                 
-            # Cập nhật độ ưu tiên nếu có trong cấu hình
+            # **Update priority** (cập nhật độ ưu tiên) nếu có trong **configuration** (cấu hình)
             if plugin_config:
                 plugin_obj.priority = plugin_config.priority
                 
             instances.append(plugin_obj)
             logger.info(f"[CPU] Đã tải plugin: {plugin_obj.name} (ưu tiên={plugin_obj.priority})")
             
-            # --- Auto wrap methods with detailed logging ---
+            # --- **Auto wrap methods** (tự động bọc phương thức) với **detailed logging** (ghi nhật ký chi tiết) ---
             try:
                 from ..utils.logging_decorator import log_feature  # type: ignore
 
                 def _wrap_method(method_name: str, category: str):
                     if hasattr(plugin_obj, method_name):
                         original = getattr(plugin_obj, method_name)
-                        # tránh bọc 2 lần
+                        # tránh **double wrapping** (bọc hai lần)
                         if not getattr(original, "_is_wrapped", False):
                             wrapped = log_feature(category)(original)
                             wrapped._is_wrapped = True  # type: ignore
@@ -161,7 +161,7 @@ def discover_plugins(
         except Exception as exc:
             logger.warning(f"[CPU] Bỏ qua plugin {plugin_name} - khởi tạo thất bại: {exc}")
     
-    # Sắp xếp theo độ ưu tiên tăng dần
+    # **Sort** (sắp xếp) theo **priority** (độ ưu tiên) tăng dần
     instances.sort(key=lambda p: p.priority)
     return instances
 

