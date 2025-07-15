@@ -1,0 +1,170 @@
+{
+    "_comment": "Cấu hình tài nguyên dành cho ResourceManager...",
+
+    "processes": {
+        "CPU": "ml-inference",
+        "GPU": "inference-cuda"
+    },
+    "process_priority_map": {
+        "ml-inference": 2,
+        "inference-cuda": 3
+    },
+    "network_interface": "eth0",
+
+    "optimization_parameters": {
+        "gpu_power_adjustment_step": 10,
+        "gpu_load_balancing": "round_robin",
+        "gpu_memory_allocation": "dynamic",
+        "nvlink_optimization": true,
+        "tensor_core_utilization": true,
+        "disk_io_limit_step_mbps": 10
+    },
+
+    "resource_allocation": {
+        "cpu": {
+            "max_threads": 12,
+            "default_freq_mhz": 2600,
+            "min_freq_mhz": 1800,
+            "max_freq_mhz": 2600
+        },
+        "ram": {
+            "max_allocation_mb": 131072
+        },
+        "gpu": {
+            "max_usage_percent": [90,90],
+            "accelerators": {
+                "count": 2,
+                "model": "Nvidia Tesla V100",
+                "memory_gb": 16,
+                "architecture": "Volta",
+                "cuda_cores": 5120,
+                "tensor_cores": 640,
+                "memory_bandwidth_gbps": 900,
+                "fp32_performance_tflops": 15.7,
+                "tensor_performance_tflops": 125,
+                "nvlink_bandwidth_gbps": 300,
+                "power_consumption_watts": 250
+            }
+        },
+        "disk_io": {
+            "min_limit_mbps": 50,
+            "max_limit_mbps": 2500
+        },
+        "network": {
+            "bandwidth_limit_mbps": 10000
+        },
+        "cache": {
+            "limit_percent": 50
+        }
+    },
+
+    "monitoring_parameters": {
+        "temperature_monitoring_interval_seconds": 15,
+        "power_monitoring_interval_seconds": 15,
+        "azure_monitor_interval_seconds": 300,
+        "optimization_interval_seconds": 30
+    },
+
+    "temperature_limits": {
+        "cpu_max_celsius": 85,
+        "gpu_max_celsius": 85
+    },
+
+    "power_limits": {
+        "total_power_watts": {
+            "max": 650
+        },
+        "per_device_power_watts": {
+            "cpu": 150,
+            "gpu_total": 500,
+            "gpu_per_unit": 250
+        }
+    },
+
+    "baseline_thresholds": {
+        "cpu_usage_percent": 90,
+        "gpu_usage_percent": 90,
+        "ram_usage_percent": 90,
+        "disk_io_usage_mbps": 90,
+        "network_usage_mbps": 90
+    },
+
+    "safe_restore_parameters": {
+        "enable_safe_restore": true,
+        "max_retry_attempts": 3,
+        "retry_interval_seconds": 30,
+        "additional_checks": {
+            "check_sentinel_alerts": true,
+            "check_log_analytics": true,
+            "check_security_recommendations": true,
+            "check_traffic_anomalies": true
+        }
+    },
+
+    "azure_integration": {
+        "sentinel": {
+            "alert_check_days": 1
+        },
+        "log_analytics": {
+            "query_interval_minutes": 5
+        },
+        "security_center": {
+            "recommendation_check_interval_minutes": 10
+        },
+        "traffic_analytics": {
+            "check_interval_minutes": 10
+        }
+    },
+
+    "azure_anomaly_detector": {
+        "api_base": "https://eastus2.api.cognitive.microsoft.com/",
+        "key_vault_url": "https://llmsskeyvault.vault.azure.net/"
+    },
+
+    "azure_openai": {
+        "api_base": "https://interchangeczz.openai.azure.com/",
+        "deployment_name": "gpt-4o",
+        "api_version": "2024-08-01-preview"
+    },
+
+    "server_config": {
+        "server_type": "Standard_NC12s_v3",
+        "os_name": "Ubuntu",
+        "os_version": "22.04 LTS",
+        "resource_limits": {
+            "cpu_usage_percent": 90.0,
+            "ram_usage_percent": 90.0,
+            "gpu_usage_percent": 90.0,
+            "network_bandwidth_mbps": 500.0,
+            "storage_usage_percent": 90.0
+        }
+    },
+
+    "optimization_goals": {
+        "cpu_threads": "Optimize to balance CPU load.",
+        "frequency": "Maximize performance while reducing energy consumption.",
+        "ram_allocation_mb": "Ensure sufficient RAM allocation without waste.",
+        "gpu_usage_percent": "Balance GPU usage to avoid bottlenecks.",
+        "gpu_accelerators": "Leverage dual Tesla V100 GPUs for parallel cryptocurrency mining operations with optimal power efficiency.",
+        "network_bandwidth_limit_mbps": "Optimize network bandwidth to efficiently transmit data.",
+        "cache_limit_percent": "Efficiently allocate cache to improve data retrieval speed."
+    },
+
+    "ai_driven_monitoring": {
+        "enabled": false
+    },
+
+    "log_analytics": {
+        "enabled": false,
+        "log_level": "INFO",
+        "log_destination": "/app/mining_environment/logs/resource_manager.log"
+    },
+
+    "alert_thresholds": {
+        "cpu_usage_percent": 90,
+        "gpu_usage_percent": 90,
+        "ram_usage_percent": 90,
+        "disk_io_usage_mbps": 90,
+        "network_usage_mbps": 90
+    }
+}
