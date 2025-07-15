@@ -1508,92 +1508,12 @@ class MemoryCloakStrategy(CloakStrategy):
         self.logger.info(f"[MEMORY RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
-#                         FACTORY: CloakStrategyFactory                       #
+#                    DEPRECATED: CloakStrategyFactory REMOVED                 #
 ###############################################################################
 
-class CloakStrategyFactory:
-    """
-    Factory tạo các instance chiến lược cloaking cho CPU, GPU, Network, DiskIO, Cache, Memory (đồng bộ).
-    """
-
-    STRATEGY_MAP: Dict[str, Type[CloakStrategy]] = {
-        'cpu_cloaking': CpuCloakStrategy,
-        'gpu_cloaking': GpuCloakStrategy,
-        'network_cloaking': NetworkCloakStrategy,
-        'disk_io_cloaking': DiskIoCloakStrategy,
-        'cache_cloaking': CacheCloakStrategy,
-        'memory_cloaking': MemoryCloakStrategy,
-    }
-
-    @staticmethod
-    def create_strategy(
-        strategy_name: str,
-        config: Dict[str, Any],
-        logger: logging.Logger,
-        resource_managers: Dict[str, Any]
-    ) -> Optional[CloakStrategy]:
-        """
-        Tạo instance chiến lược cloaking theo tên.
-
-        :param strategy_name: Tên chiến lược (VD: 'cpu_cloaking', 'gpu_cloaking', ...).
-        :param config: Cấu hình chung hoặc riêng từng strategy.
-        :param logger: Logger.
-        :param resource_managers: Dict chứa các ResourceManager tương ứng.
-        :return: Instance CloakStrategy hoặc None nếu thất bại.
-        """
-        if strategy_name not in CloakStrategyFactory.STRATEGY_MAP:
-            logger.error(f"Chiến lược '{strategy_name}' không được hỗ trợ.")
-            return None
-
-        strategy_class = CloakStrategyFactory.STRATEGY_MAP[strategy_name]
-
-        try:
-            if strategy_name == 'cpu_cloaking':
-                cpu_rm = resource_managers.get('cpu')
-                if not cpu_rm:
-                    logger.error("Không có CPUResourceManager để tạo CpuCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, cpu_rm)  # type: ignore[arg-type]
-
-            elif strategy_name == 'gpu_cloaking':
-                gpu_rm = resource_managers.get('gpu')
-                if not gpu_rm:
-                    logger.error("Không có GPUResourceManager để tạo GpuCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, gpu_rm)  # type: ignore[arg-type]
-
-            elif strategy_name == 'network_cloaking':
-                net_rm = resource_managers.get('network')
-                if not net_rm:
-                    logger.error("Không có NetworkResourceManager để tạo NetworkCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, net_rm)  # type: ignore[arg-type]
-
-            elif strategy_name == 'disk_io_cloaking':
-                disk_rm = resource_managers.get('disk_io')
-                if not disk_rm:
-                    logger.error("Không có DiskIOResourceManager để tạo DiskIoCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, disk_rm)  # type: ignore[arg-type]
-
-            elif strategy_name == 'cache_cloaking':
-                cache_rm = resource_managers.get('cache')
-                if not cache_rm:
-                    logger.error("Không có CacheResourceManager để tạo CacheCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, cache_rm)  # type: ignore[arg-type]
-
-            elif strategy_name == 'memory_cloaking':
-                mem_rm = resource_managers.get('memory')
-                cache_rm = resource_managers.get('cache')
-                if not mem_rm or not cache_rm:
-                    logger.error("Thiếu MemoryResourceManager hoặc CacheResourceManager để tạo MemoryCloakStrategy.")
-                    return None
-                return cast(Any, strategy_class)(config, logger, mem_rm, cache_rm)  # type: ignore[arg-type]
-
-        except Exception as e:
-            logger.error(f"Lỗi tạo chiến lược '{strategy_name}': {e}\n{traceback.format_exc()}")
-            return None
-
-        logger.error(f"Logic tạo strategy cho '{strategy_name}' chưa được triển khai.")
-        return None
+# CloakStrategyFactory đã được thay thế bởi ResourceCoordinator trong resource_control.py
+# theo blueprint redesign. Tất cả strategy management đã được tập trung hóa trong
+# ResourceCoordinator với khả năng phân biệt direct execution và plugin delegation.
+#
+# Để tương thích ngược, sử dụng:
+# from .resource_control import CloakStrategyFactory
