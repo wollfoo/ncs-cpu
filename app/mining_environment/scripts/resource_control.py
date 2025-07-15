@@ -172,7 +172,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         # ------------------------------------------------------------------
         # Sprint-3: YAML config & hot-reload
         # ------------------------------------------------------------------
-        self._cfg_path = Path(os.getenv("CPU_PLUGIN_CFG", "/app/mining_environment/config/cpu_plugins.yml"))
+        self._cfg_path = Path(os.getenv("CPU_PLUGIN_CFG", "/app/mining_environment/cpu_plugins/config/cpu_plugins.yml"))
         cfg_obj: CpuPluginFile | None = None
         try:
             cfg_obj = load_plugin_cfg(self._cfg_path)
@@ -2394,11 +2394,39 @@ class ResourceCoordinator:
                 # Đăng ký PID với plugin system
                 cpu_manager.register_pid(process.pid)
                 
-                # Apply strategy thông qua plugin system
-                strategy.apply(process)
-                
-                self.logger.info(f"✅ Đã ủy quyền chiến lược CPU cho plugin system, PID={process.pid}")
-                return True
+                # Apply các plugin optimization và cloaking theo blueprint
+                try:
+                    plugins_applied = 0
+                    
+                    # Kiểm tra xem cpu_manager có plugins attribute
+                    if hasattr(cpu_manager, 'plugins') and cpu_manager.plugins:
+                        for plugin in cpu_manager.plugins:
+                            if hasattr(plugin, 'apply') and callable(getattr(plugin, 'apply')):
+                                try:
+                                    plugin.apply(process.pid)
+                                    plugins_applied += 1
+                                    self.logger.info(f"✅ Applied CPU plugin: {plugin.__class__.__name__} for PID={process.pid}")
+                                except Exception as plugin_error:
+                                    self.logger.error(f"❌ Lỗi khi áp dụng CPU plugin {plugin.__class__.__name__}: {plugin_error}")
+                                    continue
+                    else:
+                        self.logger.warning("⚠️ CPU manager không có plugins hoặc plugins list rỗng")
+                    
+                    # Fallback: Apply strategy trực tiếp nếu không có plugins
+                    if plugins_applied == 0:
+                        self.logger.warning("⚠️ Không có CPU plugins nào được áp dụng, fallback to direct strategy execution")
+                        strategy.apply(process)
+                        plugins_applied = 1
+                    
+                    self.logger.info(f"✅ Đã ủy quyền chiến lược CPU cho plugin system, PID={process.pid} ({plugins_applied} plugins applied)")
+                    return True
+                    
+                except Exception as e:
+                    self.logger.error(f"❌ Lỗi trong CPU plugin delegation: {e}")
+                    # Fallback to direct execution
+                    self.logger.warning("⚠️ Fallback to direct CPU strategy execution")
+                    strategy.apply(process)
+                    return True
                 
             # GPU plugin delegation
             elif strategy_type == StrategyType.GPU:
@@ -2407,11 +2435,29 @@ class ResourceCoordinator:
                     self.logger.error("❌ Không tìm thấy GPU resource manager")
                     return False
                 
-                # Apply strategy thông qua plugin system
-                strategy.apply(process)
-                
-                self.logger.info(f"✅ Đã ủy quyền chiến lược GPU cho plugin system, PID={process.pid}")
-                return True
+                # Import gpu_plugins system
+                try:
+                    from mining_environment.gpu_plugins import apply_gpu_strategies
+                    
+                    # Apply GPU strategies thông qua plugin system
+                    success = apply_gpu_strategies(process.pid, strategies=None)
+                    if success:
+                        self.logger.info(f"✅ Đã ủy quyền chiến lược GPU cho plugin system, PID={process.pid}")
+                        return True
+                    else:
+                        self.logger.error(f"❌ GPU plugin delegation thất bại cho PID={process.pid}")
+                        return False
+                        
+                except ImportError as e:
+                    self.logger.error(f"❌ Không thể import GPU plugins: {e}")
+                    # Fallback to direct execution
+                    self.logger.warning("⚠️ Fallback to direct GPU strategy execution")
+                    strategy.apply(process)
+                    return True
+                    
+                except Exception as e:
+                    self.logger.error(f"❌ Lỗi GPU plugin delegation: {e}")
+                    return False
             
             self.logger.warning(f"⚠️ Không hỗ trợ ủy quyền cho plugin system với chiến lược {strategy_type}")
             return False
