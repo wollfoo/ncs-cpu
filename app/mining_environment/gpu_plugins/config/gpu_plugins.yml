@@ -20,9 +20,9 @@ plugins:
   ebpf_filter:
     enabled: true
     mock_mode: auto
-    config_path: /home/azureuser/opus-training/app/mining_environment/gpu_plugins/ebpf/config/ebpf_config.json
+    config_path: /app/mining_environment/gpu_plugins/ebpf/config/ebpf_config.json
 
 global:
   log_level: INFO
   enable_monitoring: true
-  logs_dir: /home/azureuser/opus-training/app/mining_environment/logs
+  logs_dir: /app/mining_environment/logs
