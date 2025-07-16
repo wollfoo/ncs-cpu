@@ -5,9 +5,11 @@ Provides simplified interface for system operations and resource management
 
 import logging
 import time
+import threading
 from typing import Dict, Any, Optional
 from .auxiliary_modules.event_bus import EventBus
 from .auxiliary_modules.models import ConfigModel
+from .resource_manager import ResourceManager
 
 
 class SystemFacade:
@@ -38,17 +40,48 @@ class SystemFacade:
             'performance': {}
         }
         
+        # Initialize ResourceManager instance
+        self.resource_manager = None
+        self.resource_manager_thread = None
+        
         self.logger.info("SystemFacade initialized")
     
     def initialize_system(self) -> bool:
         """
-        Initialize system components
+        Initialize system components including ResourceManager
         
         Returns:
             bool: True if initialization successful
         """
         try:
-            self.logger.info("Initializing system components...")
+            self.logger.info("🔧 Initializing system components...")
+            
+            # Initialize ResourceManager
+            init_msg = "🚀 Initializing ResourceManager through SystemFacade..."
+            self.logger.info(init_msg)
+            self.resource_logger.info(init_msg)
+            
+            # Create ResourceManager instance
+            self.resource_manager = ResourceManager(self.config, self.resource_logger)
+            
+            # Start ResourceManager in separate thread (non-blocking)
+            self.resource_manager_thread = threading.Thread(
+                target=self.resource_manager.start,
+                daemon=True,
+                name="ResourceManagerThread"
+            )
+            self.resource_manager_thread.start()
+            
+            # Wait a moment for ResourceManager to initialize
+            time.sleep(1)
+            
+            # Verify ResourceManager is running
+            if self.resource_manager_thread.is_alive():
+                success_msg = "✅ ResourceManager started successfully in background thread"
+                self.logger.info(success_msg)
+                self.resource_logger.info(success_msg)
+            else:
+                raise RuntimeError("ResourceManager thread failed to start")
             
             # Initialize system state
             self.system_state['initialized'] = True
@@ -57,14 +90,17 @@ class SystemFacade:
             # Publish initialization event
             self.event_bus.publish('system.initialized', {
                 'timestamp': time.time(),
-                'status': 'ready'
+                'status': 'ready',
+                'resource_manager_active': True
             })
             
-            self.logger.info("System initialization completed successfully")
+            self.logger.info("✅ System initialization completed successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"System initialization failed: {e}")
+            error_msg = f"❌ System initialization failed: {e}"
+            self.logger.error(error_msg)
+            self.resource_logger.error(error_msg)
             self.system_state['status'] = 'error'
             return False
     
@@ -83,16 +119,38 @@ class SystemFacade:
     
     def shutdown_system(self) -> bool:
         """
-        Shutdown system components gracefully
+        Shutdown system components gracefully including ResourceManager
         
         Returns:
             bool: True if shutdown successful
         """
         try:
-            self.logger.info("Shutting down system components...")
+            self.logger.info("🛑 Shutting down system components...")
             
             # Update system state
             self.system_state['status'] = 'shutting_down'
+            
+            # Shutdown ResourceManager
+            if self.resource_manager:
+                shutdown_msg = "🛑 Shutting down ResourceManager..."
+                self.logger.info(shutdown_msg)
+                self.resource_logger.info(shutdown_msg)
+                
+                try:
+                    self.resource_manager.shutdown()
+                    
+                    # Wait for ResourceManager thread to complete
+                    if self.resource_manager_thread and self.resource_manager_thread.is_alive():
+                        self.resource_manager_thread.join(timeout=10)
+                        
+                    success_msg = "✅ ResourceManager shutdown completed"
+                    self.logger.info(success_msg)
+                    self.resource_logger.info(success_msg)
+                    
+                except Exception as e:
+                    error_msg = f"❌ ResourceManager shutdown error: {e}"
+                    self.logger.error(error_msg)
+                    self.resource_logger.error(error_msg)
             
             # Publish shutdown event
             self.event_bus.publish('system.shutdown', {
@@ -104,11 +162,13 @@ class SystemFacade:
             self.system_state['initialized'] = False
             self.system_state['status'] = 'stopped'
             
-            self.logger.info("System shutdown completed successfully")
+            self.logger.info("✅ System shutdown completed successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"System shutdown failed: {e}")
+            error_msg = f"❌ System shutdown failed: {e}"
+            self.logger.error(error_msg)
+            self.resource_logger.error(error_msg)
             return False
     
     def get_resource_status(self) -> Dict[str, Any]:
