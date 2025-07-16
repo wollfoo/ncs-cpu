@@ -44,13 +44,15 @@ class GPULogger:
     Ghi log chi tiết cho GPU optimization và cloaking functions
     """
     
-    def __init__(self, logs_dir: str = "/app/mining_environment/logs"):
+    def __init__(self, logs_dir: str = None):
         """
         Khởi tạo GPU Logger
         
         Args:
             logs_dir: Thư mục lưu trữ logs
         """
+        if logs_dir is None:
+            logs_dir = os.getenv('LOGS_DIR', 'logs')
         self.logs_dir = Path(logs_dir)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         
@@ -350,7 +352,7 @@ class GPULogger:
 # Global logger instance
 _gpu_logger_instance = None
 
-def get_gpu_logger(logs_dir: str = "/app/mining_environment/logs") -> GPULogger:
+def get_gpu_logger(logs_dir: str = None) -> GPULogger:
     """
     Lấy GPU Logger instance (Singleton pattern)
     """

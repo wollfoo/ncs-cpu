@@ -106,8 +106,8 @@ class FileIntegrityChecker:
         """**Verify** (xác thực) tất cả **critical files** (tệp quan trọng)"""
         critical_files = [
             # **CPU throttle eBPF** (eBPF điều chỉnh CPU) đã bị loại bỏ
-            "/app/mining_environment/cpu_plugins/cloaking_lib/libcloak.so",
-            "/app/mining_environment/cuda/libgpuhook.so"
+            "../cpu_plugins/cloaking_lib/libcloak.so",
+            "../cuda/libgpuhook.so"
         ]
         
         results = {}
@@ -189,9 +189,9 @@ if __name__ == "__main__":
     if sys.argv[1] == "generate":
         checker = FileIntegrityChecker()
         directories = [
-            "/app/mining_environment/cpu_plugins",
+            "../cpu_plugins",
             "/opt/ebpf",
-            "/app/mining_environment/cuda"
+            "../cuda"
         ]
         
         output_path = sys.argv[2] if len(sys.argv) > 2 else "file_hashes.json"

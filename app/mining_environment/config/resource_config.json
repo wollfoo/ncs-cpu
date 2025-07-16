@@ -157,7 +157,7 @@
     "log_analytics": {
         "enabled": false,
         "log_level": "INFO",
-        "log_destination": "/app/mining_environment/logs/resource_manager.log"
+        "log_destination": "logs/resource_manager.log"
     },
 
     "alert_thresholds": {

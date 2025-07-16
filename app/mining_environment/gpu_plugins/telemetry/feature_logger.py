@@ -20,7 +20,7 @@ _logger = logging.getLogger(_LOGGER_NAME)
 
 if not _logger.handlers:
     # Thiết lập handler file + console (khi run foreground)
-    log_dir = Path("/app/mining_environment/logs")
+    log_dir = Path(os.getenv('LOGS_DIR', 'logs'))
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
     except OSError:

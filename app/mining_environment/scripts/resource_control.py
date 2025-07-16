@@ -172,7 +172,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         # ------------------------------------------------------------------
         # Sprint-3: YAML config & hot-reload
         # ------------------------------------------------------------------
-        self._cfg_path = Path(os.getenv("CPU_PLUGIN_CFG", "/app/mining_environment/cpu_plugins/config/cpu_plugins.yml"))
+        self._cfg_path = Path(os.getenv("CPU_PLUGIN_CFG", "../cpu_plugins/config/cpu_plugins.yml"))
         cfg_obj: CpuPluginFile | None = None
         try:
             cfg_obj = load_plugin_cfg(self._cfg_path)

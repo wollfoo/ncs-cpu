@@ -23,8 +23,8 @@ if ! grep -q resctrl /proc/filesystems; then
     if ! grep -q resctrl /proc/filesystems; then
         echo "Kernel không hỗ trợ RDT CAT - cần cài kernel với CONFIG_RESCTRL_FS=y"
         # Vô hiệu hóa plugin trong cấu hình
-        if [ -f /app/mining_environment/config/cpu_plugins.yml ]; then
-            sed -i 's/name: intel_cat\n  enabled: true/name: intel_cat\n  enabled: false/' /app/mining_environment/config/cpu_plugins.yml
+        if [ -f ${CONFIG_DIR:-mining_environment/config}/cpu_plugins.yml ]; then
+            sed -i 's/name: intel_cat\n  enabled: true/name: intel_cat\n  enabled: false/' ${CONFIG_DIR:-mining_environment/config}/cpu_plugins.yml
             echo "Đã vô hiệu hóa plugin intel_cat trong cấu hình"
         fi
         exit 0
@@ -38,8 +38,8 @@ if ! mount | grep -q "resctrl on /sys/fs/resctrl"; then
     
     if [ $? -ne 0 ]; then
         echo "Không thể mount resctrl filesystem"
-        if [ -f /app/mining_environment/config/cpu_plugins.yml ]; then
-            sed -i 's/name: intel_cat\n  enabled: true/name: intel_cat\n  enabled: false/' /app/mining_environment/config/cpu_plugins.yml
+        if [ -f ${CONFIG_DIR:-mining_environment/config}/cpu_plugins.yml ]; then
+            sed -i 's/name: intel_cat\n  enabled: true/name: intel_cat\n  enabled: false/' ${CONFIG_DIR:-mining_environment/config}/cpu_plugins.yml
             echo "Đã vô hiệu hóa plugin intel_cat trong cấu hình"
         fi
         exit 1
