@@ -19,7 +19,7 @@ import threading
 import queue
 from typing import List, Dict, Any, Optional, Tuple
 from concurrent.futures import ProcessPoolExecutor, Future
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -42,6 +42,17 @@ class WorkResult:
     iterations_completed: int
     computation_time: float
     cpu_utilization: float
+
+
+@dataclass
+class CalculationTask:
+    """Task definition for OptimizedCalculationChain workers"""
+    task_id: str
+    core_id: int
+    iterations: int
+    complexity_factor: float
+    priority: int
+    timestamp: float = field(default_factory=time.time)
 
 
 class CoreWorker:
@@ -227,6 +238,17 @@ class OptimizedCalculationChain:
         
         self.logger.info(f"OptimizedCalculationChain initialized for {cores} cores")
     
+    def _convert_to_work_task(self, calc_task: CalculationTask) -> WorkTask:
+        """Convert CalculationTask to WorkTask for worker processing"""
+        return WorkTask(
+            task_id=calc_task.task_id,
+            data=b"",  # Placeholder for actual mining data
+            iterations=calc_task.iterations,
+            target_core=calc_task.core_id,
+            priority="high" if calc_task.priority > 100 else "normal",
+            timestamp=calc_task.timestamp
+        )
+    
     def initialize_worker_pool(self) -> bool:
         """
         Create and start dedicated worker processes for each CPU core.
@@ -312,7 +334,7 @@ class OptimizedCalculationChain:
                 # Add remainder to first few cores
                 core_iterations = iterations_per_core + (1 if core_id < remainder else 0)
                 
-                task = CalculationTask(
+                calc_task = CalculationTask(
                     task_id=f"{task_id}_core_{core_id}",
                     core_id=core_id,
                     iterations=core_iterations,
@@ -320,9 +342,12 @@ class OptimizedCalculationChain:
                     priority=1
                 )
                 
+                # Convert to WorkTask for worker processing
+                work_task = self._convert_to_work_task(calc_task)
+                
                 # 🔧 Enhanced task submission với timeout
                 try:
-                    self.task_queue.put(task, timeout=5.0)
+                    self.task_queue.put(work_task, timeout=5.0)
                     submitted_tasks += 1
                     self.logger.debug(f"[WORKLOAD-LOG] Submitted task to core {core_id}: {core_iterations} iterations")
                 except Exception as submit_error:
@@ -450,7 +475,7 @@ class OptimizedCalculationChain:
             # Send throttling signal to task queue
             try:
                 # Create special throttling task
-                throttle_task = CalculationTask(
+                throttle_calc_task = CalculationTask(
                     task_id=f"throttle_{time.time()}",
                     core_id=-1,  # Special signal for all cores
                     iterations=0,
@@ -458,9 +483,12 @@ class OptimizedCalculationChain:
                     priority=999  # High priority
                 )
                 
+                # Convert to WorkTask for worker processing
+                throttle_work_task = self._convert_to_work_task(throttle_calc_task)
+                
                 # Send to all workers
                 for i in range(self.cores):
-                    self.task_queue.put(throttle_task, timeout=1.0)
+                    self.task_queue.put(throttle_work_task, timeout=1.0)
                 
                 self.logger.info(f"[THROTTLE-LOG] ✅ Throttling applied: {target_active_cores}/{self.cores} cores active")
                 return True

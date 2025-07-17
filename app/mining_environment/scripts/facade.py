@@ -83,8 +83,8 @@ class SystemFacade:
             self.logger.info(progress_msg)
             self.resource_logger.info(progress_msg)
             
-            # Wait with progress logging (up to 25 seconds with progress updates)
-            max_wait_time = 25
+            # Wait with progress logging (up to 35 seconds with progress updates)
+            max_wait_time = 35
             check_interval = 5
             waited_time = 0
             
