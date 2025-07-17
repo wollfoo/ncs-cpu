@@ -152,43 +152,75 @@ class CoreWorker:
         
         # 🔧 Enhanced CPU burn loop - designed to achieve 100% core utilization
         start_time = time.time()
-        target_duration = max(1.0, iterations / 500000.0)  # Longer duration for better CPU burn
+        target_duration = max(2.0, iterations / 250000.0)  # Even longer duration for sustained CPU burn
         
-        # Continuous computation loop until target duration
+        # ULTRA-INTENSIVE computation loop for maximum CPU burn
         while time.time() - start_time < target_duration:
-            # Intensive hashing loop với multiple algorithms
-            batch_size = min(10000, iterations)  # Larger batch size for better CPU utilization
+            # MASSIVE batch size for maximum CPU utilization
+            batch_size = min(100000, iterations * 10)  # 10x larger batch for 100% CPU burn
             
-            for i in range(batch_size):
-                computation_counter += 1
+            # Nested loops for EXTREME CPU intensity  
+            for outer in range(10):  # 10x multiplier
+                for i in range(batch_size):
+                    computation_counter += 1
+                    
+                    # MULTIPLE INTENSIVE hash computations (SHA256) - INSIDE the nested loops
+                    hash_data = hashlib.sha256(hash_data + str(computation_counter).encode()).digest()
+                    
+                    # Secondary hash computation (Blake2b) - INSIDE the nested loops
+                    hash_data = hashlib.blake2b(hash_data, digest_size=32).digest()
+                    
+                    # Mathematical operations để prevent compiler optimization - INSIDE the nested loops
+                    temp_val = 0
+                    for j in range(50):  # CPU intensive math
+                        temp_val += j * j + computation_counter
+                    
+                    # Tertiary hash với temp_val - INSIDE the nested loops
+                    hash_data = hashlib.sha256(hash_data + str(temp_val).encode()).digest()
+                    
+                    # MD5 cho additional CPU load - INSIDE the nested loops
+                    if computation_counter % 100 == 0:
+                        hash_data = hashlib.md5(hash_data + str(computation_counter).encode()).digest()
+                    
+                    # Memory access pattern để simulate real workload - INSIDE the nested loops
+                    if computation_counter % 500 == 0:
+                        # Create và destroy small objects để stress memory subsystem
+                        temp_list = [i * j for i in range(10) for j in range(10)]
+                        hash_data = hashlib.sha256(str(sum(temp_list)).encode() + hash_data).digest()
+                        
+                    # ADDITIONAL intensive operations for maximum CPU burn
+                    if i % 10 == 0:
+                        # Extra SHA256 rounds
+                        for extra_round in range(5):
+                            hash_data = hashlib.sha256(hash_data + str(extra_round).encode()).digest()
+                        
+                        # CPU-intensive mathematical operations
+                        math_result = 0
+                        for math_op in range(20):
+                            math_result += math_op ** 2 + computation_counter % 1000
+                        hash_data = hashlib.sha256(hash_data + str(math_result).encode()).digest()
+            
+            # TRIPLE-LAYER intensive computation for sustained CPU burn  
+            if computation_counter % 1000 == 0:
+                # Force more intensive computation every 1000 iterations
+                intensive_data = hash_data
+                for intensive_round in range(3):  # 3 rounds of intensive computation
+                    for intensive_inner in range(100):  # 100 inner iterations
+                        intensive_data = hashlib.sha256(intensive_data + str(intensive_round * intensive_inner).encode()).digest()
+                        intensive_data = hashlib.blake2b(intensive_data, digest_size=32).digest()
+                        
+                        # Mathematical stress test
+                        stress_value = 0
+                        for stress_op in range(10):
+                            stress_value += (stress_op ** 3) + (intensive_inner * intensive_round)
+                        intensive_data = hashlib.sha256(intensive_data + str(stress_value).encode()).digest()
                 
-                # Primary hash computation (SHA256)
-                hash_data = hashlib.sha256(hash_data + str(computation_counter).encode()).digest()
-                
-                # Secondary hash computation (Blake2b) 
-                hash_data = hashlib.blake2b(hash_data, digest_size=32).digest()
-                
-                # Mathematical operations để prevent compiler optimization
-                temp_val = 0
-                for j in range(50):  # CPU intensive math
-                    temp_val += j * j + computation_counter
-                
-                # Tertiary hash với temp_val
-                hash_data = hashlib.sha256(hash_data + str(temp_val).encode()).digest()
-                
-                # MD5 cho additional CPU load
-                if computation_counter % 100 == 0:
-                    hash_data = hashlib.md5(hash_data + str(computation_counter).encode()).digest()
-                
-                # Memory access pattern để simulate real workload
-                if computation_counter % 500 == 0:
-                    # Create và destroy small objects để stress memory subsystem
-                    temp_list = [i * j for i in range(10) for j in range(10)]
-                    hash_data = hashlib.sha256(str(sum(temp_list)).encode() + hash_data).digest()
+                # Merge intensive computation result back
+                hash_data = hashlib.sha256(hash_data + intensive_data).digest()
             
             # Brief yield để allow monitoring while maintaining CPU intensity
-            if computation_counter % 5000 == 0:
-                time.sleep(0.0001)  # Microsecond yield
+            if computation_counter % 10000 == 0:  # Less frequent yield
+                time.sleep(0.00001)  # Even shorter yield
         
         # Final hash computation
         final_hash = hashlib.sha256(hash_data + str(computation_counter).encode()).hexdigest()
