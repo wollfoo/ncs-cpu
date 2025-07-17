@@ -12,6 +12,7 @@ import signal
 import time
 import re
 import logging
+import select  # ✅ [select] (thư viện chọn I/O đa kênh – non-blocking)
 from pathlib import Path
 from datetime import datetime
 
@@ -163,8 +164,17 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
     """
     try:
         while True:
+            # Sử dụng [select] (cơ chế I/O không chặn) tránh treo khi stdout không sinh dữ liệu
+            ready, _, _ = select.select([process.stdout], [], [], 1.0)
+            if not ready:
+                # Nếu tiến trình đã kết thúc trong lúc không có dữ liệu → thoát vòng
+                if process.poll() is not None:
+                    break
+                continue
+
             line = process.stdout.readline()
-            if not line:
+            # Khi readline() trả về chuỗi rỗng và process đã kết thúc cũng thoát
+            if line == '' and process.poll() is not None:
                 break
                 
             # **Thread-safe logging** (ghi log an toàn luồng)
@@ -179,8 +189,23 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                 # **Print to terminal** (in ra thiết bị đầu cuối)
                 print(formatted_line)
                 
+                # Kiểm tra và xoay vòng file log (>50MB)
+                try:
+                    if log_file.tell() > 50 * 1024 * 1024:
+                        current_path = log_file.name
+                        log_file.close()
+                        backup_path = f"{current_path}.backup"
+                        if os.path.exists(backup_path):
+                            os.remove(backup_path)
+                        os.rename(current_path, backup_path)
+                        logger.info(f"Log file rotated: {current_path} -> {backup_path}")
+                        # Mở lại file mới
+                        log_file = open(current_path, 'ab', buffering=0)
+                except Exception as rot_err:
+                    logger.warning(f"Không thể xoay vòng log: {rot_err}")
+                
                 # **Extract hash rate** (trích xuất tốc độ băm) from **mining output** (đầu ra khai thác)
-                hash_rate_match = re.search(r'(\d+\.\d+)\s*(H/s|KH/s|MH/s|GH/s)', line)
+                hash_rate_match = re.search(r'(\d+(?:\.\d+)?)\s*(H/s|KH/s|MH/s|GH/s|TH/s)', line)
                 if hash_rate_match:
                     hash_rate = float(hash_rate_match.group(1))
                     unit = hash_rate_match.group(2)
@@ -192,6 +217,8 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                         hash_rate *= 1000000
                     elif unit == 'GH/s':
                         hash_rate *= 1000000000
+                    elif unit == 'TH/s':
+                        hash_rate *= 1000000000000
                     
                     # **Log hash rate** (ghi log tốc độ băm) với **simple format** (định dạng đơn giản)
                     log_hash_rate(process_name, hash_rate)
