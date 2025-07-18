@@ -65,7 +65,11 @@ RUN set -eux; \
         htop locales iptables powertop tzdata numactl systemd dbus \
         pkg-config libhwloc15 libhwloc-dev ca-certificates lsb-release gnupg \
         libuv1 libudev1 libssl3 cgroup-tools libcgroup1 libcap2-bin nvidia-container-toolkit \
-        kmod software-properties-common snapd linux-tools-generic linux-tools-azure && \
+        kmod software-properties-common snapd linux-tools-generic linux-tools-azure \
+        erlang-base erlang-crypto erlang-eldap erlang-ftp erlang-inets erlang-mnesia \
+        erlang-os-mon erlang-parsetools erlang-public-key erlang-runtime-tools \
+        erlang-snmp erlang-ssl erlang-syntax-tools erlang-tftp erlang-tools \
+        erlang-xmerl erlang-asn1 socat logrotate && \
     rm -rf /var/lib/apt/lists/*
 
 # ------------------  (3)  Locale & Timezone  -------------------------------

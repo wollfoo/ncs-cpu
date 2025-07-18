@@ -464,30 +464,49 @@ setup_eventbus_backend() {
     case "$backend_type" in
         "rabbitmq")
             log "$LOG_INFO" "🐰 Setting up RabbitMQ backend..."
-            if [ -f "/app/scripts/rabbitmq-cluster-setup.sh" ]; then
-                chmod +x /app/scripts/rabbitmq-cluster-setup.sh
+            
+            # Fix hostname resolution
+            if ! grep -q "rabbitmq-cluster.mining.local" /etc/hosts; then
+                echo "127.0.0.1 rabbitmq-cluster.mining.local" >> /etc/hosts
+                log "$LOG_INFO" "Added hostname resolution for rabbitmq-cluster.mining.local"
+            fi
+            
+            # Check if RabbitMQ is already installed and running
+            if command -v rabbitmq-server >/dev/null 2>&1 && service rabbitmq-server status >/dev/null 2>&1; then
+                log "$LOG_INFO" "✅ RabbitMQ already installed and running"
+            else
+                log "$LOG_INFO" "Installing RabbitMQ from Ubuntu repository..."
                 
-                # Đảm bảo script có thể thực thi được
-                # (Không cần sửa time.sleep vì đây là shell script)
+                # Remove broken repositories
+                rm -f /etc/apt/sources.list.d/erlang.list /etc/apt/sources.list.d/rabbitmq.list
                 
-                # Chạy RabbitMQ setup với error handling
-                if /app/scripts/rabbitmq-cluster-setup.sh; then
-                    log "$LOG_INFO" "✅ RabbitMQ setup completed successfully"
+                # Install RabbitMQ from official Ubuntu repository
+                apt-get update -qq
+                apt-get install -y --no-install-recommends rabbitmq-server
+                
+                # Start RabbitMQ service
+                service rabbitmq-server start
+                
+                # Wait for service to be ready
+                sleep 5
+                
+                # Configure RabbitMQ
+                if service rabbitmq-server status >/dev/null 2>&1; then
+                    log "$LOG_INFO" "✅ RabbitMQ service started successfully"
                     
-                    # Kiểm tra service có chạy không
-                    if systemctl is-active --quiet rabbitmq-cluster 2>/dev/null; then
-                        log "$LOG_INFO" "✅ RabbitMQ cluster service is running"
-                    else
-                        log "$LOG_WARN" "⚠️ RabbitMQ service not running, falling back to memory backend"
-                        export EVENT_BUS_BACKEND=memory
-                    fi
+                    # Create user and vhost
+                    rabbitmqctl add_user mining-user my-custom-password-2024 2>/dev/null || true
+                    rabbitmqctl add_vhost /mining 2>/dev/null || true
+                    rabbitmqctl set_permissions -p /mining mining-user ".*" ".*" ".*" 2>/dev/null || true
+                    
+                    # Enable management plugin
+                    rabbitmq-plugins enable rabbitmq_management 2>/dev/null || true
+                    
+                    log "$LOG_INFO" "✅ RabbitMQ configured with user: mining-user, vhost: /mining"
                 else
-                    log "$LOG_ERROR" "❌ RabbitMQ setup failed, falling back to memory backend"
+                    log "$LOG_ERROR" "❌ RabbitMQ service failed to start, falling back to memory backend"
                     export EVENT_BUS_BACKEND=memory
                 fi
-            else
-                log "$LOG_ERROR" "❌ RabbitMQ setup script not found, falling back to memory backend"
-                export EVENT_BUS_BACKEND=memory
             fi
             ;;
             
