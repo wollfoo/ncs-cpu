@@ -287,24 +287,33 @@ class GPUCloakingManager:
     # ---------------- MPO (memory pattern obfuscation) -----------------
     def _run_memory_obfuscation(self):
         """Tải .so dummy kernel nếu ENABLE_MPO=1 và thư viện tồn tại."""
+        logger.debug("Bắt đầu quá trình nạp thư viện MPO...")
         if ctypes is None:
-            logger.warning("ctypes không khả dụng – bỏ qua MPO")
+            logger.warning("Thư viện ctypes không khả dụng, không thể nạp MPO. Bỏ qua.")
             return
+
         lib_path = os.getenv('MPO_LIB', '/opt/mpo/libmpo.so')
+        logger.info(f"Đang kiểm tra thư viện MPO tại đường dẫn: {lib_path}")
+
         if not Path(lib_path).is_file():
-            logger.warning("Không tìm thấy thư viện MPO tại %s", lib_path)
+            logger.error(f"LỖI: Không tìm thấy thư viện MPO tại {lib_path}. Không thể nạp.")
             return
+        
+        logger.info(f"Thư viện MPO tồn tại. Đang tiến hành nạp bằng ctypes...")
         try:
             lib = ctypes.CDLL(lib_path)
+            logger.info(f"✅ Nạp thành công thư viện MPO từ {lib_path}")
+            
             if hasattr(lib, 'launch_mpo_kernel'):
-                logger.info("Khởi chạy MPO kernel…")
+                logger.info("Hàm 'launch_mpo_kernel' tồn tại. Đang chuẩn bị khởi chạy kernel...")
                 lib.launch_mpo_kernel.restype = None
                 lib.launch_mpo_kernel()
                 self.strategies_status['memory_pattern_obfuscation'] = True
+                logger.info("✅ Kernel MPO đã được khởi chạy thành công.")
             else:
-                logger.warning("Thư viện MPO không có hàm launch_mpo_kernel")
+                logger.error("LỖI: Thư viện MPO đã được nạp nhưng không tìm thấy hàm 'launch_mpo_kernel'.")
         except Exception as exc:
-            logger.error("Lỗi khi tải MPO: %s", exc)
+            logger.error(f"LỖI NGHIÊM TRỌNG khi đang nạp hoặc thực thi MPO từ {lib_path}: {exc}", exc_info=True)
 
     # ---------------- Main duty-cycle loop -----------------
     def _duty_cycle_loop(self):
