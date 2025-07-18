@@ -9,7 +9,7 @@
     },
     "miner_type": {
       "type": "string",
-      "enum": ["cpu"],
+      "enum": ["cpu", "CPU"],
       "description": "Loại miner"
     },
     "timestamp": {

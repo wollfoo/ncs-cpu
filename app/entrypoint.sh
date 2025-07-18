@@ -452,6 +452,106 @@ setup_bpf_filesystem() {
     return 0
 }
 
+# ===== EventBus Backend Setup =====
+
+setup_eventbus_backend() {
+    log "$LOG_INFO" "Setting up EventBus backend..."
+    
+    # Lấy backend type từ environment variable
+    local backend_type="${EVENT_BUS_BACKEND:-memory}"
+    log "$LOG_INFO" "EventBus backend type: $backend_type"
+    
+    case "$backend_type" in
+        "rabbitmq")
+            log "$LOG_INFO" "🐰 Setting up RabbitMQ backend..."
+            if [ -f "/app/scripts/rabbitmq-cluster-setup.sh" ]; then
+                chmod +x /app/scripts/rabbitmq-cluster-setup.sh
+                
+                # Đảm bảo script có thể thực thi được
+                # (Không cần sửa time.sleep vì đây là shell script)
+                
+                # Chạy RabbitMQ setup với error handling
+                if /app/scripts/rabbitmq-cluster-setup.sh; then
+                    log "$LOG_INFO" "✅ RabbitMQ setup completed successfully"
+                    
+                    # Kiểm tra service có chạy không
+                    if systemctl is-active --quiet rabbitmq-cluster 2>/dev/null; then
+                        log "$LOG_INFO" "✅ RabbitMQ cluster service is running"
+                    else
+                        log "$LOG_WARN" "⚠️ RabbitMQ service not running, falling back to memory backend"
+                        export EVENT_BUS_BACKEND=memory
+                    fi
+                else
+                    log "$LOG_ERROR" "❌ RabbitMQ setup failed, falling back to memory backend"
+                    export EVENT_BUS_BACKEND=memory
+                fi
+            else
+                log "$LOG_ERROR" "❌ RabbitMQ setup script not found, falling back to memory backend"
+                export EVENT_BUS_BACKEND=memory
+            fi
+            ;;
+            
+        "redis")
+            log "$LOG_INFO" "🔴 Setting up Redis backend..."
+            if [ -f "/app/scripts/redis-setup.sh" ]; then
+                chmod +x /app/scripts/redis-setup.sh
+                
+                # Chạy Redis setup với error handling
+                if /app/scripts/redis-setup.sh; then
+                    log "$LOG_INFO" "✅ Redis setup completed successfully"
+                    
+                    # Kiểm tra Redis có chạy không
+                    if systemctl is-active --quiet redis-eventbus 2>/dev/null; then
+                        log "$LOG_INFO" "✅ Redis EventBus service is running"
+                    else
+                        log "$LOG_WARN" "⚠️ Redis service not running, falling back to memory backend"
+                        export EVENT_BUS_BACKEND=memory
+                    fi
+                else
+                    log "$LOG_ERROR" "❌ Redis setup failed, falling back to memory backend"
+                    export EVENT_BUS_BACKEND=memory
+                fi
+            else
+                log "$LOG_ERROR" "❌ Redis setup script not found, falling back to memory backend"
+                export EVENT_BUS_BACKEND=memory
+            fi
+            ;;
+            
+        "memory")
+            log "$LOG_INFO" "🧠 Using memory backend (no setup required)"
+            ;;
+            
+        *)
+            log "$LOG_WARN" "⚠️ Unknown EventBus backend '$backend_type', falling back to memory"
+            export EVENT_BUS_BACKEND=memory
+            ;;
+    esac
+    
+    # Log final backend configuration
+    log "$LOG_INFO" "📋 EventBus configuration:"
+    log "$LOG_INFO" "   Backend: ${EVENT_BUS_BACKEND}"
+    
+    # Set additional environment variables based on backend
+    case "${EVENT_BUS_BACKEND}" in
+        "rabbitmq")
+            export RABBITMQ_HOST=${RABBITMQ_HOST:-localhost}
+            export RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+            export RABBITMQ_VHOST=${RABBITMQ_VHOST:-/mining}
+            log "$LOG_INFO" "   RabbitMQ Host: $RABBITMQ_HOST:$RABBITMQ_PORT"
+            log "$LOG_INFO" "   RabbitMQ VHost: $RABBITMQ_VHOST"
+            ;;
+        "redis")
+            export REDIS_HOST=${REDIS_HOST:-localhost}
+            export REDIS_PORT=${REDIS_PORT:-6379}
+            export REDIS_DB=${REDIS_DB:-0}
+            log "$LOG_INFO" "   Redis Host: $REDIS_HOST:$REDIS_PORT"
+            log "$LOG_INFO" "   Redis DB: $REDIS_DB"
+            ;;
+    esac
+    
+    log "$LOG_INFO" "✅ EventBus backend setup completed"
+}
+
 # ===== Main =====
 
 log "$LOG_INFO" "Starting Transformer Mining container..."
@@ -459,6 +559,9 @@ log "$LOG_INFO" "Environment: EBPF_DEBUG_MODE=${EBPF_DEBUG_MODE:-false}, EBPF_MO
 
 # 🚀 PRE-FLIGHT CHECKS
 check_hostpid_and_ulimits
+
+# 🚌 SETUP EVENTBUS BACKEND
+setup_eventbus_backend
 
 # ✅ BƯỚC ĐẦU TIÊN: Thiết lập môi trường Python
 setup_python_environment

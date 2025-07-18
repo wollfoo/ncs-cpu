@@ -9,7 +9,7 @@
     },
     "miner_type": {
       "type": "string",
-      "enum": ["gpu"],
+      "enum": ["gpu", "GPU"],
       "description": "Loại miner"
     },
     "timestamp": {

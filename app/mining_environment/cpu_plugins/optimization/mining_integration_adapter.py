@@ -302,6 +302,40 @@ class MiningIntegrationAdapter:
             self.logger.error(f"Failed to apply throttling: {e}")
             return False
     
+    def register_external_process(self, pid: int) -> bool:
+        """
+        Register external ml-inference process with mining adapter.
+        
+        Args:
+            pid: Process ID of external process
+            
+        Returns:
+            bool: True if successfully registered, False otherwise
+        """
+        try:
+            self.logger.info(f"📝 Registering external process PID={pid} with mining adapter")
+            
+            # Store external process PID for monitoring
+            if not hasattr(self, 'external_processes'):
+                self.external_processes = []
+            
+            self.external_processes.append(pid)
+            
+            # Enable monitoring for external process
+            if self.workload_distributor:
+                try:
+                    self.workload_distributor.register_external_process(pid)
+                    self.logger.info(f"✅ Registered PID={pid} with workload distributor")
+                except Exception as e:
+                    self.logger.warning(f"Failed to register PID with workload distributor: {e}")
+            
+            self.logger.info(f"🎯 Successfully registered external process PID={pid}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to register external process PID={pid}: {e}")
+            return False
+
     def get_performance_metrics(self) -> Optional[PerformanceMetrics]:
         """Get current performance metrics"""
         if not self.is_initialized:

