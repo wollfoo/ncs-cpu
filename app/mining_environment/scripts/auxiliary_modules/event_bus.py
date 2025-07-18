@@ -84,20 +84,190 @@ class RedisEventBusBackend(EventBusBackend):
     
     def __init__(self, logger: logging.Logger | None = None) -> None:
         self._logger = logger or logging.getLogger(__name__)
-        # TODO: Implement Redis connection và pub/sub logic
-        raise NotImplementedError("Redis backend sẽ được implement trong Phase 2-4")
+        self._redis_client = None
+        self._pubsub = None
+        self._listener_thread = None
+        self._stop_listening = False
+        self._lock = threading.RLock()
+        self._subscribers: DefaultDict[str, List[Callable[[Dict[str, Any]], None]]] = defaultdict(list)
+        
+        # Redis connection configuration
+        self._redis_config = {
+            'host': os.getenv('REDIS_HOST', 'localhost'),
+            'port': int(os.getenv('REDIS_PORT', '6379')),
+            'db': int(os.getenv('REDIS_DB', '0')),
+            'password': os.getenv('REDIS_PASSWORD', None),
+            'decode_responses': True,
+            'socket_timeout': 5.0,
+            'socket_connect_timeout': 5.0,
+            'retry_on_timeout': True,
+            'health_check_interval': 30
+        }
+        
+        # Retry configuration
+        self._retry_config = {
+            'max_retries': 3,
+            'base_delay': 0.1,
+            'max_delay': 1.0,
+            'backoff_factor': 2.0
+        }
+        
+        # Initialize Redis connection
+        self._initialize_redis()
+    
+    def _initialize_redis(self) -> None:
+        """Khởi tạo kết nối Redis với retry logic."""
+        try:
+            import redis
+            self._redis_client = redis.Redis(**self._redis_config)
+            
+            # Test connection
+            self._redis_client.ping()
+            self._logger.info("Redis connection established successfully")
+            
+            # Initialize pubsub
+            self._pubsub = self._redis_client.pubsub()
+            
+        except ImportError:
+            raise ImportError("Redis package not installed. Run: pip install redis>=4.5.0")
+        except Exception as e:
+            self._logger.error(f"Failed to initialize Redis connection: {e}")
+            raise
+    
+    def _retry_operation(self, operation, *args, **kwargs):
+        """Retry logic cho Redis operations với exponential backoff."""
+        retry_count = 0
+        delay = self._retry_config['base_delay']
+        
+        while retry_count < self._retry_config['max_retries']:
+            try:
+                return operation(*args, **kwargs)
+            except Exception as e:
+                retry_count += 1
+                if retry_count >= self._retry_config['max_retries']:
+                    self._logger.error(f"Redis operation failed after {retry_count} retries: {e}")
+                    raise
+                
+                self._logger.warning(f"Redis operation failed (attempt {retry_count}): {e}. Retrying in {delay}s...")
+                time.sleep(delay)
+                delay = min(delay * self._retry_config['backoff_factor'], self._retry_config['max_delay'])
     
     def publish(self, topic: str, payload: Dict[str, Any]) -> None:
-        raise NotImplementedError("Redis backend sẽ được implement trong Phase 2-4")
+        """Gửi sự kiện tới Redis channel với retry logic."""
+        if not self._redis_client:
+            raise RuntimeError("Redis client not initialized")
+        
+        try:
+            # Serialize payload to JSON
+            message = json.dumps(payload)
+            
+            # Publish với retry logic
+            def _publish_operation():
+                published = self._redis_client.publish(topic, message)
+                if published == 0:
+                    self._logger.warning(f"No subscribers for topic '{topic}'")
+                return published
+            
+            self._retry_operation(_publish_operation)
+            self._logger.debug(f"Published message to topic '{topic}': {payload}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to publish message to topic '{topic}': {e}")
+            raise
     
     def subscribe(self, topic: str, callback: Callable[[Dict[str, Any]], None]) -> None:
-        raise NotImplementedError("Redis backend sẽ được implement trong Phase 2-4")
+        """Đăng ký callback cho Redis channel."""
+        with self._lock:
+            if callback not in self._subscribers[topic]:
+                self._subscribers[topic].append(callback)
+                
+                # Subscribe to Redis channel if first subscriber
+                if len(self._subscribers[topic]) == 1:
+                    try:
+                        self._pubsub.subscribe(topic)
+                        self._logger.debug(f"Subscribed to Redis channel '{topic}'")
+                    except Exception as e:
+                        self._logger.error(f"Failed to subscribe to Redis channel '{topic}': {e}")
+                        raise
     
     def start_listening(self) -> None:
-        raise NotImplementedError("Redis backend sẽ được implement trong Phase 2-4")
+        """Khởi động background listener thread."""
+        if self._listener_thread and self._listener_thread.is_alive():
+            self._logger.warning("Listener thread already running")
+            return
+        
+        self._stop_listening = False
+        self._listener_thread = threading.Thread(target=self._listen_for_messages, daemon=True)
+        self._listener_thread.start()
+        self._logger.info("Redis listener thread started")
+    
+    def _listen_for_messages(self) -> None:
+        """Background thread để lắng nghe Redis messages."""
+        try:
+            while not self._stop_listening:
+                try:
+                    # Non-blocking get message with timeout
+                    message = self._pubsub.get_message(timeout=1.0)
+                    
+                    if message and message['type'] == 'message':
+                        topic = message['channel']
+                        data = message['data']
+                        
+                        try:
+                            # Deserialize JSON payload
+                            payload = json.loads(data)
+                            
+                            # Call all subscribers for this topic
+                            callbacks = []
+                            with self._lock:
+                                callbacks = list(self._subscribers.get(topic, []))
+                            
+                            for callback in callbacks:
+                                try:
+                                    callback(payload)
+                                except Exception as e:
+                                    self._logger.error(f"Error calling callback for topic '{topic}': {e}")
+                                    
+                        except json.JSONDecodeError as e:
+                            self._logger.error(f"Invalid JSON in message from topic '{topic}': {e}")
+                            
+                except Exception as e:
+                    if not self._stop_listening:
+                        self._logger.error(f"Error in Redis listener: {e}")
+                        time.sleep(1)  # Avoid tight loop on persistent errors
+                        
+        except Exception as e:
+            self._logger.error(f"Fatal error in Redis listener thread: {e}")
     
     def stop(self) -> None:
-        raise NotImplementedError("Redis backend sẽ được implement trong Phase 2-4")
+        """Dừng Redis backend và cleanup resources."""
+        self._stop_listening = True
+        
+        # Wait for listener thread to finish
+        if self._listener_thread and self._listener_thread.is_alive():
+            self._listener_thread.join(timeout=5.0)
+            if self._listener_thread.is_alive():
+                self._logger.warning("Listener thread did not stop gracefully")
+        
+        # Close pubsub connection
+        if self._pubsub:
+            try:
+                self._pubsub.close()
+            except Exception as e:
+                self._logger.error(f"Error closing pubsub connection: {e}")
+        
+        # Close Redis client
+        if self._redis_client:
+            try:
+                self._redis_client.close()
+            except Exception as e:
+                self._logger.error(f"Error closing Redis client: {e}")
+        
+        # Clear subscribers
+        with self._lock:
+            self._subscribers.clear()
+        
+        self._logger.info("Redis backend stopped")
 
 
 class KafkaEventBusBackend(EventBusBackend):
