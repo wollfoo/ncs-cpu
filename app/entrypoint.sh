@@ -457,9 +457,9 @@ setup_bpf_filesystem() {
 setup_eventbus_backend() {
     log "$LOG_INFO" "Setting up EventBus backend..."
     
-    # Lấy backend type từ environment variable
-    local backend_type="${EVENT_BUS_BACKEND:-memory}"
-    log "$LOG_INFO" "EventBus backend type: $backend_type"
+    # Lấy backend type từ environment variable - FORCE MEMORY BACKEND DUE TO RABBITMQ ISSUES
+    local backend_type="memory"  # Force memory backend to avoid RabbitMQ connection issues
+    log "$LOG_INFO" "EventBus backend type: $backend_type (forced to memory for stability)"
     
     case "$backend_type" in
         "rabbitmq")
@@ -548,7 +548,8 @@ setup_eventbus_backend() {
     
     # Log final backend configuration
     log "$LOG_INFO" "📋 EventBus configuration:"
-    log "$LOG_INFO" "   Backend: ${EVENT_BUS_BACKEND}"
+    log "$LOG_INFO" "   Backend: memory (forced for stability)"
+    export EVENT_BUS_BACKEND=memory  # Ensure environment variable is set correctly
     
     # Set additional environment variables based on backend
     case "${EVENT_BUS_BACKEND}" in

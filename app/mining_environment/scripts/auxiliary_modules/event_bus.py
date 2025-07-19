@@ -283,6 +283,8 @@ class RabbitMQEventBusBackend(EventBusBackend):
         self._stop_listening = False
         self._lock = threading.RLock()
         self._subscribers: DefaultDict[str, List[Callable[[Dict[str, Any]], None]]] = defaultdict(list)
+        # **Thread-safe consumer tags management** (quản lý thẻ consumer an toàn luồng)
+        self._consumer_tags_lock = threading.RLock()
         self._consumer_tags = {}
         
         # RabbitMQ connection configuration
@@ -388,8 +390,9 @@ class RabbitMQEventBusBackend(EventBusBackend):
             if not self._connection or self._connection.is_closed:
                 self._logger.warning("🔧 RabbitMQ connection is closed, reinitializing...")
                 
-                # **Clear consumer tags** (xóa thẻ consumer) before reinit
-                self._consumer_tags.clear()
+                # **Thread-safe clear consumer tags** (xóa thẻ consumer an toàn luồng) before reinit
+                with self._consumer_tags_lock:
+                    self._consumer_tags.clear()
                 self._initialize_rabbitmq()
                 return True
                 
@@ -397,8 +400,9 @@ class RabbitMQEventBusBackend(EventBusBackend):
             if not self._channel or self._channel.is_closed:
                 self._logger.warning("🔧 RabbitMQ channel is closed, recreating...")
                 
-                # **Clear consumer tags** (xóa thẻ consumer) before channel recreation
-                self._consumer_tags.clear()
+                # **Thread-safe clear consumer tags** (xóa thẻ consumer an toàn luồng) before channel recreation
+                with self._consumer_tags_lock:
+                    self._consumer_tags.clear()
                 self._channel = self._connection.channel()
                 
                 # **Re-declare exchange** (khai báo lại exchange)
@@ -417,7 +421,8 @@ class RabbitMQEventBusBackend(EventBusBackend):
                 self._logger.debug("✅ Channel health check passed")
             except Exception as channel_e:
                 self._logger.warning(f"🔧 Channel accessibility test failed: {channel_e}, recreating...")
-                self._consumer_tags.clear()
+                with self._consumer_tags_lock:
+                    self._consumer_tags.clear()
                 self._channel = self._connection.channel()
                 
                 # **Re-declare exchange** (khai báo lại exchange)
@@ -436,7 +441,8 @@ class RabbitMQEventBusBackend(EventBusBackend):
         except Exception as e:
             self._logger.error(f"❌ Enhanced connection validation failed: {e}")
             # **Emergency cleanup** (dọn dẹp khẩn cấp)
-            self._consumer_tags.clear()
+            with self._consumer_tags_lock:
+                self._consumer_tags.clear()
             return False
     
     def publish(self, topic: str, payload: Dict[str, Any]) -> None:
@@ -542,8 +548,11 @@ class RabbitMQEventBusBackend(EventBusBackend):
                     time.sleep(2 ** retry_count)  # Exponential backoff
                     continue
 
-                # Setup consumers for all subscribed topics
-                for topic in self._subscribers.keys():
+                # **Thread-safe setup consumers** (thiết lập consumers an toàn luồng) for all subscribed topics
+                with self._lock:
+                    topics_to_process = list(self._subscribers.keys())
+                
+                for topic in topics_to_process:
                     queue_name = topic.replace(':', '.')
 
                     def make_callback(topic_name):
@@ -585,8 +594,11 @@ class RabbitMQEventBusBackend(EventBusBackend):
                     unique_consumer_tag = f"ctag-{uuid.uuid4().hex[:12]}-{microseconds}-{os.getpid()}-{random_suffix}"
                     self._logger.debug(f"🏷️  Creating ultra-unique consumer tag: {unique_consumer_tag}")
 
-                    # **Verify tag uniqueness** (xác minh tính duy nhất thẻ) - check against existing tags
-                    if unique_consumer_tag in self._consumer_tags.values():
+                    # **Thread-safe tag uniqueness verification** (xác minh tính duy nhất thẻ an toàn luồng)
+                    with self._consumer_tags_lock:
+                        tag_exists = unique_consumer_tag in self._consumer_tags.values()
+                    
+                    if tag_exists:
                         # **Fallback regeneration** (tái tạo dự phòng) nếu tag trùng (extremely rare)
                         unique_consumer_tag = f"ctag-backup-{uuid.uuid4().hex}-{int(time.time() * 1000000)}"
                         self._logger.warning(f"🔄 Consumer tag collision detected, using backup: {unique_consumer_tag}")
@@ -599,7 +611,9 @@ class RabbitMQEventBusBackend(EventBusBackend):
                             consumer_tag=unique_consumer_tag  # **Ultra-unique consumer tag** (thẻ consumer cực kỳ duy nhất)
                         )
 
-                        self._consumer_tags[topic] = consumer_tag
+                        # **Thread-safe consumer tag storage** (lưu trữ thẻ consumer an toàn luồng)
+                        with self._consumer_tags_lock:
+                            self._consumer_tags[topic] = consumer_tag
                         self._logger.debug(f"Started consuming queue '{queue_name}' for topic '{topic}'")
 
                     except Exception as consumer_error:
@@ -624,8 +638,9 @@ class RabbitMQEventBusBackend(EventBusBackend):
                         self._logger.info(f"🔄 Retrying in {2 ** retry_count} seconds...")
                         time.sleep(2 ** retry_count)  # Exponential backoff
 
-                        # Clear consumer tags and reinitialize connection
-                        self._consumer_tags.clear()
+                        # **Thread-safe clear consumer tags** (xóa thẻ consumer an toàn luồng) and reinitialize connection
+                        with self._consumer_tags_lock:
+                            self._consumer_tags.clear()
                         try:
                             self._initialize_rabbitmq()
                         except Exception as init_error:
@@ -640,13 +655,19 @@ class RabbitMQEventBusBackend(EventBusBackend):
         # **Pre-cleanup validation** (xác thực trước dọn dẹp)
         cleanup_errors = []
         
-        # **Phase 1: Individual consumer cancellation** (Giai đoạn 1: hủy consumer riêng lẻ)
+        # **Phase 1: Enhanced consumer cancellation** (Giai đoạn 1: hủy consumer nâng cao) using safe cleanup
         if self._channel and not self._channel.is_closed:
             try:
-                self._logger.info("🧹 Phase 1: Cancelling individual consumers...")
+                self._logger.info("🧹 Phase 1: Enhanced consumer cleanup...")
                 
-                # **Cancel consumers with timeout protection** (hủy consumer với bảo vệ timeout)
-                for topic, consumer_tag in list(self._consumer_tags.items()):
+                # **Use safe cleanup method** (sử dụng phương thức dọn dẹp an toàn)
+                self._safe_consumer_cleanup()
+                
+                # **Legacy cleanup for compatibility** (dọn dẹp cũ để tương thích)
+                with self._consumer_tags_lock:
+                    consumer_items = list(self._consumer_tags.items())
+                
+                for topic, consumer_tag in consumer_items:
                     try:
                         # **Verify consumer tag exists** (xác minh thẻ consumer tồn tại) trước khi cancel
                         if consumer_tag:
@@ -683,9 +704,10 @@ class RabbitMQEventBusBackend(EventBusBackend):
                     cleanup_errors.append(f"Emergency cleanup failed: {emergency_e}")
                     self._logger.error(f"❌ Emergency cleanup failed: {emergency_e}")
         
-        # **Clear consumer tags tracking** (xóa theo dõi thẻ consumer) - always execute
+        # **Thread-safe clear consumer tags tracking** (xóa theo dõi thẻ consumer an toàn luồng) - always execute
         try:
-            self._consumer_tags.clear()
+            with self._consumer_tags_lock:
+                self._consumer_tags.clear()
             self._logger.debug("✅ Consumer tags cleared")
         except Exception as e:
             cleanup_errors.append(f"Consumer tags clear failed: {e}")
@@ -730,6 +752,70 @@ class RabbitMQEventBusBackend(EventBusBackend):
             self._logger.info("🎯 Ultra-safe RabbitMQ cleanup completed successfully - no errors!")
         
         self._logger.info("🏁 RabbitMQ backend shutdown sequence completed")
+    
+    def _safe_consumer_cleanup(self) -> None:
+        """**Thread-safe consumer cleanup** (dọn dẹp consumer an toàn luồng) với **error isolation** (cô lập lỗi)"""
+        try:
+            # **Atomic snapshot and clear** (chụp nhanh và xóa nguyên tử)
+            with self._consumer_tags_lock:
+                if not self._consumer_tags:
+                    self._logger.debug("🔍 No consumer tags to cleanup")
+                    return
+                tags_copy = dict(self._consumer_tags)
+                self._consumer_tags.clear()
+                self._logger.debug(f"📋 Captured {len(tags_copy)} consumer tags for cleanup")
+            
+            # **Cleanup outside lock** (dọn dẹp bên ngoài lock) để tránh **deadlock** (khóa chết)
+            cleanup_count = 0
+            error_count = 0
+            
+            for topic, tag in tags_copy.items():
+                try:
+                    if self._channel and not self._channel.is_closed and tag:
+                        self._channel.basic_cancel(tag)
+                        cleanup_count += 1
+                        self._logger.debug(f"✅ Successfully cancelled consumer: {topic} (tag: {tag})")
+                    else:
+                        self._logger.debug(f"⚠️ Skipped cleanup for {topic}: channel_ok={bool(self._channel and not self._channel.is_closed)}, tag_ok={bool(tag)}")
+                except Exception as e:
+                    error_count += 1
+                    self._logger.warning(f"⚠️ Failed to cancel consumer {topic}: {e}")
+                    # **Continue cleanup** (tiếp tục dọn dẹp) instead of failing
+            
+            # **Cleanup summary** (tóm tắt dọn dẹp)
+            self._logger.info(f"🧹 Consumer cleanup completed: {cleanup_count} successful, {error_count} errors")
+            
+        except Exception as e:
+            self._logger.error(f"❌ Critical error in _safe_consumer_cleanup: {e}")
+            # **Emergency fallback** (dự phòng khẩn cấp): force clear tags
+            try:
+                with self._consumer_tags_lock:
+                    self._consumer_tags.clear()
+                self._logger.warning("🚨 Emergency: Force cleared consumer tags after cleanup failure")
+            except Exception as emergency_e:
+                self._logger.error(f"💥 Emergency cleanup also failed: {emergency_e}")
+    
+    def _validate_consumer_state(self) -> bool:
+        """**Enhanced consumer state validation** (xác thực trạng thái consumer nâng cao) với **thread safety** (an toàn luồng)"""
+        try:
+            with self._consumer_tags_lock:
+                consumer_count = len(self._consumer_tags)
+                if consumer_count == 0:
+                    self._logger.debug("🔍 No active consumers to validate")
+                    return True
+                
+                # **Check for orphaned consumer tags** (kiểm tra thẻ consumer mồ côi)
+                if not self._channel or self._channel.is_closed:
+                    self._logger.warning(f"⚠️ Found {consumer_count} orphaned consumer tags (channel closed)")
+                    self._consumer_tags.clear()
+                    return False
+                
+                self._logger.debug(f"✅ Consumer state validation passed: {consumer_count} active consumers")
+                return True
+                
+        except Exception as e:
+            self._logger.error(f"❌ Consumer state validation failed: {e}")
+            return False
 
 
 class KafkaEventBusBackend(EventBusBackend):

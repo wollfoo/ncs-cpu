@@ -2508,16 +2508,20 @@ class CloakStrategyFactory:
         strategy_name: str,
         config: Dict[str, Any],
         logger: logging.Logger,
-        resource_managers: Dict[str, Any]
+        resource_managers: Dict[str, Any],
+        process_type: str = None,
+        strategy_hints: Dict[str, Any] = None
     ) -> Optional[Any]:
         """
-        Tạo một strategy instance. Wrapper cho tương thích ngược.
+        ✅ ENHANCED: Tạo type-aware strategy instance với pre-configuration.
         
         :param strategy_name: Tên chiến lược
         :param config: Cấu hình
         :param logger: Logger
         :param resource_managers: Resource managers
-        :return: Strategy instance hoặc None
+        :param process_type: 'CPU' hoặc 'GPU' process type cho optimization
+        :param strategy_hints: Optional optimization hints
+        :return: Pre-configured strategy instance hoặc None
         """
         # Tạo hoặc lấy ResourceCoordinator instance
         coordinator_key = id(config)
@@ -2548,10 +2552,24 @@ class CloakStrategyFactory:
         
         if strategy_name in strategy_mapping:
             mapped_name = strategy_mapping[strategy_name]
-            return coordinator.strategies.get(mapped_name)
+            strategy = coordinator.strategies.get(mapped_name)
+        else:
+            # Thử tìm trực tiếp
+            strategy = coordinator.strategies.get(strategy_name)
         
-        # Thử tìm trực tiếp
-        return coordinator.strategies.get(strategy_name)
+        # ✅ TYPE-AWARE CONFIGURATION
+        if strategy and process_type:
+            try:
+                # Pre-configure strategy nếu support type-aware config
+                if hasattr(strategy, 'configure_for_process_type'):
+                    strategy.configure_for_process_type(process_type, strategy_hints)
+                    logger.info(f"🎯 [Factory] Strategy '{strategy_name}' pre-configured for {process_type}")
+                else:
+                    logger.debug(f"⚠️ [Factory] Strategy '{strategy_name}' doesn't support type-aware config")
+            except Exception as e:
+                logger.error(f"❌ [Factory] Failed to configure strategy '{strategy_name}': {e}")
+        
+        return strategy
     
     @staticmethod
     def get_available_strategies() -> List[str]:

@@ -377,8 +377,6 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     stop_event.set()
     return None
 
-
-
 def manage_cpu_miner(privileged_mgr, max_retries: int = 5):
     """
     Quản lý **lifecycle** (vòng đời) của **CPU miner** (máy khai thác CPU) - chỉ khởi động và giám sát process.
