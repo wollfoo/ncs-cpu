@@ -257,6 +257,11 @@ class ResourceManager(IResourceManager):
 
         # Đăng ký event 'resource_adjustment' (nếu cần)
         self.event_bus.subscribe('resource_adjustment', self.handle_resource_adjustment)
+        
+        # ✅ PHASE 3 REFACTORING: Thêm missing subscriber cho new_process_detected
+        self.event_bus.subscribe('new_process_detected', self.handle_new_process_detected)
+        # New standardized format
+        self.event_bus.subscribe('process:detected', self.handle_new_process_detected)
 
     def is_gpu_initialized(self) -> bool:
         """
@@ -269,20 +274,109 @@ class ResourceManager(IResourceManager):
         Handler cho event 'resource_adjustment'.
         """
         self.logger.debug(f"Nhận event resource_adjustment: {event_data}")
+        
+        # ✅ PHASE 3 REFACTORING: Hoàn thiện Event Consistency
+        # Thêm missing publisher cho resource_adjustment event
+        try:
+            # Process the resource adjustment
+            pid = event_data.get('pid')
+            adjustment_type = event_data.get('type', 'unknown')
+            
+            self.logger.info(f"Processing resource adjustment for PID={pid}, type={adjustment_type}")
+            
+            # Publish completion event với new standardized naming
+            completion_payload = {
+                'pid': pid,
+                'adjustment_type': adjustment_type,
+                'status': 'completed',
+                'timestamp': time.time(),
+                'processed_by': 'ResourceManager'
+            }
+            
+            # New standardized format
+            self.event_bus.publish('resource:adjustment_completed', completion_payload)
+            # Legacy format for backward compatibility
+            self.event_bus.publish('resource_adjustment_completed', completion_payload)
+            
+            self.logger.info(f"✅ Published resource adjustment completion event for PID={pid}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error in resource adjustment processing: {e}")
+            # Publish error event
+            error_payload = {
+                'pid': event_data.get('pid'),
+                'status': 'error',
+                'error': str(e),
+                'timestamp': time.time()
+            }
+            self.event_bus.publish('resource:adjustment_error', error_payload)
+
+    def handle_new_process_detected(self, event_data: Dict[str, Any]):
+        """
+        Handler cho event 'new_process_detected'.
+        ✅ PHASE 3 REFACTORING: Thêm missing subscriber để hoàn thiện Event Consistency
+        """
+        try:
+            pid = event_data.get('pid')
+            process_name = event_data.get('name', 'unknown')
+            is_gpu = event_data.get('is_gpu', False)
+            
+            self.logger.info(f"🔍 [NEW-PROCESS] Detected new process: {process_name} (PID={pid}, GPU={is_gpu})")
+            
+            # Validate process still exists
+            if not psutil.pid_exists(pid):
+                self.logger.warning(f"⚠️ [NEW-PROCESS] Process PID={pid} no longer exists, skipping")
+                return
+            
+            # Log process details for monitoring
+            try:
+                proc = psutil.Process(pid)
+                cpu_percent = proc.cpu_percent()
+                memory_mb = proc.memory_info().rss / (1024 * 1024)
+                
+                self.logger.info(f"📊 [NEW-PROCESS] Process stats: CPU={cpu_percent:.1f}%, Memory={memory_mb:.1f}MB")
+                
+                # Trigger additional monitoring if needed
+                if is_gpu and self.is_gpu_initialized():
+                    gpu_usage = self.shared_resource_manager.get_gpu_usage_percent(pid)
+                    self.logger.info(f"🎮 [NEW-PROCESS] GPU usage: {gpu_usage:.1f}%")
+                
+            except psutil.NoSuchProcess:
+                self.logger.warning(f"⚠️ [NEW-PROCESS] Process PID={pid} disappeared during monitoring")
+            except Exception as e:
+                self.logger.error(f"❌ [NEW-PROCESS] Error monitoring process PID={pid}: {e}")
+            
+            # Acknowledge the detection
+            ack_payload = {
+                'original_pid': pid,
+                'acknowledged_by': 'ResourceManager',
+                'timestamp': time.time(),
+                'action_taken': 'monitoring_enabled'
+            }
+            
+            # Publish acknowledgment với standardized naming
+            self.event_bus.publish('process:detection_acknowledged', ack_payload)
+            self.logger.info(f"✅ [NEW-PROCESS] Acknowledged detection of PID={pid}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error handling new_process_detected event: {e}")
 
     def _setup_eventbus_subscriptions(self):
         """Setup EventBus subscriptions cho mining events - PID Propagation Flow Step 2"""
         try:
-            # Subscribe to CPU mining events
-            self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
+            # ✅ PHASE 2 REFACTORING: Migrate to new Event Naming Conventions
+            # Subscribe to new standardized mining events (domain:action pattern)
+            self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
+            self.event_bus.subscribe('mining:gpu_started', self._on_gpu_mining_event)
             
-            # Subscribe to GPU mining events
+            # Backward compatibility: Keep legacy subscriptions during transition period
+            self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
             self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
             
             # Start EventBus listener
             self.event_bus.start_listening()
             
-            self.logger.info("✅ EventBus subscriptions established for mining events")
+            self.logger.info("✅ EventBus subscriptions established for mining events (new + legacy formats)")
             
         except Exception as e:
             self.logger.error(f"❌ Failed to setup EventBus subscriptions: {e}")
@@ -391,12 +485,18 @@ class ResourceManager(IResourceManager):
             self.process_states[pid] = "cloaking"
             
             # Gửi event thông báo có process mới (theo blueprint)
-            self.event_bus.publish('new_process_detected', {
+            # ✅ PHASE 3 REFACTORING: Chuẩn hóa event naming cho new_process_detected
+            process_payload = {
                 'pid': pid,
                 'name': name,
                 'is_gpu': is_gpu,
                 'timestamp': time.time()
-            })
+            }
+            
+            # New standardized format
+            self.event_bus.publish('process:detected', process_payload)
+            # Legacy format for backward compatibility
+            self.event_bus.publish('new_process_detected', process_payload)
             
             self.logger.info(f"✅ Đã enqueue cloaking cho {name} (PID={pid}) - {'GPU' if is_gpu else 'CPU'} queue")
             

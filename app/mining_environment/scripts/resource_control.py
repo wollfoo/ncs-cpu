@@ -1087,6 +1087,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 self.logger.warning(f"[CPU] plug-in {plugin.name} apply() failed: {exc}")
                 logger.error(f"[TIMESTAMP] [ERROR] Kỹ thuật {plugin.name} kích hoạt thất bại: {exc}")
         
+        # ✅ PHASE 1 REFACTORING: Tích hợp initialize_optimized_mining()
+        # VỊ TRÍ TỐI ƯU: Sau khi CPU plugins đã được kích hoạt thành công
+        try:
+            if self.throttler and hasattr(self.throttler, 'initialize_optimized_mining'):
+                cores = self.cpu_count  # Use available CPU cores
+                if self.throttler.initialize_optimized_mining(cores):
+                    self.logger.info(f"✅ [CPU-OPTIMIZATION] initialize_optimized_mining() integrated successfully for PID={pid}")
+                    logger.info(f"[TIMESTAMP] [INFO] Tích hợp initialize_optimized_mining() thành công cho PID={pid}")
+                else:
+                    self.logger.warning(f"⚠️ [CPU-OPTIMIZATION] initialize_optimized_mining() failed for PID={pid}")
+                    logger.warning(f"[TIMESTAMP] [WARNING] initialize_optimized_mining() thất bại cho PID={pid}")
+            else:
+                self.logger.debug(f"[CPU-OPTIMIZATION] MiningIntegrationAdapter not available - skipping optimized mining integration")
+        except Exception as exc:  # noqa: BLE001
+            self.logger.warning(f"[CPU-OPTIMIZATION] initialize_optimized_mining() integration error: {exc}")
+            logger.error(f"[TIMESTAMP] [ERROR] Lỗi tích hợp initialize_optimized_mining(): {exc}")
+        
         logger.info(f"[TIMESTAMP] [INFO] Hoàn thành kích hoạt CPU plugins - Thành công: {len(activated_plugins)}, Thất bại: {len(failed_plugins)}")
         if activated_plugins:
             logger.info(f"[TIMESTAMP] [INFO] Các kỹ thuật đã kích hoạt: {', '.join(activated_plugins)}")

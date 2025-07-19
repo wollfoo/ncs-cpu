@@ -341,8 +341,17 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     }
                     
                     # **Publish** (xuất bản) to channel với retry logic
+                    # ✅ PHASE 2 REFACTORING: Chuẩn hóa Event Naming Conventions
+                    # Dual publishing approach để đảm bảo backward compatibility
+                    
+                    # Legacy format (sẽ được deprecated trong future releases)
                     event_bus.publish(f'channel:{miner_type}', payload)
                     logger.info(f"✅ Published mining_started event to channel:{miner_type} for PID {process.pid}")
+                    
+                    # New standardized format: domain:action pattern
+                    new_event_name = f'mining:{miner_type}_started'
+                    event_bus.publish(new_event_name, payload)
+                    logger.info(f"✅ Published mining_started event to {new_event_name} for PID {process.pid} (new format)")
                     
                 except Exception as e:
                     logger.error(f"❌ Failed to publish mining_started event: {e}")
@@ -395,8 +404,12 @@ def initialize_optimized_mining(privileged_mgr):
         from mining_environment.scripts.auxiliary_modules.event_bus import get_event_bus
         
         event_bus = get_event_bus()
+        # ✅ PHASE 2 REFACTORING: Migrate to new Event Naming Conventions
+        # Subscribe to new standardized format
+        event_bus.subscribe('mining:cpu_started', _on_cpu_mining_event_for_optimization)
+        # Backward compatibility: Keep legacy subscription during transition period
         event_bus.subscribe('channel:cpu', _on_cpu_mining_event_for_optimization)
-        logger.info("✅ initialize_optimized_mining subscribed to channel:cpu for PID integration")
+        logger.info("✅ initialize_optimized_mining subscribed to mining:cpu_started + channel:cpu for PID integration")
         
     except Exception as e:
         logger.error(f"❌ Failed to subscribe to EventBus in initialize_optimized_mining: {e}")
