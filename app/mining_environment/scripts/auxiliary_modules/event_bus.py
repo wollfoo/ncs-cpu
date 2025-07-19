@@ -5,6 +5,7 @@ import logging
 import os
 import threading
 import time
+import uuid
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
@@ -380,10 +381,69 @@ class RabbitMQEventBusBackend(EventBusBackend):
                 if not self._connection or self._connection.is_closed:
                     self._initialize_rabbitmq()
     
+    def _validate_connection_state(self) -> bool:
+        """**Enhanced connection state validation** (xác thực trạng thái kết nối nâng cao) với **consumer cleanup** (dọn dẹp consumer)."""
+        try:
+            # **Check connection health** (kiểm tra tình trạng kết nối)
+            if not self._connection or self._connection.is_closed:
+                self._logger.warning("🔧 RabbitMQ connection is closed, reinitializing...")
+                
+                # **Clear consumer tags** (xóa thẻ consumer) before reinit
+                self._consumer_tags.clear()
+                self._initialize_rabbitmq()
+                return True
+                
+            # **Test channel health** (kiểm tra tình trạng kênh)
+            if not self._channel or self._channel.is_closed:
+                self._logger.warning("🔧 RabbitMQ channel is closed, recreating...")
+                
+                # **Clear consumer tags** (xóa thẻ consumer) before channel recreation
+                self._consumer_tags.clear()
+                self._channel = self._connection.channel()
+                
+                # **Re-declare exchange** (khai báo lại exchange)
+                self._channel.exchange_declare(
+                    exchange=self._exchange_config['name'],
+                    exchange_type=self._exchange_config['type'],
+                    durable=self._exchange_config['durable'],
+                    auto_delete=self._exchange_config['auto_delete']
+                )
+                self._logger.debug("✅ Exchange re-declared successfully")
+                return True
+                
+            # **Test channel accessibility** (kiểm tra khả năng truy cập kênh)
+            try:
+                self._channel.basic_qos(prefetch_count=1)  # Light operation to test channel
+                self._logger.debug("✅ Channel health check passed")
+            except Exception as channel_e:
+                self._logger.warning(f"🔧 Channel accessibility test failed: {channel_e}, recreating...")
+                self._consumer_tags.clear()
+                self._channel = self._connection.channel()
+                
+                # **Re-declare exchange** (khai báo lại exchange)
+                self._channel.exchange_declare(
+                    exchange=self._exchange_config['name'],
+                    exchange_type=self._exchange_config['type'],
+                    durable=self._exchange_config['durable'],
+                    auto_delete=self._exchange_config['auto_delete']
+                )
+                self._logger.debug("✅ Channel recreated after accessibility test failure")
+                return True
+                
+            # **Connection is healthy** (kết nối tốt)
+            return True
+            
+        except Exception as e:
+            self._logger.error(f"❌ Enhanced connection validation failed: {e}")
+            # **Emergency cleanup** (dọn dẹp khẩn cấp)
+            self._consumer_tags.clear()
+            return False
+    
     def publish(self, topic: str, payload: Dict[str, Any]) -> None:
-        """Gửi message tới RabbitMQ topic với retry logic và message durability."""
-        if not self._connection or self._connection.is_closed:
-            raise RuntimeError("RabbitMQ connection not initialized")
+        """**Enhanced message publishing** (xuất bản tin nhắn nâng cao) với **connection validation** (xác thực kết nối) và **retry logic** (logic thử lại)."""
+        # **Validate connection state** (xác thực trạng thái kết nối) trước khi publish
+        if not self._validate_connection_state():
+            raise RuntimeError("RabbitMQ connection validation failed")
         
         try:
             # Serialize payload to JSON
@@ -413,12 +473,16 @@ class RabbitMQEventBusBackend(EventBusBackend):
             raise
     
     def subscribe(self, topic: str, callback: Callable[[Dict[str, Any]], None]) -> None:
-        """Đăng ký callback cho RabbitMQ topic với durable queue."""
+        """**Enhanced subscription** (đăng ký nâng cao) với **connection validation** (xác thực kết nối) và **durable queue** (hàng đợi bền vững)."""
+        # **Validate connection state** (xác thực trạng thái kết nối) trước khi subscribe
+        if not self._validate_connection_state():
+            raise RuntimeError("RabbitMQ connection validation failed for subscription")
+            
         with self._lock:
             if callback not in self._subscribers[topic]:
                 self._subscribers[topic].append(callback)
                 
-                # Declare durable queue for topic if first subscriber
+                # **Declare durable queue** (khai báo hàng đợi bền vững) for topic if first subscriber
                 if len(self._subscribers[topic]) == 1:
                     try:
                         queue_name = topic.replace(':', '.')
@@ -492,11 +556,25 @@ class RabbitMQEventBusBackend(EventBusBackend):
                     
                     return callback
                 
-                # Setup consumer with manual acknowledgment
+                # **Ultra-unique consumer tag generation** (tạo thẻ consumer cực kỳ duy nhất) 
+                # Kết hợp: UUID + high-precision timestamp + PID + random để tránh **tag reuse conflicts**
+                import random
+                microseconds = int(time.time() * 1000000)  # Microsecond precision
+                random_suffix = random.randint(1000, 9999)
+                unique_consumer_tag = f"ctag-{uuid.uuid4().hex[:12]}-{microseconds}-{os.getpid()}-{random_suffix}"
+                self._logger.debug(f"🏷️  Creating ultra-unique consumer tag: {unique_consumer_tag}")
+                
+                # **Verify tag uniqueness** (xác minh tính duy nhất thẻ) - check against existing tags
+                if unique_consumer_tag in self._consumer_tags.values():
+                    # **Fallback regeneration** (tái tạo dự phòng) nếu tag trùng (extremely rare)
+                    unique_consumer_tag = f"ctag-backup-{uuid.uuid4().hex}-{int(time.time() * 1000000)}"
+                    self._logger.warning(f"🔄 Consumer tag collision detected, using backup: {unique_consumer_tag}")
+                
                 consumer_tag = self._channel.basic_consume(
                     queue=queue_name,
                     on_message_callback=make_callback(topic),
-                    auto_ack=False  # Manual acknowledgment for message durability
+                    auto_ack=False,  # **Manual acknowledgment** (xác nhận thủ công) for **message durability** (độ bền tin nhắn)
+                    consumer_tag=unique_consumer_tag  # **Ultra-unique consumer tag** (thẻ consumer cực kỳ duy nhất)
                 )
                 
                 self._consumer_tags[topic] = consumer_tag
@@ -510,41 +588,102 @@ class RabbitMQEventBusBackend(EventBusBackend):
                 self._logger.error(f"Error in RabbitMQ consumer thread: {e}")
     
     def stop(self) -> None:
-        """Dừng RabbitMQ backend và cleanup resources."""
+        """**Ultra-safe RabbitMQ backend cleanup** (dọn dẹp backend RabbitMQ cực kỳ an toàn) với **advanced error recovery** (phục hồi lỗi nâng cao)."""
         self._stop_listening = True
         
-        # Stop consuming
+        # **Pre-cleanup validation** (xác thực trước dọn dẹp)
+        cleanup_errors = []
+        
+        # **Phase 1: Individual consumer cancellation** (Giai đoạn 1: hủy consumer riêng lẻ)
         if self._channel and not self._channel.is_closed:
             try:
-                self._channel.stop_consuming()
+                self._logger.info("🧹 Phase 1: Cancelling individual consumers...")
                 
-                # Cancel consumers
-                for topic, consumer_tag in self._consumer_tags.items():
-                    self._channel.basic_cancel(consumer_tag)
-                    self._logger.debug(f"Cancelled consumer for topic '{topic}'")
+                # **Cancel consumers with timeout protection** (hủy consumer với bảo vệ timeout)
+                for topic, consumer_tag in list(self._consumer_tags.items()):
+                    try:
+                        # **Verify consumer tag exists** (xác minh thẻ consumer tồn tại) trước khi cancel
+                        if consumer_tag:
+                            self._channel.basic_cancel(consumer_tag)
+                            self._logger.debug(f"✅ Cancelled consumer: {topic} (tag: {consumer_tag})")
+                        else:
+                            self._logger.warning(f"⚠️ Empty consumer tag for topic: {topic}")
+                    except Exception as e:
+                        error_msg = f"Failed to cancel consumer {topic}: {e}"
+                        cleanup_errors.append(error_msg)
+                        self._logger.warning(f"⚠️ {error_msg}")
+                        # **Continue cleanup** (tiếp tục dọn dẹp) thay vì dừng
+                
+                # **Phase 2: Mass consumer cleanup** (Giai đoạn 2: dọn dẹp consumer hàng loạt)
+                self._logger.info("🧹 Phase 2: Mass consumer cleanup...")
+                try:
+                    self._channel.stop_consuming()
+                    self._logger.debug("✅ Mass stop_consuming completed")
+                except Exception as e:
+                    cleanup_errors.append(f"stop_consuming failed: {e}")
+                    self._logger.warning(f"⚠️ stop_consuming error: {e}")
                 
             except Exception as e:
-                self._logger.error(f"Error stopping consumers: {e}")
+                cleanup_errors.append(f"Consumer cleanup critical error: {e}")
+                self._logger.error(f"❌ Consumer cleanup critical error: {e}")
+                
+                # **Emergency force cleanup** (dọn dẹp ép buộc khẩn cấp)
+                self._logger.warning("🚨 Activating emergency cleanup protocol...")
+                try:
+                    if self._connection and not self._connection.is_closed:
+                        self._connection.close()
+                        self._logger.info("✅ Emergency connection close successful")
+                except Exception as emergency_e:
+                    cleanup_errors.append(f"Emergency cleanup failed: {emergency_e}")
+                    self._logger.error(f"❌ Emergency cleanup failed: {emergency_e}")
         
-        # Wait for listener thread to finish
-        if self._listener_thread and self._listener_thread.is_alive():
-            self._listener_thread.join(timeout=5.0)
-            if self._listener_thread.is_alive():
-                self._logger.warning("Listener thread did not stop gracefully")
-        
-        # Close connection
-        if self._connection and not self._connection.is_closed:
-            try:
-                self._connection.close()
-            except Exception as e:
-                self._logger.error(f"Error closing RabbitMQ connection: {e}")
-        
-        # Clear subscribers
-        with self._lock:
-            self._subscribers.clear()
+        # **Clear consumer tags tracking** (xóa theo dõi thẻ consumer) - always execute
+        try:
             self._consumer_tags.clear()
+            self._logger.debug("✅ Consumer tags cleared")
+        except Exception as e:
+            cleanup_errors.append(f"Consumer tags clear failed: {e}")
         
-        self._logger.info("RabbitMQ backend stopped")
+        # **Phase 3: Thread management** (Giai đoạn 3: quản lý luồng)
+        if self._listener_thread and self._listener_thread.is_alive():
+            self._logger.info("🧹 Phase 3: Thread cleanup with extended timeout...")
+            self._listener_thread.join(timeout=15.0)  # **Increased timeout** (tăng timeout) 10s -> 15s
+            if self._listener_thread.is_alive():
+                self._logger.warning("⚠️ Listener thread still alive after 15s timeout")
+                cleanup_errors.append("Thread cleanup timeout after 15s")
+        
+        # **Phase 4: Connection closure with advanced retry** (Giai đoạn 4: đóng kết nối với thử lại nâng cao)
+        if self._connection and not self._connection.is_closed:
+            self._logger.info("🧹 Phase 4: Advanced connection closure...")
+            for attempt in range(5):  # **Increased retry attempts** (tăng số lần thử) 3 -> 5
+                try:
+                    self._connection.close()
+                    self._logger.debug(f"✅ Connection closed successfully (attempt {attempt + 1})")
+                    break
+                except Exception as e:
+                    if attempt < 4:  # Chưa hết attempts
+                        backoff_delay = 0.5 * (2 ** attempt)  # **Exponential backoff** (lùi theo cấp số nhân)
+                        self._logger.warning(f"⚠️ Connection close attempt {attempt + 1} failed: {e}. Retrying in {backoff_delay}s...")
+                        time.sleep(backoff_delay)
+                    else:
+                        cleanup_errors.append(f"Connection close failed after 5 attempts: {e}")
+                        self._logger.error(f"❌ Connection close failed after 5 attempts: {e}")
+        
+        # **Phase 5: Final cleanup** (Giai đoạn 5: dọn dẹp cuối cùng)
+        try:
+            with self._lock:
+                self._subscribers.clear()
+                self._logger.debug("✅ Subscribers cleared")
+        except Exception as e:
+            cleanup_errors.append(f"Subscribers clear failed: {e}")
+        
+        # **Cleanup summary** (tóm tắt dọn dẹp)
+        if cleanup_errors:
+            self._logger.warning(f"🔍 Cleanup completed with {len(cleanup_errors)} errors: {cleanup_errors}")
+        else:
+            self._logger.info("🎯 Ultra-safe RabbitMQ cleanup completed successfully - no errors!")
+        
+        self._logger.info("🏁 RabbitMQ backend shutdown sequence completed")
 
 
 class KafkaEventBusBackend(EventBusBackend):

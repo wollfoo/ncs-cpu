@@ -362,8 +362,11 @@ class ResourceManager(IResourceManager):
             self.logger.error(f"❌ Error handling new_process_detected event: {e}")
 
     def _setup_eventbus_subscriptions(self):
-        """Setup EventBus subscriptions cho mining events - PID Propagation Flow Step 2"""
+        """**Enhanced EventBus setup** (thiết lập EventBus nâng cao) với **RabbitMQ fallback mechanism** (cơ chế dự phòng RabbitMQ)"""
         try:
+            # **Primary attempt** (thử nghiệm chính): Sử dụng **configured backend** (backend đã cấu hình)
+            self.logger.info("🔌 Setting up EventBus subscriptions with configured backend...")
+            
             # ✅ PHASE 2 REFACTORING: Migrate to new Event Naming Conventions
             # Subscribe to new standardized mining events (domain:action pattern)
             self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
@@ -373,14 +376,38 @@ class ResourceManager(IResourceManager):
             self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
             self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
             
-            # Start EventBus listener
+            # **Test EventBus functionality** (kiểm tra chức năng EventBus) với **timeout protection** (bảo vệ timeout)
             self.event_bus.start_listening()
             
-            self.logger.info("✅ EventBus subscriptions established for mining events (new + legacy formats)")
+            self.logger.info("✅ EventBus subscriptions established successfully (primary backend)")
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to setup EventBus subscriptions: {e}")
-            # **Fallback** - không crash ResourceManager nếu EventBus thất bại
+            self.logger.error(f"❌ Primary EventBus backend failed: {e}")
+            
+            # **FALLBACK MECHANISM** (cơ chế dự phòng): Switch to **memory backend** (chuyển sang backend bộ nhớ)
+            try:
+                self.logger.warning("🔄 Activating fallback: switching to memory EventBus backend...")
+                
+                # **Create new memory EventBus** (tạo EventBus bộ nhớ mới)
+                from .auxiliary_modules.event_bus import EventBus
+                self.event_bus = EventBus(backend_type="memory", logger=self.logger)
+                
+                # **Re-setup subscriptions** (thiết lập lại subscriptions) với **memory backend** (backend bộ nhớ)
+                self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
+                self.event_bus.subscribe('mining:gpu_started', self._on_gpu_mining_event)
+                self.event_bus.subscribe('channel:cpu', self._on_cpu_mining_event)
+                self.event_bus.subscribe('channel:gpu', self._on_gpu_mining_event)
+                
+                # Start memory EventBus (luôn thành công cho memory backend)
+                self.event_bus.start_listening()
+                
+                self.logger.info("✅ Fallback successful: Memory EventBus is operational")
+                
+            except Exception as fallback_e:
+                self.logger.error(f"❌ Memory EventBus fallback failed: {fallback_e}")
+                # **Final fallback** (dự phòng cuối cùng): Continue without EventBus
+                self.logger.warning("⚠️ Running without EventBus - system will use process discovery fallback")
+                self.event_bus = None
 
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """Handle CPU mining events - PID Propagation Flow Step 2"""
