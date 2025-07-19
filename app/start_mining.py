@@ -131,7 +131,6 @@ def start_system_manager():
         stop_event.set()
         stop_system_manager()
 
-
 def stop_system_manager():
     logger.info("Đang dừng Resource Manager...")
     try:
@@ -477,7 +476,6 @@ def initialize_optimized_mining(privileged_mgr):
             optimized_integration.cleanup()
             optimized_integration = None
         return False
-
 
 def _on_cpu_mining_event_for_optimization(payload):
     """Handle CPU mining events for OptimizedCalculationChain - PID Propagation Flow Step 3"""
