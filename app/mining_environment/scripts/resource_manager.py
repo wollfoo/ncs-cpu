@@ -382,8 +382,14 @@ class ResourceManager(IResourceManager):
             self.resource_adjustment_queue.put((priority, count_val, task))
             self.process_states[pid] = "cloaking"
             
+            # ✅ ENHANCED: Detailed enqueue_cloaking logging với strategy breakdown
             self.logger.info(f"✅ Enqueued {name} (PID={pid}) for comprehensive {process_type} cloaking")
-            self.logger.info(f"🎯 Applied strategies: {available_strategies}")
+            self.logger.info(f"🎯 Primary strategy: {primary_strategy}")
+            self.logger.info(f"🔧 Additional strategies: {additional_strategies}")
+            self.logger.info(f"📋 Available strategies: {available_strategies}")
+            self.logger.info(f"💡 Strategy hints applied: {strategy_hints}")
+            self.logger.info(f"⚖️ Queue priority: {priority}, count: {count_val}")
+            self.logger.info(f"🧠 Process classification: {process_type}, GPU: {is_gpu}")
             
         except Exception as e:
             self.logger.error(f"Lỗi khi enqueue process {name} (PID={pid}): {e}\n{traceback.format_exc()}")

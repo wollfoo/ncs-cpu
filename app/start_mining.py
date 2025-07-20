@@ -440,8 +440,22 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     logger.error(f"❌ Failed to publish mining_started event: {e}")
                     # **Không dừng tiến trình** nếu EventBus thất bại - **fallback** vẫn hoạt động
                 
+                # ✅ ENHANCED: Ensure log file creation với initial logging
+                logger.info(f"📁 [Mining Log] Creating log file: {miner_log_path}")
+                
                 # **Open log file** (mở tệp log) cho **dual logging** (ghi log kép)
                 log_file = open(miner_log_path, 'ab', buffering=0)
+                
+                # ✅ ENHANCED: Initial log entry để confirm file creation
+                initial_log = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ===== MINING LOG STARTED =====\n"
+                initial_log += f"Process: {process_name} (PID: {process.pid})\n"
+                initial_log += f"Command: {' '.join(mining_command)}\n"
+                initial_log += f"Log File: {miner_log_path}\n"
+                initial_log += f"========================================\n"
+                log_file.write(initial_log.encode('utf-8'))
+                log_file.flush()
+                
+                logger.info(f"✅ [Mining Log] Log file initialized: {miner_log_path}")
                 
                 # **Start dual logging thread** (khởi chạy luồng ghi log kép)
                 log_thread = threading.Thread(
@@ -450,6 +464,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     daemon=True
                 )
                 log_thread.start()
+                logger.info(f"🚀 [Mining Log] Dual logging thread started for {process_name}")
                 
                 # **Start simple log monitoring** (bắt đầu giám sát log đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
                 mining_perf_logger.monitor_process_logs(process_name, str(miner_log_path))
