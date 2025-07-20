@@ -2514,7 +2514,7 @@ class CloakStrategyFactory:
         resource_managers: Dict[str, Any],
         process_type: str = None,
         strategy_hints: Dict[str, Any] = None
-    ) -> Optional[Any]:
+        ) -> Optional[Any]:
         """
         ✅ ENHANCED: Tạo type-aware strategy instance với pre-configuration.
         
