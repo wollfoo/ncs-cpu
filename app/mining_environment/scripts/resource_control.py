@@ -2534,7 +2534,7 @@ class CloakStrategyFactory:
         # Import StrategyType
         from .cloak_strategies import StrategyType
         
-        # Map strategy name cũ sang StrategyType mới
+        # ✅ ENHANCED: Map strategy name cũ sang StrategyType mới cho comprehensive cloaking
         strategy_mapping = {
             'cpu': StrategyType.CPU,
             'gpu': StrategyType.GPU,
@@ -2542,12 +2542,14 @@ class CloakStrategyFactory:
             'disk_io': StrategyType.DISK_IO,
             'cache': StrategyType.CACHE,
             'memory': StrategyType.MEMORY,
+            'thermal_control': StrategyType.THERMAL_CONTROL,  # ✅ NEW
             'cpu_cloaking': StrategyType.CPU,
             'gpu_cloaking': StrategyType.GPU,
             'network_cloaking': StrategyType.NETWORK,
             'disk_io_cloaking': StrategyType.DISK_IO,
             'cache_cloaking': StrategyType.CACHE,
-            'memory_cloaking': StrategyType.MEMORY
+            'memory_cloaking': StrategyType.MEMORY,
+            'thermal_cloaking': StrategyType.THERMAL_CONTROL  # ✅ NEW
         }
         
         if strategy_name in strategy_mapping:

