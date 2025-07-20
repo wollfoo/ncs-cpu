@@ -1,3 +1,4 @@
+
 """
 start_mining.py
 
@@ -145,74 +146,138 @@ def rotate_log_file(log_path, max_size_mb=50):
 
 def dual_logger_thread(process, log_file, process_name, log_lock):
     """
-    **Thread-safe dual logging** (ghi log kép an toàn luồng) - ghi vào **file** (tệp) và **terminal** (thiết bị đầu cuối)
+    **Enhanced thread-safe dual logging** (ghi log kép an toàn luồng nâng cao) - 
+    **Real-time streaming** (truyền dữ liệu thời gian thực) với **hash detection** (phát hiện băm) và **metrics tracking** (theo dõi chỉ số)
     """
+    hash_rates = []  # **Hash rate tracking** (theo dõi tốc độ băm)
+    start_time = time.time()
+    line_count = 0
+    
     try:
         while True:
-            # Sử dụng [select] (cơ chế I/O không chặn) tránh treo khi stdout không sinh dữ liệu
+            # **Non-blocking I/O** (I/O không chặn) với **select** (chọn lọc)
             ready, _, _ = select.select([process.stdout], [], [], 1.0)
             if not ready:
-                # Nếu tiến trình đã kết thúc trong lúc không có dữ liệu → thoát vòng
+                # **Process termination check** (kiểm tra kết thúc tiến trình)
                 if process.poll() is not None:
                     break
                 continue
 
             line = process.stdout.readline()
-            # Khi readline() trả về chuỗi rỗng và process đã kết thúc cũng thoát
+            # **EOF detection** (phát hiện kết thúc file)
             if line == '' and process.poll() is not None:
                 break
                 
-            # **Thread-safe logging** (ghi log an toàn luồng)
-            with log_lock:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                formatted_line = f"[{timestamp}][{process_name}] {line.strip()}"
+            if line:
+                line_count += 1
                 
-                # **Write to file** (ghi vào tệp)
-                log_file.write(f"{formatted_line}\n".encode())
-                log_file.flush()
-                
-                # **Print to terminal** (in ra thiết bị đầu cuối)
-                print(formatted_line)
-                
-                # Kiểm tra và xoay vòng file log (>50MB)
-                try:
-                    if log_file.tell() > 50 * 1024 * 1024:
-                        current_path = log_file.name
-                        log_file.close()
-                        backup_path = f"{current_path}.backup"
-                        if os.path.exists(backup_path):
-                            os.remove(backup_path)
-                        os.rename(current_path, backup_path)
-                        logger.info(f"Log file rotated: {current_path} -> {backup_path}")
-                        # Mở lại file mới
-                        log_file = open(current_path, 'ab', buffering=0)
-                except Exception as rot_err:
-                    logger.warning(f"Không thể xoay vòng log: {rot_err}")
-                
-                # **Extract hash rate** (trích xuất tốc độ băm) from **mining output** (đầu ra khai thác)
-                hash_rate_match = re.search(r'(\d+(?:\.\d+)?)\s*(H/s|KH/s|MH/s|GH/s|TH/s)', line)
-                if hash_rate_match:
-                    hash_rate = float(hash_rate_match.group(1))
-                    unit = hash_rate_match.group(2)
+                # **Thread-safe logging block** (khối ghi log an toàn luồng)
+                with log_lock:
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    runtime = time.time() - start_time
                     
-                    # **Convert to H/s** (chuyển đổi sang H/s)
-                    if unit == 'KH/s':
-                        hash_rate *= 1000
-                    elif unit == 'MH/s':
-                        hash_rate *= 1000000
-                    elif unit == 'GH/s':
-                        hash_rate *= 1000000000
-                    elif unit == 'TH/s':
-                        hash_rate *= 1000000000000
+                    # **Enhanced log format** (định dạng log nâng cao) với **runtime info** (thông tin thời gian chạy)
+                    formatted_line = f"[{timestamp}][{process_name}][R:{runtime:.0f}s] {line.strip()}"
                     
-                    # **Log hash rate** (ghi log tốc độ băm) với **simple format** (định dạng đơn giản)
-                    log_hash_rate(process_name, hash_rate)
+                    # **Color-coded terminal output** (đầu ra terminal có mã màu)
+                    if "error" in line.lower() or "failed" in line.lower():
+                        terminal_output = f"\033[91m{formatted_line}\033[0m"  # Red
+                    elif "H/s" in line or "accepted" in line.lower():
+                        terminal_output = f"\033[92m{formatted_line}\033[0m"  # Green
+                    elif "connecting" in line.lower() or "started" in line.lower():
+                        terminal_output = f"\033[94m{formatted_line}\033[0m"  # Blue
+                    else:
+                        terminal_output = formatted_line
                     
+                    # **Real-time terminal display** (hiển thị terminal thời gian thực)
+                    print(terminal_output, flush=True)
+                    
+                    # **File logging** (ghi log tệp) - **binary mode** (chế độ nhị phân)
+                    log_file.write(f"{formatted_line}\n".encode('utf-8'))
+                    log_file.flush()
+                    
+                    # **Log rotation check** (kiểm tra xoay vòng log)
+                    try:
+                        if log_file.tell() > 50 * 1024 * 1024:
+                            current_path = log_file.name
+                            log_file.close()
+                            backup_path = f"{current_path}.backup"
+                            if os.path.exists(backup_path):
+                                os.remove(backup_path)
+                            os.rename(current_path, backup_path)
+                            logger.info(f"📁 Log rotated: {current_path} -> {backup_path}")
+                            # **Reopen new file** (mở lại file mới)
+                            log_file = open(current_path, 'ab', buffering=0)
+                    except Exception as rot_err:
+                        logger.warning(f"⚠️ Log rotation failed: {rot_err}")
+                    
+                    # **Advanced hash rate detection** (phát hiện tốc độ băm nâng cao)
+                    hash_rate_match = re.search(r'(\d+(?:\.\d+)?)\s*(H/s|KH/s|MH/s|GH/s|TH/s)', line)
+                    if hash_rate_match:
+                        hash_rate = float(hash_rate_match.group(1))
+                        unit = hash_rate_match.group(2)
+                        
+                        # **Unit conversion** (chuyển đổi đơn vị)
+                        multiplier = {
+                            'H/s': 1,
+                            'KH/s': 1000,
+                            'MH/s': 1000000,
+                            'GH/s': 1000000000,
+                            'TH/s': 1000000000000
+                        }
+                        hash_rate_hz = hash_rate * multiplier.get(unit, 1)
+                        
+                        # **Hash rate tracking** (theo dõi tốc độ băm)
+                        hash_rates.append(hash_rate_hz)
+                        
+                        # **Performance metrics calculation** (tính toán chỉ số hiệu suất)
+                        if len(hash_rates) >= 5:  # **Moving average** (trung bình trượt) của 5 samples
+                            recent_avg = sum(hash_rates[-5:]) / 5
+                            total_avg = sum(hash_rates) / len(hash_rates)
+                            
+                            # **Real-time metrics display** (hiển thị chỉ số thời gian thực)
+                            metrics_line = (f"\033[96m📊 METRICS [{process_name}]: "
+                                          f"Current={hash_rate:.2f} {unit} | "
+                                          f"Avg5={recent_avg:.2f} H/s | "
+                                          f"TotalAvg={total_avg:.2f} H/s | "
+                                          f"Samples={len(hash_rates)} | "
+                                          f"Runtime={runtime:.0f}s\033[0m")
+                            print(metrics_line, flush=True)
+                        
+                        # **Log hash rate** (ghi log tốc độ băm) để **performance system** (hệ thống hiệu suất)
+                        log_hash_rate(process_name, hash_rate_hz)
+                    
+                    # **Status indicators** (chỉ báo trạng thái) mỗi 100 dòng
+                    if line_count % 100 == 0:
+                        status_line = (f"\033[93m📈 STATUS [{process_name}]: "
+                                     f"Lines={line_count} | Runtime={runtime:.0f}s | "
+                                     f"HashSamples={len(hash_rates)}\033[0m")
+                        print(status_line, flush=True)
+                        
     except Exception as e:
-        logger.error(f"Lỗi trong dual_logger_thread: {e}")
+        error_msg = f"❌ Error in dual_logger_thread [{process_name}]: {e}"
+        logger.error(error_msg)
+        print(f"\033[91m{error_msg}\033[0m", flush=True)
     finally:
-        if log_file:
-            log_file.close()
+        # **Cleanup** (dọn dẹp) và **final stats** (thống kê cuối)
+        try:
+            if log_file and not log_file.closed:
+                log_file.close()
+            
+            runtime = time.time() - start_time
+            final_stats = (f"\033[95m🏁 FINAL STATS [{process_name}]: "
+                         f"Runtime={runtime:.0f}s | Lines={line_count} | "
+                         f"HashSamples={len(hash_rates)}")
+            if hash_rates:
+                total_avg = sum(hash_rates) / len(hash_rates)
+                final_stats += f" | AvgHashRate={total_avg:.2f} H/s"
+            final_stats += "\033[0m"
+            
+            print(final_stats, flush=True)
+            logger.info(f"Dual logger thread stopped for {process_name}: {runtime:.0f}s runtime")
+            
+        except Exception as cleanup_err:
+            logger.error(f"Cleanup error in dual_logger_thread: {cleanup_err}")
 
 def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     """
@@ -297,13 +362,37 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 )
             
             if process:
-                logger.info(f"Quá trình khai thác {'CPU' if cpu else 'GPU'} đã được khởi động với PID: {process.pid}")
+                startup_time = time.time()
+                miner_type = 'CPU' if cpu else 'GPU'
+                
+                # **Enhanced startup logging** (ghi log khởi động nâng cao)
+                startup_msg = (f"🚀 MINING PROCESS STARTED [{miner_type}]\n"
+                             f"   ├─ Process Name: {process_name}\n"
+                             f"   ├─ PID: {process.pid}\n"
+                             f"   ├─ Command: {' '.join(mining_command)}\n"
+                             f"   ├─ Log File: {miner_log_path}\n"
+                             f"   ├─ Stealth Mode: {enable_stealth and cpu}\n"
+                             f"   └─ Namespace Isolation: {enable_ns and privileged_manager is not None}")
+                
+                logger.info(startup_msg)
+                print(f"\033[92m{startup_msg}\033[0m", flush=True)  # Green startup message
                 
                 # **Register process** (đăng ký tiến trình) với **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
                 register_mining_process(process_name, process.pid, process)
                 
-                # **Simple operation logging** (ghi log thao tác đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
-                logger.info(f"START: {process_name} PID={process.pid} CMD={' '.join(mining_command)}")
+                # **Detailed operation logging** (ghi log thao tác chi tiết)
+                operation_details = {
+                    'process_name': process_name,
+                    'pid': process.pid,
+                    'miner_type': miner_type.lower(),
+                    'command': ' '.join(mining_command),
+                    'startup_time': startup_time,
+                    'stealth_enabled': enable_stealth and cpu,
+                    'namespace_isolation': enable_ns and privileged_manager is not None,
+                    'log_file': str(miner_log_path)
+                }
+                
+                logger.info(f"PROCESS_START: {process_name} | PID={process.pid} | TYPE={miner_type} | TIME={startup_time}")
                 
                 # **EventBus publish** (xuất bản sự kiện) - **PID Propagation Flow Step 1**
                 try:
@@ -466,35 +555,96 @@ def main():
     else:
         logger.info("✅ Chỉ khởi động CPU mining thread (GPU không được cấu hình)")
     
-    # **Performance monitoring thread** (luồng giám sát hiệu suất)
+    # **Enhanced performance monitoring thread** (luồng giám sát hiệu suất nâng cao)
     def performance_monitor():
-        """Monitor và display real-time mining performance"""
+        """
+        **Real-time mining performance monitor** (giám sát hiệu suất khai thác thời gian thực) với 
+        **detailed metrics** (chỉ số chi tiết) và **system resource tracking** (theo dõi tài nguyên hệ thống)
+        """
         last_report_time = time.time()
+        last_metrics_time = time.time()
+        monitor_start_time = time.time()
+        
+        print(f"\033[96m🔍 PERFORMANCE MONITOR STARTED\033[0m", flush=True)
         
         while not stop_event.is_set():
             try:
-                # **Generate performance report** (tạo báo cáo hiệu suất) mỗi 60 giây
-                if time.time() - last_report_time >= 60:
-                    comparison_report = generate_performance_comparison()
-                    logger.info("=== MINING PERFORMANCE REPORT ===")
-                    for line in comparison_report.split('\n'):
-                        if line.strip():
-                            logger.info(line)
-                    logger.info("=== END PERFORMANCE REPORT ===")
-                    last_report_time = time.time()
+                current_time = time.time()
                 
-                # **Display real-time metrics** (hiển thị chỉ số thời gian thực) mỗi 30 giây
-                metrics = get_real_time_metrics()
-                cpu_metrics = metrics.get("ml-inference", {})
-                gpu_metrics = metrics.get("inference-cuda", {})
+                # **Enhanced real-time metrics** (chỉ số thời gian thực nâng cao) mỗi 15 giây
+                if current_time - last_metrics_time >= 15:
+                    metrics = get_real_time_metrics()
+                    cpu_metrics = metrics.get("ml-inference", {})
+                    gpu_metrics = metrics.get("inference-cuda", {})
+                    
+                    cpu_hash = cpu_metrics.get('current_hash_rate', 0)
+                    gpu_hash = gpu_metrics.get('current_hash_rate', 0)
+                    total_hash = cpu_hash + gpu_hash
+                    
+                    # **System resource usage** (sử dụng tài nguyên hệ thống)
+                    try:
+                        cpu_percent = psutil.cpu_percent(interval=1)
+                        memory = psutil.virtual_memory()
+                        memory_percent = memory.percent
+                        
+                        # **Enhanced metrics display** (hiển thị chỉ số nâng cao)
+                        runtime_total = current_time - monitor_start_time
+                        metrics_display = (
+                            f"\033[96m📊 REAL-TIME METRICS [Runtime: {runtime_total:.0f}s]\n"
+                            f"   ├─ CPU Mining: {cpu_hash:.2f} H/s\n"
+                            f"   ├─ GPU Mining: {gpu_hash:.2f} H/s\n"
+                            f"   ├─ Total Hash: {total_hash:.2f} H/s\n"
+                            f"   ├─ CPU Usage: {cpu_percent:.1f}%\n"
+                            f"   ├─ Memory Usage: {memory_percent:.1f}%\n"
+                            f"   └─ Active Processes: {len([p for p in [cpu_process, gpu_process] if p and p.poll() is None])}/2\033[0m"
+                        )
+                        
+                        print(metrics_display, flush=True)
+                        logger.info(f"METRICS: CPU={cpu_hash:.2f}H/s GPU={gpu_hash:.2f}H/s "
+                                   f"TOTAL={total_hash:.2f}H/s SYS_CPU={cpu_percent:.1f}% "
+                                   f"SYS_MEM={memory_percent:.1f}% RUNTIME={runtime_total:.0f}s")
+                        
+                    except Exception as sys_err:
+                        logger.warning(f"⚠️ System metrics error: {sys_err}")
+                    
+                    last_metrics_time = current_time
                 
-                logger.info(f"📊 REAL-TIME: CPU {cpu_metrics.get('current_hash_rate', 0):.2f} H/s | "
-                           f"GPU {gpu_metrics.get('current_hash_rate', 0):.2f} H/s | "
-                           f"Total {cpu_metrics.get('current_hash_rate', 0) + gpu_metrics.get('current_hash_rate', 0):.2f} H/s")
+                # **Detailed performance report** (báo cáo hiệu suất chi tiết) mỗi 60 giây
+                if current_time - last_report_time >= 60:
+                    try:
+                        comparison_report = generate_performance_comparison()
+                        
+                        print(f"\033[95m=== DETAILED PERFORMANCE REPORT ===\033[0m", flush=True)
+                        logger.info("=== DETAILED PERFORMANCE REPORT ===")
+                        
+                        for line in comparison_report.split('\n'):
+                            if line.strip():
+                                logger.info(line)
+                                print(f"\033[95m{line}\033[0m", flush=True)
+                        
+                        print(f"\033[95m=== END PERFORMANCE REPORT ===\033[0m", flush=True)
+                        logger.info("=== END PERFORMANCE REPORT ===")
+                        
+                        last_report_time = current_time
+                        
+                    except Exception as report_err:
+                        logger.error(f"❌ Performance report error: {report_err}")
                 
-                time.sleep(30)
+                # **Process health check** (kiểm tra sức khỏe tiến trình)
+                with process_lock:
+                    cpu_alive = is_mining_process_running(cpu_process)
+                    gpu_alive = is_mining_process_running(gpu_process)
+                
+                if not cpu_alive and not gpu_alive:
+                    logger.warning("⚠️ All mining processes stopped!")
+                    print(f"\033[91m⚠️ ALL MINING PROCESSES STOPPED!\033[0m", flush=True)
+                
+                time.sleep(15)  # **Check interval** (khoảng thời gian kiểm tra)
+                
             except Exception as e:
-                logger.error(f"Error in performance monitoring: {e}")
+                error_msg = f"❌ Error in performance monitoring: {e}"
+                logger.error(error_msg)
+                print(f"\033[91m{error_msg}\033[0m", flush=True)
                 time.sleep(30)
     
     # **Start performance monitoring thread** (khởi động luồng giám sát hiệu suất)
