@@ -1728,16 +1728,6 @@ class MemoryCloakStrategy(CloakStrategy):
         """
         self.logger.info(f"[MEMORY RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
-# ✅ REMOVED: ThermalControlStrategy class đã được unified vào GpuCloakStrategy
-# 
-# Thermal management được integrated trực tiếp trong GpuCloakStrategy để:
-# - Eliminate resource conflicts between GPU and thermal strategies
-# - Improve coordination and reduce overhead  
-# - Single unified GPU control với comprehensive thermal protection
-# - Simplified strategy assignment logic
-#
-# Use GpuCloakStrategy với enable_thermal_monitoring=True thay vì separate thermal strategy.
-
 ###############################################################################
 #                    DEPRECATED: CloakStrategyFactory REMOVED                 #
 ###############################################################################
