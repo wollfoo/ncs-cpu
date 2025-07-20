@@ -172,6 +172,9 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # Fallback initialization for basic functionality
             pass
 
+        # ✅ FIXED: Initialize _registered_pids attribute để tránh AttributeError
+        self._registered_pids = set()
+        
         # Basic resource control attributes
         self.cpu_count = psutil.cpu_count(logical=True) or 1
         self.physical_cores = psutil.cpu_count(logical=False) or 1
