@@ -995,7 +995,8 @@ def main():
     bus = get_thread_event_bus()
     logger.info("✅ Thread communication EventBus initialized")
 
-    # **Thread collection** (bộ sưu tập luồng) để quản lý – KHÔNG có EnvironmentSetupThread
+    # Thêm khai báo danh sách mining_threads
+    mining_threads = []
 
     # (Đã bỏ EnvironmentSetupThread – môi trường thiết lập đồng bộ)
 
