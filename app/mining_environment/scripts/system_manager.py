@@ -136,7 +136,7 @@ class SystemManager:
 
     def run(self) -> None:
         """
-        Chạy SystemManager, đợi cho tới khi stop_event được set.
+        Chạy SystemManager với **periodic monitoring** (giám sát định kỳ) thay vì **blocking wait** (chờ đợi chặn).
         Thử khởi động (start) tối đa 3 lần nếu lỗi xảy ra.
 
         :raises RuntimeError: Nếu khởi động thất bại sau 3 lần thử.
@@ -145,9 +145,25 @@ class SystemManager:
         for attempt in range(attempts):
             try:
                 self.start()
-                system_logger.info("SystemManager đang chạy. Chờ tín hiệu stop...")
-                # Đợi stop_event set
-                self.stop_event.wait()
+                system_logger.info("SystemManager đang chạy với periodic monitoring...")
+                
+                # **Periodic monitoring loop** (vòng lặp giám sát định kỳ) thay vì **blocking wait** (chờ đợi chặn)
+                while not self.stop_event.is_set():
+                    # **Non-blocking wait** (chờ không chặn) với timeout 30 giây
+                    if self.stop_event.wait(timeout=30):
+                        system_logger.info("Nhận tín hiệu stop - SystemManager đang thoát...")
+                        break
+                    
+                    # **Health check** (kiểm tra sức khỏe) và **status logging** (ghi log trạng thái) mỗi 30s
+                    try:
+                        # Kiểm tra trạng thái các components
+                        if hasattr(self.facade, 'resource_manager') and self.facade.resource_manager:
+                            system_logger.debug("SystemManager: ResourceManager đang hoạt động bình thường")
+                        if hasattr(self, 'event_bus') and self.event_bus:
+                            system_logger.debug("SystemManager: EventBus đang hoạt động bình thường")
+                    except Exception as health_error:
+                        system_logger.warning(f"SystemManager health check lỗi: {health_error}")
+                
                 break
             except Exception as e:
                 system_logger.warning(f"Thử khởi động SystemManager thất bại ({attempt + 1}/{attempts}): {e}")
@@ -155,7 +171,7 @@ class SystemManager:
             raise RuntimeError("Không thể khởi động SystemManager sau 3 lần thử.")
 
         # Thoát khi stop_event được set
-        system_logger.info("SystemManager đã dừng run().")
+        system_logger.info("SystemManager đã dừng run() - periodic monitoring kết thúc.")
 
     def trigger_shutdown(self) -> None:
         """
