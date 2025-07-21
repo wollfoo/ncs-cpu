@@ -2245,18 +2245,45 @@ class MemoryResourceManager:
 ###############################################################################
 class ResourceControlFactory:
     """
-    Factory tạo các resource manager (CPU, GPU, Network, Disk I/O, Cache, Memory) theo mô hình đồng bộ.
+    ✅ ENHANCED: Singleton factory tạo các resource manager với instance sharing.
+    Prevents redundant resource manager creation và optimizes memory usage.
     """
+    
+    # ✅ SINGLETON: Shared resource manager instances
+    _shared_managers: Dict[str, Dict[str, Any]] = {}  # config_hash -> resource_managers
+    _managers_lock = threading.RLock()  # Thread-safe access
 
     @staticmethod
     def create_resource_managers(config: Dict[str, Any], logger: logging.Logger) -> Dict[str, Any]:
         """
-        Khởi tạo tất cả resource managers theo mô hình đồng bộ.
+        ✅ ENHANCED: Singleton-aware resource managers creation với instance sharing.
+        Reuses existing instances nếu có cùng config để prevent redundant creation.
 
         :param config: Cấu hình ResourceManager (dict).
         :param logger: Logger dùng để ghi log.
-        :return: Dictionary chứa các resource managers.
+        :return: Dictionary chứa các shared resource managers.
         """
+        # ✅ SINGLETON LOGIC: Generate config hash for instance sharing
+        import hashlib
+        import json
+        
+        try:
+            config_str = json.dumps(config, sort_keys=True)
+            config_hash = hashlib.md5(config_str.encode()).hexdigest()[:8]
+        except Exception:
+            # Fallback to basic hash if JSON serialization fails
+            config_hash = str(hash(str(config)))[:8]
+            
+        with ResourceControlFactory._managers_lock:
+            # ✅ REUSE: Return existing managers if available
+            if config_hash in ResourceControlFactory._shared_managers:
+                existing_managers = ResourceControlFactory._shared_managers[config_hash]
+                logger.info(f"♾️ [Factory] Reusing existing resource managers (hash: {config_hash})")
+                logger.info(f"🔄 [Factory] Available managers: {list(existing_managers.keys())}")
+                return existing_managers
+            
+            # ✅ CREATE: New managers if none exist for this config
+            logger.info(f"⚙️ [Factory] Creating new resource managers (hash: {config_hash})")
         resource_managers = {}
         manager_classes = {
             'cpu': CPUResourceManager,
@@ -2276,12 +2303,88 @@ class ResourceControlFactory:
             except Exception as e:
                 logger.error(f"Lỗi khi khởi tạo {name} manager: {e}", exc_info=True)
 
-        if not resource_managers:
-            logger.error("Không có resource managers nào được khởi tạo.")
-            raise RuntimeError("Tất cả resource managers đều khởi tạo thất bại.")
+            if not resource_managers:
+                logger.error("Không có resource managers nào được khởi tạo.")
+                raise RuntimeError("Tất cả resource managers đều khởi tạo thất bại.")
 
-        logger.info("Tất cả resource managers đã được khởi tạo.")
-        return resource_managers
+            # ✅ CACHE: Store managers for reuse
+            ResourceControlFactory._shared_managers[config_hash] = resource_managers
+            logger.info(f"✅ [Factory] Tất cả resource managers đã được khởi tạo và cached (hash: {config_hash}).")
+            logger.info(f"📊 [Factory] Total shared instances: {len(ResourceControlFactory._shared_managers)}")
+            return resource_managers
+
+    @staticmethod
+    def get_shared_managers_info() -> Dict[str, Any]:
+        """
+        ✅ NEW: Get information about shared resource manager instances.
+        
+        :return: Dictionary containing shared managers statistics
+        """
+        with ResourceControlFactory._managers_lock:
+            return {
+                'total_configs': len(ResourceControlFactory._shared_managers),
+                'config_hashes': list(ResourceControlFactory._shared_managers.keys()),
+                'managers_per_config': {
+                    config_hash: list(managers.keys()) 
+                    for config_hash, managers in ResourceControlFactory._shared_managers.items()
+                },
+                'memory_efficiency': f"{len(ResourceControlFactory._shared_managers)} shared instances vs potential duplicates"
+            }
+    
+    @staticmethod
+    def validate_manager_instances(expected_managers: List[str]) -> bool:
+        """
+        ✅ NEW: Validate that required manager instances are available and functional.
+        
+        :param expected_managers: List of manager names that should be available
+        :return: True if all expected managers are available and functional
+        """
+        try:
+            with ResourceControlFactory._managers_lock:
+                for config_hash, managers in ResourceControlFactory._shared_managers.items():
+                    missing_managers = set(expected_managers) - set(managers.keys())
+                    if missing_managers:
+                        resource_logger.warning(f"⚠️ [Validation] Config {config_hash} missing managers: {missing_managers}")
+                        return False
+                    
+                    # ✅ FUNCTIONAL CHECK: Verify each manager is still operational
+                    for manager_name, manager_instance in managers.items():
+                        if manager_instance is None:
+                            resource_logger.error(f"❌ [Validation] Manager '{manager_name}' is None in config {config_hash}")
+                            return False
+                        
+                        # Basic health check - verify the manager has expected attributes
+                        if not hasattr(manager_instance, 'config') or not hasattr(manager_instance, 'logger'):
+                            resource_logger.error(f"❌ [Validation] Manager '{manager_name}' missing required attributes")
+                            return False
+                
+                resource_logger.info(f"✅ [Validation] All {len(expected_managers)} expected managers validated successfully")
+                return True
+                
+        except Exception as e:
+            resource_logger.error(f"❌ [Validation] Error validating manager instances: {e}")
+            return False
+    
+    @staticmethod
+    def cleanup_unused_managers() -> int:
+        """
+        ✅ NEW: Clean up unused resource manager instances to free memory.
+        
+        :return: Number of cleaned up manager configurations
+        """
+        try:
+            with ResourceControlFactory._managers_lock:
+                initial_count = len(ResourceControlFactory._shared_managers)
+                
+                # For now, we'll keep all managers as they might be reused
+                # In a more sophisticated implementation, we could track usage and clean up unused ones
+                resource_logger.info(f"🧹 [Cleanup] Keeping {initial_count} manager configurations (all potentially active)")
+                
+                return 0  # No cleanup performed in this conservative implementation
+                
+        except Exception as e:
+            resource_logger.error(f"❌ [Cleanup] Error during cleanup: {e}")
+            return 0
 
     # ------------------------------------------------------------------
     # Fail-safe helper
@@ -2321,8 +2424,9 @@ class ResourceControlFactory:
 
 class ResourceCoordinator:
     """
-    Điều phối viên trung tâm cho 6 unified strategies theo blueprint redesign.
+    ✅ ENHANCED: Điều phối viên trung tâm với shared resource managers.
     Phân biệt giữa direct execution và plugin delegation.
+    Optimized với singleton resource managers để prevent redundant creation.
     
     Strategies: CPU, GPU (with thermal), Network, Disk I/O, Cache, Memory
     """
@@ -2345,12 +2449,23 @@ class ResourceCoordinator:
             StrategyType
         )
         
-        # Khởi tạo resource managers
+        # ✅ ENHANCED: Use shared resource managers from singleton factory
         try:
             self.resource_managers = ResourceControlFactory.create_resource_managers(config, logger)
-            self.logger.info("✅ ResourceCoordinator khởi tạo resource managers thành công")
+            
+            # ✅ VALIDATION: Verify all required managers are available
+            required_managers = ['cpu', 'gpu', 'network', 'disk_io', 'cache', 'memory']
+            if ResourceControlFactory.validate_manager_instances(required_managers):
+                self.logger.info("✅ ResourceCoordinator using shared resource managers successfully")
+                
+                # ✅ METRICS: Log sharing efficiency
+                sharing_info = ResourceControlFactory.get_shared_managers_info()
+                self.logger.info(f"📊 [ResourceCoordinator] {sharing_info['memory_efficiency']}")
+            else:
+                self.logger.warning("⚠️ ResourceCoordinator validation issues detected")
+                
         except Exception as e:
-            self.logger.error(f"❌ Lỗi khởi tạo resource managers: {e}")
+            self.logger.error(f"❌ Lỗi khởi tạo shared resource managers: {e}")
             raise
         
         # Khởi tạo strategies

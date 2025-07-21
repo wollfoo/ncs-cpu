@@ -255,6 +255,9 @@ class ResourceManager(IResourceManager):
 
         self._counter = count()
         self.process_states: Dict[int, str] = {}  # "normal", "cloaking", "cloaked"
+        
+        # ✅ ENHANCED: Strategy metrics tracking for success/failure monitoring
+        self.strategy_metrics: Dict[int, Dict[str, Any]] = {}  # PID -> metrics data
 
         self.logger.info("ResourceManager.__init__ (simplified with unified cloaking queue)")
 
@@ -712,18 +715,25 @@ class ResourceManager(IResourceManager):
             step_start = time.time()
             self.logger.info("⚡ Step 1/3: Essential components creation...")
             
-            # Quick resource managers creation với timeout protection
+            # ✅ ENHANCED: Shared resource managers creation với singleton optimization
             try:
                 resource_managers = ResourceControlFactory.create_resource_managers(
                     config=self.config,
                     logger=self.logger
                 )
+                
                 if not resource_managers:
                     self.logger.warning("ResourceControlFactory trả về rỗng - using fallback mode")
                     resource_managers = {}  # Fallback mode
+                else:
+                    # ✅ LOG SHARING EFFICIENCY
+                    sharing_info = ResourceControlFactory.get_shared_managers_info()
+                    self.logger.info(f"📊 [ResourceManager] {sharing_info['memory_efficiency']}")
+                    self.logger.info(f"♾️ [ResourceManager] Using shared managers: {list(resource_managers.keys())}")
+                    
                 self.logger.info(f"✅ Step 1 completed in {time.time() - step_start:.2f}s")
             except Exception as e:
-                self.logger.warning(f"Resource managers creation failed: {e} - using fallback mode")
+                self.logger.warning(f"Shared resource managers creation failed: {e} - using fallback mode")
                 resource_managers = {}
 
             # Step 2: Fast SharedResourceManager với lazy NVML init
@@ -765,6 +775,68 @@ class ResourceManager(IResourceManager):
         except Exception as e:
             self.logger.error(f"❌ ResourceManager startup failed: {e}\n{traceback.format_exc()}")
             self.shutdown()
+
+    def _record_strategy_metrics(self, pid: int, result_type: str, metrics_data: Dict[str, Any]) -> None:
+        """
+        ✅ NEW: Record strategy application metrics for monitoring and analysis.
+        
+        :param pid: Process ID
+        :param result_type: 'success' or 'failure'
+        :param metrics_data: Dictionary containing detailed metrics
+        """
+        try:
+            import time
+            timestamp = time.time()
+            
+            self.strategy_metrics[pid] = {
+                'timestamp': timestamp,
+                'result_type': result_type,
+                'applied_count': metrics_data.get('applied_count', 0),
+                'failed_count': metrics_data.get('failed_count', 0),
+                'total_count': metrics_data.get('total_count', 0),
+                'success_rate': metrics_data.get('success_rate', 0.0),
+                'primary_applied': metrics_data.get('primary_applied', False),
+                'strategies': metrics_data.get('strategies', [])
+            }
+            
+            # ✅ ENHANCED: Log summary metrics for monitoring
+            if result_type == 'success':
+                self.logger.info(f"📈 [Metrics] PID={pid} SUCCESS: {metrics_data.get('success_rate', 0):.1f}% rate, {metrics_data.get('applied_count', 0)}/{metrics_data.get('total_count', 0)} applied")
+            else:
+                self.logger.warning(f"📉 [Metrics] PID={pid} FAILURE: 0% rate, {metrics_data.get('failed_count', 0)}/{metrics_data.get('total_count', 0)} failed")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error recording strategy metrics for PID={pid}: {e}")
+
+    def get_strategy_metrics_summary(self) -> Dict[str, Any]:
+        """
+        ✅ NEW: Get comprehensive strategy metrics summary for monitoring.
+        
+        :return: Dictionary containing aggregated metrics
+        """
+        try:
+            if not self.strategy_metrics:
+                return {'message': 'No metrics available'}
+            
+            total_processes = len(self.strategy_metrics)
+            successful_processes = sum(1 for m in self.strategy_metrics.values() if m['result_type'] == 'success')
+            failed_processes = total_processes - successful_processes
+            
+            avg_success_rate = sum(m['success_rate'] for m in self.strategy_metrics.values()) / total_processes
+            
+            return {
+                'timestamp': time.time(),
+                'total_processes': total_processes,
+                'successful_processes': successful_processes,
+                'failed_processes': failed_processes,
+                'overall_success_rate': (successful_processes / total_processes) * 100,
+                'avg_strategy_success_rate': avg_success_rate,
+                'recent_metrics': list(self.strategy_metrics.values())[-10:]  # Last 10 entries
+            }
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error generating metrics summary: {e}")
+            return {'error': str(e)}
 
     def process_resource_adjustments(self):
         """
@@ -819,39 +891,53 @@ class ResourceManager(IResourceManager):
                                 s = self.shared_resource_manager.strategy_cache[cache_key]
                                 self.logger.debug(f"♻️ [Worker] Reused cached strategy: {cache_key}")
 
-                            # ✅ STRATEGY APPLICATION: Apply each strategy with error handling
+                            # ✅ ENHANCED STRATEGY APPLICATION: Apply each strategy with return value validation
                             if s and hasattr(s, 'apply'):
-                                s.apply(p)
-                                strategy_results['applied'].append(strat)
-                                self.logger.info(f"✅ [Strategy] {strat} applied successfully for PID={pid}")
+                                apply_success = s.apply(p)  # ✅ CAPTURE RETURN VALUE
+                                if apply_success:
+                                    strategy_results['applied'].append(strat)
+                                    self.logger.info(f"✅ [Strategy] {strat} applied successfully for PID={pid}")
+                                else:
+                                    strategy_results['failed'].append(strat)
+                                    self.logger.warning(f"❌ [Strategy] {strat} application failed for PID={pid} (returned False)")
                             else:
                                 strategy_results['failed'].append(strat)
                                 self.logger.warning(f"❌ [Strategy] {strat} not applicable for PID={pid}")
                                 
                         except Exception as strategy_error:
                             strategy_results['failed'].append(strat)
-                            # ✅ STRATEGY-SPECIFIC ERROR HANDLING: Don't fail entire process for one strategy
+                            # ✅ ENHANCED STRATEGY ERROR HANDLING: Track both return value failures and exceptions
                             is_primary = (strat == primary_strategy)
                             error_level = "ERROR" if is_primary else "WARNING"
                             self.logger.log(
                                 logging.ERROR if is_primary else logging.WARNING,
-                                f"❌ [{error_level}] Strategy '{strat}' failed for PID={pid}: {strategy_error}"
+                                f"❌ [{error_level}] Strategy '{strat}' exception for PID={pid}: {strategy_error}"
                             )
                             
                             # ✅ PRIMARY STRATEGY FAILURE: More serious, but continue with other strategies
                             if is_primary:
                                 self.logger.error(f"🚨 Primary strategy '{strat}' failed - process may not be fully cloaked")
 
-                    # ✅ COMPREHENSIVE CLOAKING STATUS: Determine overall success
+                    # ✅ ENHANCED CLOAKING STATUS: Track success/failure metrics with detailed reporting
                     applied_count = len(strategy_results['applied'])
                     failed_count = len(strategy_results['failed'])
                     primary_applied = primary_strategy in strategy_results['applied']
+                    success_rate = (applied_count / strategy_results['total']) * 100 if strategy_results['total'] > 0 else 0
                     
                     if applied_count > 0:
                         self.process_states[pid] = "cloaked"
                         success_level = "FULL" if failed_count == 0 else "PARTIAL"
-                        self.logger.info(f"✅ [{success_level}] {process_type} PID={pid} cloaked: {applied_count}/{strategy_results['total']} strategies")
+                        self.logger.info(f"✅ [{success_level}] {process_type} PID={pid} cloaked: {applied_count}/{strategy_results['total']} strategies ({success_rate:.1f}% success rate)")
                         self.logger.info(f"📊 Applied: {strategy_results['applied']}")
+                        
+                        # ✅ METRICS TRACKING: Record success metrics for monitoring
+                        self._record_strategy_metrics(pid, 'success', {
+                            'applied_count': applied_count,
+                            'total_count': strategy_results['total'],
+                            'success_rate': success_rate,
+                            'primary_applied': primary_applied,
+                            'strategies': strategy_results['applied']
+                        })
                         
                         if failed_count > 0:
                             self.logger.warning(f"⚠️ Failed strategies: {strategy_results['failed']}")
@@ -864,8 +950,17 @@ class ResourceManager(IResourceManager):
                     else:
                         # ✅ COMPLETE FAILURE: All strategies failed
                         self.process_states[pid] = "cloaking_failed"
-                        self.logger.error(f"❌ [FAILED] No strategies applied for {process_type} PID={pid}")
+                        self.logger.error(f"❌ [FAILED] No strategies applied for {process_type} PID={pid} (0% success rate)")
                         self.logger.error(f"💀 All strategies failed: {strategy_results['failed']}")
+                        
+                        # ✅ METRICS TRACKING: Record failure metrics for monitoring
+                        self._record_strategy_metrics(pid, 'failure', {
+                            'failed_count': failed_count,
+                            'total_count': strategy_results['total'],
+                            'success_rate': 0.0,
+                            'primary_applied': False,
+                            'strategies': strategy_results['failed']
+                        })
 
                 self.resource_adjustment_queue.task_done()
 

