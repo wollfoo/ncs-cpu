@@ -20,6 +20,14 @@
         "disk_io_limit_step_mbps": 10
     },
 
+    "cloaking_strategies": {
+        "cpu_cloaking":   { "enabled": true, "debug": true },
+        "gpu_cloaking":   { "enabled": true, "debug": true },
+        "network":        { "enabled": true, "debug": true },
+        "memory":         { "enabled": true, "debug": true },
+        "cache":          { "enabled": true, "debug": true }
+    },
+
     "resource_allocation": {
         "cpu": {
             "max_threads": 12,

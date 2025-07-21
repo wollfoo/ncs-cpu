@@ -38,12 +38,14 @@ class UnifiedLoggerManager:
             'description': 'Resource management operations'
         },
         'mining_environment.cloak_strategies': {
-            'level': logging.INFO,
+            # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết chiến lược cloaking
+            'level': logging.DEBUG,
             'file': 'cloak_strategies.log',
             'description': 'Cloaking strategy implementations'
         },
         'mining_environment.resource_control': {
-            'level': logging.INFO,
+            # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết điều khiển tài nguyên
+            'level': logging.DEBUG,
             'file': 'resource_control.log',
             'description': 'Low-level resource control operations'
         },

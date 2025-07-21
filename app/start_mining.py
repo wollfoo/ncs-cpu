@@ -930,8 +930,8 @@ def resource_manager_thread():
     """**Thread 4: Resource Manager** (Luồng 4: Trình quản lý tài nguyên) với **EventBus integration** (tích hợp EventBus)"""
     thread_logger = setup_logging('resource_manager_thread', str(Path(LOGS_DIR) / 'resource_manager_thread.log'), 'INFO')
     thread_logger.info("📊 Resource Manager Thread Started")
-    
-    # EventBus không còn được sử dụng cho ResourceManager
+# Lấy EventBus để truyền vào ResourceManager và ghi sự kiện lỗi (chỉ mục đích nội bộ)
+    bus = get_thread_event_bus()
 
     try:
         # **Step 1**: Load configuration

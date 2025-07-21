@@ -22,8 +22,8 @@ from .unified_logging import get_unified_logger
 # ✅ ERROR MANAGEMENT: Use centralized error handling system
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ STANDARDIZED: Get unified logger instance
-cloak_logger = get_unified_logger('cloak_strategies')
+# ✅ STANDARDIZED: Get unified logger instance (khớp hierarchy)
+cloak_logger = get_unified_logger('mining_environment.cloak_strategies')
 
 # ✅ ERROR REPORTER: Get centralized error reporter instance
 error_reporter = get_error_reporter()
