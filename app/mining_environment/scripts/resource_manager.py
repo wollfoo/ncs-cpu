@@ -59,33 +59,42 @@ class SharedResourceManager:
         return self._nvml_init
 
     def initialize_nvml(self):
+        """**Thread-safe NVML initialization** (khởi tạo NVML an toàn luồng) với **threading-based timeout** (thời gian chờ dựa trên luồng)"""
         if not self._nvml_init:
             try:
-                # Ultra-fast NVML initialization với timeout protection
-                self.logger.debug("Fast NVML initialization...")
+                # ✅ FIXED: Thread-safe NVML initialization với concurrent.futures timeout
+                self.logger.debug("Thread-safe NVML initialization...")
                 
-                # Timeout wrapper cho NVML init
-                def nvml_init_with_timeout():
-                    pynvml.nvmlInit()
-                    return True
+                # ✅ THREADING-BASED TIMEOUT: Safer for multi-threading environment
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+                import time
                 
-                # Try với timeout để tránh blocking
-                import signal
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("NVML init timeout")
+                def nvml_init_worker():
+                    """Worker function for NVML initialization"""
+                    try:
+                        pynvml.nvmlInit()
+                        return True
+                    except Exception as e:
+                        self.logger.debug(f"NVML init worker exception: {e}")
+                        raise
                 
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(3)  # 3 giây timeout
-                
-                try:
-                    nvml_init_with_timeout()
-                    self._nvml_init = True
-                    self.logger.info("NVML đã được khởi tạo thành công.")
-                finally:
-                    signal.alarm(0)  # Clear timeout
+                # ✅ THREAD-SAFE: Use ThreadPoolExecutor với timeout
+                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="NVML_Init") as executor:
+                    future = executor.submit(nvml_init_worker)
                     
-            except (TimeoutError, Exception) as e:
-                self.logger.warning(f"NVML initialization failed/timeout: {e} - continuing without GPU support")
+                    try:
+                        # ✅ CONFIGURABLE TIMEOUT: 3-second timeout for NVML init
+                        result = future.result(timeout=3.0)
+                        self._nvml_init = True
+                        self.logger.info("✅ NVML đã được khởi tạo thành công (thread-safe mode)")
+                        
+                    except FutureTimeoutError:
+                        self.logger.warning("⏰ NVML initialization timeout after 3s - continuing without GPU support")
+                        future.cancel()  # Cancel the running task
+                        self._nvml_init = False
+                    
+            except Exception as e:
+                self.logger.warning(f"❌ NVML initialization failed: {e} - continuing without GPU support")
                 self._nvml_init = False
 
     def shutdown_nvml(self):
@@ -218,7 +227,9 @@ class ResourceManager(IResourceManager):
 
         self._initialized = True
         self.logger = logger
-        self.config = config
+        
+        # ✅ ENHANCED: Configuration validation before initialization
+        self.config = self._validate_configuration(config)
         self.event_bus = event_bus
 
         # Cờ dừng
@@ -249,6 +260,87 @@ class ResourceManager(IResourceManager):
 
         # ✅ SIMPLIFIED: Essential EventBus subscriptions only
         self.event_bus.subscribe('resource_adjustment', self.handle_resource_adjustment)
+    
+    def _validate_configuration(self, config: ConfigModel) -> ConfigModel:
+        """
+        ✅ NEW: Comprehensive configuration validation với detailed error reporting
+        
+        :param config: Configuration to validate
+        :return: Validated configuration
+        :raises: ValueError if configuration is invalid
+        """
+        try:
+            self.logger.info("🔍 Validating ResourceManager configuration...")
+            
+            # ✅ VALIDATION 1: Check process priority map
+            if not hasattr(config, 'process_priority_map'):
+                self.logger.warning("⚠️ Missing process_priority_map - using defaults")
+                config.process_priority_map = {'ml-inference': 1, 'inference-cuda': 2}
+            
+            # ✅ VALIDATION 2: Validate priority values
+            for process_name, priority in config.process_priority_map.items():
+                if not isinstance(priority, int) or priority < 1:
+                    self.logger.warning(f"⚠️ Invalid priority for '{process_name}': {priority} - setting to 1")
+                    config.process_priority_map[process_name] = 1
+            
+            # ✅ VALIDATION 3: Check cloaking strategies configuration
+            cloaking_strategies = getattr(config, 'cloaking_strategies', None)
+            if not cloaking_strategies:
+                self.logger.warning("⚠️ No cloaking strategies configured - using defaults")
+                default_strategies = {
+                    'cpu_cloaking': {'enabled': True},
+                    'gpu_cloaking': {'enabled': True},
+                    'network': {'enabled': True},
+                    'memory': {'enabled': True}
+                }
+                if hasattr(config, 'data') and isinstance(config.data, dict):
+                    config.data['cloaking_strategies'] = default_strategies
+                else:
+                    # Fallback: set attribute directly
+                    setattr(config, 'cloaking_strategies', default_strategies)
+            
+            # ✅ VALIDATION 4: Validate strategy configurations
+            if cloaking_strategies:
+                required_strategies = ['cpu_cloaking', 'gpu_cloaking']
+                for strategy in required_strategies:
+                    if strategy not in cloaking_strategies:
+                        self.logger.warning(f"⚠️ Missing required strategy '{strategy}' - enabling by default")
+                        cloaking_strategies[strategy] = {'enabled': True}
+                    
+                    elif not isinstance(cloaking_strategies[strategy], dict):
+                        self.logger.warning(f"⚠️ Invalid configuration for strategy '{strategy}' - resetting")
+                        cloaking_strategies[strategy] = {'enabled': True}
+            
+            # ✅ VALIDATION 5: Configuration method support check
+            if not hasattr(config, 'get'):
+                self.logger.warning("⚠️ Config missing 'get' method - adding wrapper")
+                original_config = config
+                
+                class ConfigWrapper:
+                    def __init__(self, original):
+                        self._original = original
+                        self.__dict__.update(original.__dict__)
+                    
+                    def get(self, key, default=None):
+                        if hasattr(self._original, 'data') and isinstance(self._original.data, dict):
+                            return self._original.data.get(key, default)
+                        return getattr(self._original, key, default)
+                
+                config = ConfigWrapper(original_config)
+            
+            self.logger.info("✅ Configuration validation completed successfully")
+            
+            # ✅ LOG CONFIGURATION SUMMARY
+            priority_count = len(getattr(config, 'process_priority_map', {}))
+            strategy_count = len(getattr(config, 'cloaking_strategies', {}))
+            self.logger.info(f"📋 Configuration summary: {priority_count} process priorities, {strategy_count} cloaking strategies")
+            
+            return config
+            
+        except Exception as e:
+            error_msg = f"❌ Configuration validation failed: {e}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
     def is_gpu_initialized(self) -> bool:
         """
@@ -274,9 +366,9 @@ class ResourceManager(IResourceManager):
         try:
             self.logger.info("🔌 Setting up essential EventBus subscriptions...")
             
-            # ✅ CORE: Subscribe to mining events only
-            self.event_bus.subscribe('mining:cpu_started', self._on_cpu_mining_event)
-            self.event_bus.subscribe('mining:gpu_started', self._on_gpu_mining_event)
+            # ✅ CORE: Subscribe to mining events only - **FIXED EVENT NAMES** (tên sự kiện đã sửa)
+            self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_mining_event)
+            self.event_bus.subscribe('mining:gpu_pid_registered', self._on_gpu_mining_event)
             
             self.event_bus.start_listening()
             self.logger.info("✅ EventBus subscriptions established successfully")
@@ -287,16 +379,17 @@ class ResourceManager(IResourceManager):
             self.event_bus = None
 
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
-        """Handle CPU mining events - PID Propagation Flow Step 2"""
+        """Handle CPU mining events - PID Propagation Flow Step 2 - **UPDATED FOR NEW EVENT FORMAT** (cập nhật cho định dạng sự kiện mới)"""
         try:
-            event_type = payload.get('event_type')
+            # ✅ FIXED: Updated to match start_mining.py payload structure
             pid = payload.get('pid')
+            process_name = payload.get('process_name', 'ml-inference')
+            status = payload.get('status')
             
-            if event_type == 'mining_started' and pid:
-                self.logger.info(f"🔨 ResourceManager received CPU mining_started: PID={pid}")
+            if pid and status == 'running':
+                self.logger.info(f"🔨 ResourceManager received CPU PID registered: PID={pid}")
                 
                 # ✅ ENHANCED: Create MiningProcess với explicit classification
-                process_name = payload.get('data', {}).get('process_name', 'ml-inference')
                 mining_process = MiningProcess(pid, process_name, is_gpu=False)  # Explicit CPU
                 
                 # Add to tracking list
@@ -309,19 +402,34 @@ class ResourceManager(IResourceManager):
                 self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error handling CPU mining event: {e}")
+            error_msg = f"❌ Error handling CPU mining event: {e}"
+            self.logger.error(error_msg)
+            
+            # ✅ ENHANCED: Error propagation through EventBus
+            try:
+                if self.event_bus:
+                    self.event_bus.publish('resource_manager:cpu_event_error', {
+                        'error_type': 'cpu_event_handling_failed',
+                        'error_message': str(e),
+                        'payload': payload,
+                        'timestamp': time.time(),
+                        'severity': 'high'
+                    })
+            except Exception as pub_error:
+                self.logger.error(f"Failed to publish error event: {pub_error}")
 
     def _on_gpu_mining_event(self, payload: Dict[str, Any]) -> None:
-        """Handle GPU mining events - PID Propagation Flow Step 2"""
+        """Handle GPU mining events - PID Propagation Flow Step 2 - **UPDATED FOR NEW EVENT FORMAT** (cập nhật cho định dạng sự kiện mới)"""
         try:
-            event_type = payload.get('event_type')
+            # ✅ FIXED: Updated to match start_mining.py payload structure
             pid = payload.get('pid')
+            process_name = payload.get('process_name', 'inference-cuda')
+            status = payload.get('status')
             
-            if event_type == 'mining_started' and pid:
-                self.logger.info(f"🎮 ResourceManager received GPU mining_started: PID={pid}")
+            if pid and status == 'running':
+                self.logger.info(f"🎮 ResourceManager received GPU PID registered: PID={pid}")
                 
                 # ✅ ENHANCED: Create MiningProcess với explicit classification
-                process_name = payload.get('data', {}).get('process_name', 'inference-cuda')
                 mining_process = MiningProcess(pid, process_name, is_gpu=True)  # Explicit GPU
                 
                 # Add to tracking list
@@ -334,7 +442,21 @@ class ResourceManager(IResourceManager):
                 self.logger.info(f"✅ GPU PID {pid} processed: enqueued for cloaking")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error handling GPU mining event: {e}")
+            error_msg = f"❌ Error handling GPU mining event: {e}"
+            self.logger.error(error_msg)
+            
+            # ✅ ENHANCED: Error propagation through EventBus
+            try:
+                if self.event_bus:
+                    self.event_bus.publish('resource_manager:gpu_event_error', {
+                        'error_type': 'gpu_event_handling_failed', 
+                        'error_message': str(e),
+                        'payload': payload,
+                        'timestamp': time.time(),
+                        'severity': 'high'
+                    })
+            except Exception as pub_error:
+                self.logger.error(f"Failed to publish error event: {pub_error}")
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
