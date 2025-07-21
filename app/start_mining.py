@@ -13,6 +13,7 @@ import signal
 import time
 import re
 import logging
+import json  # ✅ [JSON] (JavaScript Object Notation – định dạng dữ liệu cấu hình)
 import select  # ✅ [select] (thư viện chọn I/O đa kênh – non-blocking)
 from pathlib import Path
 from datetime import datetime
@@ -37,7 +38,10 @@ from mining_environment.scripts.module_loggers import (
     log_cpu_plugin_operation,
     log_gpu_plugin_operation
 )
-from mining_environment.scripts import setup_env, system_manager
+from mining_environment.scripts import setup_env
+from mining_environment.scripts.resource_manager import ResourceManager
+from mining_environment.scripts.auxiliary_modules.models import ConfigModel
+from mining_environment.scripts.auxiliary_modules.event_bus import EventBus
 from mining_environment.scripts.privileged_operations import get_privileged_manager
 
 # **Import** (nhập khẩu) **Mining Performance Logger** (trình ghi nhật ký hiệu suất khai thác – theo dõi và ghi lại các chỉ số)
@@ -109,53 +113,94 @@ def initialize_environment():
         logger.error(f"Lỗi khi thiết lập môi trường: {e}")
         sys.exit(1)
         
-def start_system_manager():
+def start_resource_manager():
     """
-    Khởi động SystemManager trong **background thread** (luồng nền) để tránh **blocking main thread** (chặn luồng chính).
+    **Direct ResourceManager startup** (khởi động ResourceManager trực tiếp) trong **background thread** (luồng nền)
+    để thay thế SystemManager và loại bỏ **facade complexity** (độ phức tạp facade).
     """
-    logger.info("Khởi động Resource Manager trong background thread...")
+    logger.info("🚀 Khởi động ResourceManager trực tiếp trong background thread...")
     
-    def system_manager_worker():
+    def resource_manager_worker():
         """
-        **Worker function** (hàm công việc) chạy SystemManager trong **separate thread** (luồng riêng biệt).
+        **Worker function** (hàm công việc) chạy ResourceManager trực tiếp trong **separate thread** (luồng riêng biệt).
         """
         try:
-            system_manager.start()
-            logger.info("Resource Manager đã được khởi động thành công.")
+            # **Step 1**: Load configuration từ JSON
+            logger.info("📋 Step 1/4: Loading configuration from JSON...")
+            config_path = Path(os.getenv('CONFIG_DIR', '/app/mining_environment/config')) / "resource_config.json"
+            
+            if not config_path.exists():
+                raise FileNotFoundError(f"Configuration file not found: {config_path}")
+                
+            with open(config_path, 'r') as f:
+                config_data = json.loads(f.read())
+            
+            config = ConfigModel(**config_data)
+            logger.info("✅ Configuration loaded successfully")
+            
+            # **Step 2**: Initialize EventBus với **memory backend** (bộ xử lý bộ nhớ)
+            logger.info("📋 Step 2/4: Initializing EventBus with memory backend...")
+            event_bus = EventBus()
+            logger.info("✅ EventBus initialized successfully")
+            
+            # **Step 3**: Create ResourceManager instance
+            logger.info("📋 Step 3/4: Creating ResourceManager instance...")
+            resource_manager = ResourceManager(config, event_bus, logger)
+            logger.info("✅ ResourceManager instance created")
+            
+            # **Step 4**: Start ResourceManager
+            logger.info("📋 Step 4/4: Starting ResourceManager...")
+            resource_manager.start()
+            logger.info("🎯 ResourceManager đã được khởi động thành công")
+            
         except Exception as e:
-            logger.error(f"Lỗi khi khởi động Resource Manager: {e}")
+            error_msg = f"❌ Lỗi khi khởi động ResourceManager: {e}"
+            logger.error(error_msg)
+            logger.error(f"🔍 Exception details: {str(e)}")
             stop_event.set()
     
-    # Tạo **background thread** (luồng nền) cho SystemManager
-    system_thread = threading.Thread(
-        target=system_manager_worker,
+    # Tạo **background thread** (luồng nền) cho ResourceManager
+    resource_thread = threading.Thread(
+        target=resource_manager_worker,
         daemon=True,  # **Daemon thread** (luồng nền) sẽ tự động kết thúc khi main program kết thúc
-        name="SystemManagerThread"
+        name="ResourceManagerThread"
     )
     
     # Khởi động **thread** (luồng) và **không chờ** nó hoàn thành (**non-blocking**)
-    system_thread.start()
-    logger.info(f"✅ SystemManager thread đã được khởi động (Thread ID: {system_thread.ident})")
+    resource_thread.start()
+    logger.info(f"✅ ResourceManager thread đã được khởi động (Thread ID: {resource_thread.ident})")
     
-    # **Short verification** (xác minh ngắn) để đảm bảo thread đã start
-    import time
-    time.sleep(1)  # Cho phép SystemManager khởi tạo cơ bản
+    # **Enhanced verification** (xác minh nâng cao) với **timeout protection** (bảo vệ timeout)
+    verification_timeout = 5  # 5 giây thay vì 1 giây
+    for i in range(verification_timeout):
+        time.sleep(1)
+        if resource_thread.is_alive():
+            logger.debug(f"🔍 ResourceManager thread verification: alive ({i+1}/{verification_timeout}s)")
+        else:
+            logger.warning(f"⚠️ ResourceManager thread đã dừng sau {i+1}s")
+            stop_event.set()
+            break
     
-    if system_thread.is_alive():
-        logger.info("🎯 SystemManager thread đang chạy bình thường - Main thread có thể tiếp tục")
+    if resource_thread.is_alive():
+        logger.info("🎯 ResourceManager thread đang chạy bình thường - Main thread có thể tiếp tục")
     else:
-        logger.warning("⚠️ SystemManager thread đã dừng ngay sau khi khởi động")
+        logger.warning("⚠️ ResourceManager thread đã dừng ngay sau khi khởi động")
         stop_event.set()
     
-    return system_thread
+    return resource_thread
 
-def stop_system_manager():
-    logger.info("Đang dừng Resource Manager...")
+def stop_resource_manager():
+    """
+    **Stop ResourceManager** (dừng ResourceManager) - simplified version without SystemManager dependency
+    """
+    logger.info("🛑 Đang dừng ResourceManager...")
     try:
-        system_manager.stop()
-        logger.info("Resource Manager đã được dừng thành công.")
+        # **Simple stop notification** (thông báo dừng đơn giản) - ResourceManager sẽ tự cleanup
+        logger.info("📋 ResourceManager shutdown initiated via stop_event")
+        stop_event.set()  # **Global stop event** (sự kiện dừng toàn cầu) sẽ trigger ResourceManager cleanup
+        logger.info("✅ ResourceManager đã được dừng thành công")
     except Exception as e:
-        logger.error(f"Lỗi khi dừng Resource Manager: {e}")
+        logger.error(f"❌ Lỗi khi dừng ResourceManager: {e}")
 
 def is_mining_process_running(process):
     return process and process.poll() is None
@@ -697,18 +742,18 @@ def main():
     # Khởi tạo **environment** (môi trường)
     privileged_manager = initialize_environment()
     
-    # Khởi động **Resource Manager** (trình quản lý tài nguyên) trong **background thread** (luồng nền)
-    system_thread = start_system_manager()
+    # Khởi động **ResourceManager** (trình quản lý tài nguyên) trực tiếp trong **background thread** (luồng nền)
+    resource_thread = start_resource_manager()
     
     # **Wait briefly** (đợi ngắn) cho SystemManager khởi tạo hoàn tất trước khi start mining
     logger.info("⏳ Đợi SystemManager khởi tạo hoàn tất...")
     time.sleep(3)  # Cho phép SystemManager setup ResourceManager và EventBus
     
-    # **Verify SystemManager status** (xác minh trạng thái SystemManager) trước khi tiếp tục
-    if system_thread.is_alive():
-        logger.info("✅ SystemManager đã khởi tạo thành công - Tiếp tục khởi động mining processes")
+    # **Verify ResourceManager status** (xác minh trạng thái ResourceManager) trước khi tiếp tục
+    if resource_thread.is_alive():
+        logger.info("✅ ResourceManager đã khởi tạo thành công - Tiếp tục khởi động mining processes")
     else:
-        logger.error("❌ SystemManager thread đã dừng - Không thể khởi động mining processes")
+        logger.error("❌ ResourceManager thread đã dừng - Không thể khởi động mining processes")
         return
     
     # **Enhanced Parallel Mining Startup** (Khởi động khai thác song song nâng cao)
@@ -913,8 +958,8 @@ def main():
         logger.info("Nhận tín hiệu KeyboardInterrupt. Đang dừng...")
         stop_event.set()
     
-    # Dừng **system manager** (trình quản lý hệ thống)
-    stop_system_manager()
+    # Dừng **ResourceManager** (trình quản lý tài nguyên)
+    stop_resource_manager()
     
     # **Cleanup** (dọn dẹp) và thoát
     logger.info("Bắt đầu quá trình dọn dẹp cuối cùng...")
