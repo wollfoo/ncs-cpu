@@ -388,13 +388,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 # **Register process** (đăng ký tiến trình) với **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
                 register_mining_process(process_name, process.pid, process)
                 
-                # **DEBUG: Force initial logging** (gỡ lỗi: buộc ghi log ban đầu) để kiểm tra logger hoạt động
-                logger.info(f"🔍 DEBUG: Attempting to log initial mining operation for {process_name}")
-                log_mining_operation(process_name, "PROCESS_START", process.pid, operation_details, 0.0, "SUCCESS")
-                logger.info(f"🔍 DEBUG: Initial resource usage logging for {process_name}")
-                log_resource_usage(process_name, force_gpu_check=(not cpu))
-                
-                # **Detailed operation logging** (ghi log thao tác chi tiết)
+                # **Detailed operation logging** (ghi log thao tác chi tiết) - ĐỊNH NGHĨA TRƯỚC KHI SỬ DỤNG
                 operation_details = {
                     'process_name': process_name,
                     'pid': process.pid,
@@ -405,6 +399,12 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     'namespace_isolation': enable_ns and privileged_manager is not None,
                     'log_file': str(miner_log_path)
                 }
+                
+                # **DEBUG: Force initial logging** (gỡ lỗi: buộc ghi log ban đầu) để kiểm tra logger hoạt động
+                logger.info(f"🔍 DEBUG: Attempting to log initial mining operation for {process_name}")
+                log_mining_operation(process_name, "PROCESS_START", process.pid, operation_details, 0.0, "SUCCESS")
+                logger.info(f"🔍 DEBUG: Initial resource usage logging for {process_name}")
+                log_resource_usage(process_name, force_gpu_check=(not cpu))
                 
                 logger.info(f"PROCESS_START: {process_name} | PID={process.pid} | TYPE={miner_type} | TIME={startup_time}")
                 
