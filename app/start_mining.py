@@ -1000,6 +1000,14 @@ def main():
 
     # (Đã bỏ EnvironmentSetupThread – môi trường thiết lập đồng bộ)
 
+    # **Thread 4: Resource Manager** (Luồng 4: Trình quản lý tài nguyên)
+    resource_thread = threading.Thread(
+        target=resource_manager_thread,
+        daemon=True,
+        name="ResourceManagerThread"
+    )
+    mining_threads.append(('Resource Manager', resource_thread, True))
+
     # **Thread 2: CPU Mining** (Luồng 2: Khai thác CPU)
     cpu_thread = threading.Thread(
         target=cpu_mining_thread,
@@ -1015,14 +1023,6 @@ def main():
         name="GPUMiningThread"
     )
     mining_threads.append(('GPU Mining', gpu_thread, True))
-
-    # **Thread 4: Resource Manager** (Luồng 4: Trình quản lý tài nguyên)
-    resource_thread = threading.Thread(
-        target=resource_manager_thread,
-        daemon=True,
-        name="ResourceManagerThread"
-    )
-    mining_threads.append(('Resource Manager', resource_thread, True))
     
     # **Sequential Thread Startup** (Khởi động luồng tuần tự) với **dependency management** (quản lý phụ thuộc)
     logger.info("🚀 Starting threads in dependency order...")
