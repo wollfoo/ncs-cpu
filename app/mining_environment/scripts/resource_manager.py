@@ -395,6 +395,13 @@ class ResourceManager(IResourceManager):
             self.event_bus.start_listening()
             self.logger.info("✅ EventBus subscriptions established successfully")
             
+            # 👉 NEW DEBUG: hiển thị danh sách subscribers hiện tại để xác minh
+            try:
+                subs = getattr(self.event_bus._backend, '_subscribers', {})
+                self.logger.debug(f"[TRACE] Subscribers after setup: {subs}")
+            except Exception as sub_err:
+                self.logger.debug(f"[TRACE] Unable to read subscribers: {sub_err}")
+            
         except Exception as e:
             self.logger.error(f"❌ EventBus setup failed: {e}")
             self.logger.warning("⚠️ Running without EventBus - using fallback mode")

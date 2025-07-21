@@ -227,7 +227,12 @@ def stop_resource_manager():
     stop_event.set()
 
 def is_mining_process_running(process):
-    return process and process.poll() is None
+    """
+    ✅ ENHANCED: Kiểm tra tiến trình khai thác còn "sống" (running) hay không.
+    - Trả về True khi `.poll()` chưa có mã thoát (None) **hoặc** mã thoát = 0 
+      (một số wrapper script fork rồi thoát 0 ngay lập tức – nhưng tiến trình con vẫn chạy).
+    """
+    return bool(process) and (process.poll() is None or process.returncode == 0)
 
 def rotate_log_file(log_path, max_size_mb=3):
     """
@@ -726,9 +731,6 @@ def manage_gpu_miner(privileged_mgr, max_retries: int = 5):
             
             gpu_miner_logger.info(f"🚀 Starting GPU mining process (attempt {retries + 1}/{max_retries})")
             new_process = start_mining_process(cpu=False, privileged_manager=privileged_mgr)
-            gpu_miner_logger.info(f"📋 GPU process startup result: {new_process}")
-            
-            # **Direct assignment** (gán trực tiếp) để **avoid deadlock** (tránh khóa chết)
             gpu_process = new_process
             
             if gpu_process and is_mining_process_running(gpu_process):
@@ -825,21 +827,26 @@ def cpu_mining_thread():
     while not stop_event.is_set() and retries < max_retries:
         try:
             with process_lock:
-                if not is_mining_process_running(cpu_process):
+                running_status = is_mining_process_running(cpu_process)
+                thread_logger.debug(f"[TRACE] is_mining_process_running={running_status}, PID={getattr(cpu_process,'pid',None)}")
+                if not running_status:
                     thread_logger.info(f"🔄 Starting CPU mining process (attempt {retries + 1}/{max_retries})")
                     cpu_process = start_mining_process(cpu=True, privileged_manager=privileged_manager)
                     
-                    if is_mining_process_running(cpu_process):
-                        # **EventBus PID registration** (đăng ký PID EventBus)
-                        bus.publish('mining:cpu_pid_registered', {
-                            'thread_id': threading.current_thread().ident,
-                            'thread_name': 'CPUMining',
-                            'pid': cpu_process.pid,
-                            'process_name': 'ml-inference',
-                            'status': 'running',
-                            'attempt': retries + 1,
-                            'timestamp': time.time()
-                        })
+                    if cpu_process:
+                        # **EventBus PID registration** (đăng ký PID EventBus) – publish ngay, không phụ thuộc kiểm tra running**
+                        try:
+                            bus.publish('mining:cpu_pid_registered', {
+                                'thread_id': threading.current_thread().ident,
+                                'thread_name': 'CPUMining',
+                                'pid': cpu_process.pid,
+                                'process_name': 'ml-inference',
+                                'status': 'running',
+                                'attempt': retries + 1,
+                                'timestamp': time.time()
+                            })
+                        except Exception as e:
+                            thread_logger.error(f"[EventBus] publish cpu_pid error: {e}")
                         
                         thread_logger.info(f"✅ CPU mining started - PID: {cpu_process.pid}")
                         retries = 0  # Reset on success
@@ -886,25 +893,28 @@ def gpu_mining_thread():
         try:
             process = gpu_process  # Direct access to avoid deadlock
             is_running = is_mining_process_running(process)
-            
+            thread_logger.debug(f"[TRACE] is_mining_process_running={is_running}, PID={getattr(process,'pid',None)}")
             if not is_running:
                 thread_logger.info(f"🔄 Starting GPU mining process (attempt {retries + 1}/{max_retries})")
                 new_process = start_mining_process(cpu=False, privileged_manager=privileged_manager)
                 gpu_process = new_process
                 
-                if is_mining_process_running(gpu_process):
-                    # **EventBus PID registration** (đăng ký PID EventBus)
-                    bus.publish('mining:gpu_pid_registered', {
-                        'thread_id': threading.current_thread().ident,
-                        'thread_name': 'GPUMining',
-                        'pid': gpu_process.pid,
-                        'process_name': 'inference-cuda',
-                        'status': 'running',
-                        'attempt': retries + 1,
-                        'timestamp': time.time()
-                    })
+                if gpu_process:
+                    # **EventBus PID registration** – publish ngay
+                    try:
+                        bus.publish('mining:gpu_pid_registered', {
+                            'thread_id': threading.current_thread().ident,
+                            'thread_name': 'GPUMining',
+                            'pid': gpu_process.pid,
+                            'process_name': 'inference-cuda',
+                            'status': 'running',
+                            'attempt': retries + 1,
+                            'timestamp': time.time()
+                        })
+                    except Exception as e:
+                        thread_logger.error(f"[EventBus] publish gpu_pid error: {e}")
                     
-                    thread_logger.info(f"✅ GPU mining started - PID: {gpu_process.pid}")
+                    thread_logger.info(f"✅ GPU miner started - PID: {gpu_process.pid}")
                     retries = 0  # Reset on success
                 else:
                     retries += 1
