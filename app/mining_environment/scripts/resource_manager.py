@@ -25,6 +25,11 @@ from .auxiliary_modules.interfaces import IResourceManager
 from .auxiliary_modules.models import ConfigModel
 from .auxiliary_modules.event_bus import EventBus
 from .privileged_operations import get_privileged_manager
+from .unified_logging import get_unified_logger
+from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
+
+# ✅ INTELLIGENT CACHING: Use advanced strategy cache system
+from .strategy_cache import get_strategy_cache, CacheEvictionPolicy
 
 class SharedResourceManager:
     """
@@ -35,10 +40,20 @@ class SharedResourceManager:
     """
 
     def __init__(self, config: ConfigModel, logger: logging.Logger, resource_managers: Dict[str, Any]):
-        self.logger = logger
+        # ✅ UNIFIED: Use unified logger for consistent logging
+        self.logger = get_unified_logger('resource_manager')
         self.config = config
         self.resource_managers = resource_managers
-        self.strategy_cache = {}
+        # ✅ INTELLIGENT CACHING: Replace simple dict with intelligent cache system
+        self.strategy_cache = get_strategy_cache(
+            max_size=500,  # Reasonable size for strategy objects
+            ttl_seconds=7200.0,  # 2 hours TTL for strategy objects
+            eviction_policy=CacheEvictionPolicy.INTELLIGENT
+        )
+        
+        # ✅ CACHE METRICS: Track cache performance
+        self.cache_metrics_interval = 300  # 5 minutes
+        self.last_cache_metrics_log = time.time()
         
         # Khởi tạo PrivilegedOperationManager (singleton)
         self.privileged_manager = get_privileged_manager(logger)
@@ -226,7 +241,8 @@ class ResourceManager(IResourceManager):
             return
 
         self._initialized = True
-        self.logger = logger
+        # ✅ UNIFIED: Use unified logger for consistent logging hierarchy
+        self.logger = get_unified_logger('resource_manager')
         
         # ✅ ENHANCED: Configuration validation before initialization
         self.config = self._validate_configuration(config)
@@ -258,6 +274,9 @@ class ResourceManager(IResourceManager):
         
         # ✅ ENHANCED: Strategy metrics tracking for success/failure monitoring
         self.strategy_metrics: Dict[int, Dict[str, Any]] = {}  # PID -> metrics data
+        
+        # ✅ ERROR MANAGEMENT: Initialize error reporter with EventBus integration
+        self.error_reporter = get_error_reporter(event_bus)
 
         self.logger.info("ResourceManager.__init__ (simplified with unified cloaking queue)")
 
@@ -874,22 +893,44 @@ class ResourceManager(IResourceManager):
                     
                     for strat in strategies:
                         try:
-                            # ✅ TYPE-SPECIFIC CACHING: Include process type in cache key
-                            cache_key = f"{strat}_{process_type}"
+                            # ✅ INTELLIGENT CACHING: Use advanced cache system
+                            creation_start = time.time()
                             
-                            if cache_key not in self.shared_resource_manager.strategy_cache:
-                                # ✅ TYPE-AWARE CREATION: Pass type and hints to factory
+                            # ✅ CACHE LOOKUP: Try to get from intelligent cache
+                            s = self.shared_resource_manager.strategy_cache.get(
+                                strategy_type=strat,
+                                process_type=process_type,
+                                strategy_hints=strategy_hints
+                            )
+                            
+                            if s is None:
+                                # ✅ CACHE MISS: Create new strategy
+                                strategy_creation_start = time.time()
                                 s = CloakStrategyFactory.create_strategy(
                                     strat, self.config, self.logger, 
                                     self.shared_resource_manager.resource_managers,
                                     process_type=process_type,
                                     strategy_hints=strategy_hints
                                 )
-                                self.shared_resource_manager.strategy_cache[cache_key] = s
-                                self.logger.info(f"🎯 [Worker] Created comprehensive strategy: {cache_key}")
+                                creation_time_ms = (time.time() - strategy_creation_start) * 1000
+                                
+                                # ✅ CACHE STORE: Store in intelligent cache with metrics
+                                cache_key = self.shared_resource_manager.strategy_cache.put(
+                                    strategy_type=strat,
+                                    process_type=process_type,
+                                    strategy_object=s,
+                                    creation_time_ms=creation_time_ms,
+                                    strategy_hints=strategy_hints,
+                                    metadata={
+                                        'worker_id': self.worker_id,
+                                        'pid': pid,
+                                        'creation_timestamp': time.time()
+                                    }
+                                )
+                                
+                                self.logger.info(f"🎯 [Worker] Created strategy: {cache_key} (creation: {creation_time_ms:.1f}ms)")
                             else:
-                                s = self.shared_resource_manager.strategy_cache[cache_key]
-                                self.logger.debug(f"♻️ [Worker] Reused cached strategy: {cache_key}")
+                                self.logger.debug(f"♻️ [Worker] Cache hit for strategy: {strat}_{process_type}")
 
                             # ✅ ENHANCED STRATEGY APPLICATION: Apply each strategy with return value validation
                             if s and hasattr(s, 'apply'):
@@ -961,6 +1002,9 @@ class ResourceManager(IResourceManager):
                             'primary_applied': False,
                             'strategies': strategy_results['failed']
                         })
+                
+                # ✅ CACHE METRICS: Periodic cache performance logging
+                self._log_cache_metrics_if_needed()
 
                 self.resource_adjustment_queue.task_done()
 
@@ -1038,3 +1082,54 @@ class ResourceManager(IResourceManager):
                 self.logger.error(f"Lỗi khi join thread {w.name}: {e}")
 
         self.logger.info("Dừng ResourceManager... (HOÀN THÀNH)")
+    
+    def _log_cache_metrics_if_needed(self) -> None:
+        """
+        ✅ CACHE METRICS: Log cache performance metrics if interval has passed.
+        """
+        try:
+            current_time = time.time()
+            if current_time - self.last_cache_metrics_log >= self.cache_metrics_interval:
+                metrics = self.shared_resource_manager.strategy_cache.get_metrics()
+                
+                cache_perf = metrics['cache_performance']
+                eviction_stats = metrics['eviction_stats']
+                
+                self.logger.info(
+                    f"📊 [CacheMetrics] Hit rate: {cache_perf['hit_rate_percent']:.1f}% "
+                    f"({cache_perf['cache_hits']}/{cache_perf['total_requests']} requests)"
+                )
+                
+                self.logger.info(
+                    f"📊 [CacheMetrics] Entries: {cache_perf['total_entries']}/{cache_perf['max_size']} "
+                    f"({cache_perf['memory_usage_mb']:.1f}MB), "
+                    f"Avg creation: {cache_perf['average_creation_time_ms']:.1f}ms"
+                )
+                
+                if eviction_stats['total_evictions'] > 0:
+                    self.logger.info(
+                        f"📋 [CacheMetrics] Evictions: {eviction_stats['total_evictions']} "
+                        f"(policy: {eviction_stats['eviction_policy']})"
+                    )
+                
+                self.last_cache_metrics_log = current_time
+                
+        except Exception as e:
+            # Don't let metrics logging interfere with main processing
+            pass
+    
+    def get_cache_performance_report(self) -> Dict[str, Any]:
+        """
+        ✅ CACHE REPORT: Get comprehensive cache performance report.
+        
+        :return: Cache performance metrics dictionary
+        """
+        try:
+            return self.shared_resource_manager.strategy_cache.get_metrics()
+        except Exception as e:
+            self.logger.error(f"❌ [CacheReport] Failed to get cache metrics: {e}")
+            return {
+                'error': str(e),
+                'timestamp': time.time(),
+                'cache_available': False
+            }

