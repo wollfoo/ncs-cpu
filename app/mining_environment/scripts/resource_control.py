@@ -2324,15 +2324,18 @@ class ResourceControlFactory:
             except Exception as e:
                 logger.error(f"Lỗi khi khởi tạo {name} manager: {e}", exc_info=True)
 
-            if not resource_managers:
-                logger.error("Không có resource managers nào được khởi tạo.")
-                raise RuntimeError("Tất cả resource managers đều khởi tạo thất bại.")
+            # (tiếp tục vòng lặp để khởi tạo các manager khác)
 
-            # ✅ CACHE: Store managers for reuse
-            ResourceControlFactory._shared_managers[config_hash] = resource_managers
-            logger.info(f"✅ [Factory] Tất cả resource managers đã được khởi tạo và cached (hash: {config_hash}).")
-            logger.info(f"📊 [Factory] Total shared instances: {len(ResourceControlFactory._shared_managers)}")
-            return resource_managers
+        # --- Kết thúc vòng for ---
+        if not resource_managers:
+            logger.error("Không có resource managers nào được khởi tạo.")
+            raise RuntimeError("Tất cả resource managers đều khởi tạo thất bại.")
+
+        # ✅ CACHE: Store managers for reuse (sau khi đã khởi tạo đầy đủ)
+        ResourceControlFactory._shared_managers[config_hash] = resource_managers
+        logger.info(f"✅ [Factory] Tất cả resource managers đã được khởi tạo và cached (hash: {config_hash}).")
+        logger.info(f"📊 [Factory] Total shared instances: {len(ResourceControlFactory._shared_managers)}")
+        return resource_managers
 
     @staticmethod
     def get_shared_managers_info() -> Dict[str, Any]:

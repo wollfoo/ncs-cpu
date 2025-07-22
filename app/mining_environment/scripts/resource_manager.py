@@ -1107,6 +1107,14 @@ class ResourceManager(IResourceManager):
                                 except Exception as _coord_err:
                                     self.logger.error(f"❌ Delegation error for strategy {strat}: {_coord_err}")
                                     apply_success = False
+                                    
+                                # ✅ FIX: Cập nhật strategy_results dựa trên apply_success
+                                if apply_success:
+                                    strategy_results['applied'].append(strat)
+                                    self.logger.debug(f"✅ [Strategy Success] {strat} successfully applied to PID={pid}")
+                                else:
+                                    strategy_results['failed'].append(strat)
+                                    self.logger.warning(f"❌ [Strategy Failed] {strat} failed for PID={pid}")
                             else:
                                 strategy_results['failed'].append(strat)
                                 self.logger.warning(f"❌ [Strategy] {strat} not applicable for PID={pid}")

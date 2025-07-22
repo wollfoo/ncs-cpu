@@ -1805,7 +1805,7 @@ class CacheCloakStrategy(CloakStrategy):
         """
         try:
             pid, name = process.pid, process.name
-            ok = self.cache_resource_manager.set_cache_limit(pid, self.cache_limit_percent)
+            ok = self.cache_resource_manager.limit_cache_usage(self.cache_limit_percent, pid)
             if ok:
                 self.logger.info(f"[Cache Cloaking] PID={pid}, cache_limit={self.cache_limit_percent}%.")
                 return True  # ✅ SUCCESS: Cache cloaking applied successfully
