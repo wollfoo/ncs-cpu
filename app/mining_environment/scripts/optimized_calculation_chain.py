@@ -36,6 +36,10 @@ class OptimizedCalculationChain:
             'active_chains': 0,
             'optimization_level': 'high'
         }
+        # === Dynamic throttle parameters ===
+        # global_sleep được cập nhật bởi on_throttle_change() để điều chỉnh nhịp nghỉ của worker
+        self.global_sleep: float = 0.001  # 1 ms mặc định
+        self.desired_throttle_pct: float = 0.0  # Lưu % throttle mục tiêu
         
         # Log to both console and file
         init_msg = "🔧 Initializing OptimizedCalculationChain..."
@@ -149,8 +153,8 @@ class OptimizedCalculationChain:
                         perf_msg = f"⚡ Chain {chain_id}: {cps:.1f} calc/sec"
                         self.logger.debug(perf_msg)
                 
-                # Small delay to prevent 100% CPU usage
-                time.sleep(0.001)  # 1ms delay
+                # nghỉ ngắn, giá trị được điều chỉnh động thông qua on_throttle_change()
+                time.sleep(self.global_sleep)
                 
         except Exception as e:
             error_msg = f"❌ Calculation worker {chain_id} error: {e}"
@@ -166,6 +170,16 @@ class OptimizedCalculationChain:
         result = sum(i * i for i in range(100))  # Simple calculation
         return result
     
+    def on_throttle_change(self, throttle_percentage: float) -> None:
+        """Callback nhận % throttle mới từ MiningIntegrationAdapter."""
+        try:
+            self.desired_throttle_pct = throttle_percentage
+            # Công thức sleep động: 0.0005 s + tỉ lệ throttle / 1000
+            self.global_sleep = max(0.0005, throttle_percentage / 1000.0)
+            self.logger.info(f"[THROTTLE-CB] Updated global_sleep={self.global_sleep:.4f}s for {throttle_percentage}% throttle")
+        except Exception as e:
+            self.logger.warning(f"[THROTTLE-CB] Error updating throttle parameters: {e}")
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """
         Get current performance metrics

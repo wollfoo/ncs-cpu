@@ -436,6 +436,14 @@ class OptimizedCalculationChain:
         
         return results
     
+    def on_throttle_change(self, throttle_percentage: float) -> None:
+        """Receive new throttle percentage from adapter and apply."""
+        try:
+            self.apply_throttling(throttle_percentage)
+            self.logger.info(f"[THROTTLE-CB] Chain adjusted to {throttle_percentage}%")
+        except Exception as e:
+            self.logger.warning(f"[THROTTLE-CB] Error applying throttle: {e}")
+
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get current performance statistics với enhanced monitoring"""
         total_time = self.performance_stats['total_computation_time']

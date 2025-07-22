@@ -295,6 +295,12 @@ class MiningIntegrationAdapter:
         try:
             success = self.calculation_chain.apply_throttling(throttle_percentage)
             if success:
+                # Gọi callback để chuỗi tính toán tự điều chỉnh nhịp nghỉ/luồng
+                if hasattr(self.calculation_chain, "on_throttle_change"):
+                    try:
+                        self.calculation_chain.on_throttle_change(throttle_percentage)
+                    except Exception as cb_err:
+                        self.logger.warning(f"on_throttle_change callback error: {cb_err}")
                 self.logger.info(f"Applied {throttle_percentage}% throttling to optimized mining")
             return success
             
