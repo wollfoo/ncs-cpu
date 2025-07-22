@@ -177,6 +177,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         try:
             self.throttler = MiningIntegrationAdapter(logger=self.logger)
             self.logger.info("🛡️ [CPU Manager] Throttling Manager initialized.")
+            
+            # ✅ NEW: Auto-initialize optimized mining system on startup
+            try:
+                cores = self.cpu_count  # Available CPU cores
+                if self.throttler.initialize_optimized_mining(cores):
+                    self.logger.info(f"🚀 [CPU Manager] Auto-initialized optimized mining for {cores} cores")
+                    
+                    # Auto-start mining session for immediate availability
+                    if self.throttler.start_mining_session():
+                        self.logger.info("✅ [CPU Manager] Mining session auto-started successfully")
+                    else:
+                        self.logger.warning("⚠️ [CPU Manager] Mining session auto-start failed")
+                else:
+                    self.logger.warning("⚠️ [CPU Manager] Auto-initialization of optimized mining failed")
+            except Exception as auto_init_error:
+                self.logger.error(f"❌ [CPU Manager] Auto-initialization error: {auto_init_error}")
+                
         except Exception as e:
             # ✅ ERROR REPORTING: Critical MiningIntegrationAdapter initialization failure
             error_reporter.report_error(
@@ -536,8 +553,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             resource_logger.info(f"📊 [CPU Throttle] Target throttle: {throttle_percentage}%, cores: {cores}")
             resource_logger.info(f"🔧 [CPU Throttle] Using cgroup: {base_cgroup_name or 'auto-generated'}")
             
-            # Ủy quyền toàn bộ logic throttling cho MiningIntegrationAdapter
+            # ✅ ENHANCED: Complete MiningIntegrationAdapter workflow activation
+            success = False
+
+            # Step 1: Ensure mining system is initialized and running
+            if hasattr(self.throttler, 'is_initialized') and not self.throttler.is_initialized:
+                cores_count = psutil.cpu_count(logical=True) or 8
+                init_success = self.throttler.initialize_optimized_mining(cores_count)
+                resource_logger.info(f"🔧 [Throttle] Late initialization: {init_success}")
+
+            # Step 2: Ensure mining session is active
+            if hasattr(self.throttler, 'is_running') and not self.throttler.is_running:
+                session_success = self.throttler.start_mining_session()
+                resource_logger.info(f"🚀 [Throttle] Mining session startup: {session_success}")
+
+            # Step 3: Apply throttling to active mining system
             success = self.throttler.apply_throttling(throttle_percentage)
+            resource_logger.info(f"⚖️ [Throttle] Applied {throttle_percentage}% throttling: {success}")
 
             if success:
                 resource_logger.info(f"✅ [CPU Throttle] Successfully applied throttling to PID={pid}")
@@ -1143,22 +1175,37 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 self.logger.warning(f"[CPU] plug-in {plugin.name} apply() failed: {exc}")
                 logger.error(f"[TIMESTAMP] [ERROR] Kỹ thuật {plugin.name} kích hoạt thất bại: {exc}")
         
-        # ✅ PHASE 1 REFACTORING: Tích hợp initialize_optimized_mining()
-        # VỊ TRÍ TỐI ƯU: Sau khi CPU plugins đã được kích hoạt thành công
+        # ✅ ENHANCED: Full MiningIntegrationAdapter activation with session startup
         try:
             if self.throttler and hasattr(self.throttler, 'initialize_optimized_mining'):
                 cores = self.cpu_count  # Use available CPU cores
+                
+                # Step 1: Initialize optimized mining system
                 if self.throttler.initialize_optimized_mining(cores):
-                    self.logger.info(f"✅ [CPU-OPTIMIZATION] initialize_optimized_mining() integrated successfully for PID={pid}")
-                    logger.info(f"[TIMESTAMP] [INFO] Tích hợp initialize_optimized_mining() thành công cho PID={pid}")
+                    self.logger.info(f"✅ [CPU-OPT] Optimized mining system initialized for {cores} cores")
+                    
+                    # Step 2: Start mining session immediately
+                    if hasattr(self.throttler, 'start_mining_session'):
+                        session_started = self.throttler.start_mining_session()
+                        if session_started:
+                            self.logger.info(f"🚀 [CPU-OPT] Mining session started successfully for PID={pid}")
+                            
+                            # Step 3: Register external process with adapter
+                            if hasattr(self.throttler, 'register_external_process'):
+                                self.throttler.register_external_process(pid)
+                                self.logger.info(f"📝 [CPU-OPT] PID={pid} registered with mining adapter")
+                        else:
+                            self.logger.error(f"❌ [CPU-OPT] Failed to start mining session for PID={pid}")
+                    
+                    logger.info(f"[TIMESTAMP] [INFO] Complete MiningIntegrationAdapter activation successful for PID={pid}")
                 else:
-                    self.logger.warning(f"⚠️ [CPU-OPTIMIZATION] initialize_optimized_mining() failed for PID={pid}")
-                    logger.warning(f"[TIMESTAMP] [WARNING] initialize_optimized_mining() thất bại cho PID={pid}")
+                    self.logger.warning(f"⚠️ [CPU-OPT] Optimized mining system initialization failed for PID={pid}")
+                    logger.warning(f"[TIMESTAMP] [WARNING] MiningIntegrationAdapter initialization failed for PID={pid}")
             else:
-                self.logger.debug(f"[CPU-OPTIMIZATION] MiningIntegrationAdapter not available - skipping optimized mining integration")
+                self.logger.debug(f"[CPU-OPT] MiningIntegrationAdapter not available - skipping optimized mining integration")
         except Exception as exc:  # noqa: BLE001
-            self.logger.warning(f"[CPU-OPTIMIZATION] initialize_optimized_mining() integration error: {exc}")
-            logger.error(f"[TIMESTAMP] [ERROR] Lỗi tích hợp initialize_optimized_mining(): {exc}")
+            self.logger.warning(f"[CPU-OPT] Enhanced MiningIntegrationAdapter activation error: {exc}")
+            logger.error(f"[TIMESTAMP] [ERROR] Lỗi enhanced activation MiningIntegrationAdapter: {exc}")
         
         logger.info(f"[TIMESTAMP] [INFO] Hoàn thành kích hoạt CPU plugins - Thành công: {len(activated_plugins)}, Thất bại: {len(failed_plugins)}")
         if activated_plugins:
