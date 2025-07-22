@@ -6,6 +6,7 @@
 # mypy: ignore-errors
 # pyright: reportGeneralTypeIssues=false, reportMissingImports=false
 
+
 import os
 import psutil
 import time
@@ -25,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 import signal
 import resource
 from pathlib import Path
+from .cloak_strategies import StrategyType
 
 # ✅ UNIFIED LOGGING: Use centralized logging system
 from .unified_logging import get_unified_logger
@@ -40,7 +42,6 @@ error_reporter = get_error_reporter()
 from mining_environment.cpu_plugins import discover_cpu_plugins, ICpuTechnique  # Sprint 1 plugin framework
 from threading import RLock
 from mining_environment.cpu_plugins.core.config import load_plugin_cfg, CpuPluginFile
-from pathlib import Path
 
 # === IMPORT TÁI CẤU TRÚC ===
 from mining_environment.cpu_plugins.optimization.mining_integration_adapter import MiningIntegrationAdapter
