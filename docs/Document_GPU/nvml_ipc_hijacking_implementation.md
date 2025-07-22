@@ -1,4 +1,4 @@
-# Hướng dẫn triển khai **[NVML IPC Hijacking]** (Chiếm dụng kênh giao tiếp NVML)
+  🚀 IMPLEMENTATION REQUEST (Yêu cầu triển khai):# Hướng dẫn triển khai **[NVML IPC Hijacking]** (Chiếm dụng kênh giao tiếp NVML)
 
 ## Tổng quan
 **[NVML IPC Hijacking]** (Chiếm dụng kênh giao tiếp NVML – proxy socket và chỉnh sửa phản hồi) là kỹ thuật chặn và sửa đổi thông tin GPU được trả về từ **[NVML]** (NVIDIA Management Library – thư viện quản lý GPU NVIDIA).
