@@ -12,6 +12,7 @@ import psutil
 import pynvml
 import traceback
 import threading
+import concurrent.futures  # ✅ NEW: ThreadPoolExecutor for per-strategy timeout
 import queue
 import time
 from threading import RLock
@@ -81,7 +82,6 @@ class SharedResourceManager:
                 self.logger.debug("Thread-safe NVML initialization...")
                 
                 # ✅ THREADING-BASED TIMEOUT: Safer for multi-threading environment
-                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
                 import time
                 
                 def nvml_init_worker():
@@ -94,7 +94,7 @@ class SharedResourceManager:
                         raise
                 
                 # ✅ THREAD-SAFE: Use ThreadPoolExecutor với timeout
-                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="NVML_Init") as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="NVML_Init") as executor:
                     future = executor.submit(nvml_init_worker)
                     
                     try:
@@ -103,7 +103,7 @@ class SharedResourceManager:
                         self._nvml_init = True
                         self.logger.info("✅ NVML đã được khởi tạo thành công (thread-safe mode)")
                         
-                    except FutureTimeoutError:
+                    except concurrent.futures.TimeoutError:
                         self.logger.warning("⏰ NVML initialization timeout after 3s - continuing without GPU support")
                         future.cancel()  # Cancel the running task
                         self._nvml_init = False
@@ -885,6 +885,17 @@ class ResourceManager(IResourceManager):
             )
             adjust_thread.start()
             self.workers.append(adjust_thread)
+
+            # ✅ NEW: Spawn additional CloakingWorker threads (parallel processing)
+            additional_workers = 3  # Total 4 workers (1 original + 3 extra)
+            for idx in range(additional_workers):
+                t = threading.Thread(
+                    target=self.process_resource_adjustments,
+                    daemon=True,
+                    name=f"CloakingWorker-{idx+2}"
+                )
+                t.start()
+                self.workers.append(t)
             
             # ✅ SIMPLIFIED: EventBus-driven architecture only
             
@@ -1068,7 +1079,14 @@ class ResourceManager(IResourceManager):
 
                             # ✅ ENHANCED STRATEGY APPLICATION: Apply each strategy with return value validation
                             if s and hasattr(s, 'apply'):
-                                apply_success = s.apply(p)  # ✅ CAPTURE RETURN VALUE
+                                # ✅ NON-BLOCKING apply with timeout using ThreadPoolExecutor
+                                try:
+                                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                                        future = executor.submit(s.apply, p)
+                                        apply_success = future.result(timeout=5)  # 5-second timeout
+                                except concurrent.futures.TimeoutError:
+                                    self.logger.warning(f"⏰ [Strategy] {strat} timeout for PID={pid}")
+                                    apply_success = False
                                 if apply_success:
                                     strategy_results['applied'].append(strat)
                                     self.logger.info(f"✅ [Strategy] {strat} applied successfully for PID={pid}")
