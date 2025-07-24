@@ -1,4 +1,4 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/antinomyhq/forge/refs/heads/main/forge.schema.json
 variables:
   operating_agent: muse
-model: qwen/qwen3-coder
+model: anthropic/claude-3.7-sonnet:thinking
