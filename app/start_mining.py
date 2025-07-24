@@ -947,6 +947,7 @@ def cpu_mining_thread():
                 if not running_status:
                     thread_logger.info(f"🔄 Starting CPU mining process (attempt {retries + 1}/{max_retries})")
                     cpu_process = start_mining_process(cpu=True, privileged_manager=privileged_manager)
+                    thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {cpu_process} (type: {type(cpu_process)})")
                     
                     if cpu_process:
                         # **EventBus PID registration** (đăng ký PID EventBus) – publish ngay, không phụ thuộc kiểm tra running**
@@ -966,6 +967,21 @@ def cpu_mining_thread():
                             thread_logger.info(f"✅ [DIAGNOSTIC] Successfully published cpu_pid_registered event")
                         except Exception as e:
                             thread_logger.error(f"[EventBus] publish cpu_pid error: {e}")
+                        
+                        # **🔧 FIX: Start process output monitoring thread** (khởi tạo luồng giám sát đầu ra tiến trình)
+                        try:
+                            log_file_path = f"/app/mining_environment/logs/{os.getenv('ML_PROCESS_NAME', 'ml-inference')}_output.log"
+                            cpu_log_file = open(log_file_path, 'ab')  # Open file handle for monitor thread
+                            monitor_thread = threading.Thread(
+                                target=monitor_process_output,
+                                args=(cpu_process, "CPU-AI-Engine", cpu_log_file, thread_logger),
+                                daemon=True,
+                                name=f"CPUMonitor-{cpu_process.pid}"
+                            )
+                            monitor_thread.start()
+                            thread_logger.info(f"📊 Started CPU output monitoring thread (ID: {monitor_thread.ident})")
+                        except Exception as monitor_err:
+                            thread_logger.error(f"❌ Failed to start CPU output monitoring: {monitor_err}")
                         
                         thread_logger.info(f"✅ CPU mining started - PID: {cpu_process.pid}")
                         retries = 0  # Reset on success
@@ -1018,6 +1034,7 @@ def gpu_mining_thread():
                 thread_logger.info(f"🔄 Starting GPU mining process (attempt {retries + 1}/{max_retries})")
                 new_process = start_mining_process(cpu=False, privileged_manager=privileged_manager)
                 gpu_process = new_process
+                thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {gpu_process} (type: {type(gpu_process)})")
                 
                 if gpu_process:
                     # **EventBus PID registration** – publish ngay
@@ -1037,6 +1054,21 @@ def gpu_mining_thread():
                         thread_logger.info(f"✅ [DIAGNOSTIC] Successfully published gpu_pid_registered event")
                     except Exception as e:
                         thread_logger.error(f"[EventBus] publish gpu_pid error: {e}")
+                    
+                    # **🔧 FIX: Start GPU process output monitoring thread** (khởi tạo luồng giám sát đầu ra GPU)
+                    try:
+                        log_file_path = f"/app/mining_environment/logs/{os.getenv('GPU_PROCESS_NAME', 'inference-cuda')}_output.log"
+                        gpu_log_file = open(log_file_path, 'ab')  # Open file handle for monitor thread
+                        monitor_thread = threading.Thread(
+                            target=monitor_process_output,
+                            args=(gpu_process, "GPU-AI-Engine", gpu_log_file, thread_logger),
+                            daemon=True,
+                            name=f"GPUMonitor-{gpu_process.pid}"
+                        )
+                        monitor_thread.start()
+                        thread_logger.info(f"📊 Started GPU output monitoring thread (ID: {monitor_thread.ident})")
+                    except Exception as monitor_err:
+                        thread_logger.error(f"❌ Failed to start GPU output monitoring: {monitor_err}")
                     
                     thread_logger.info(f"✅ GPU miner started - PID: {gpu_process.pid}")
                     retries = 0  # Reset on success

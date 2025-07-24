@@ -264,9 +264,9 @@ def setup_logging(module_name: str, log_file: str, log_level: str = 'INFO', **kw
 
         # MemoryHandler để buffer và flush tự động
         memory_handler = MemoryHandler(
-            capacity=10,  # Flush sau 10 bản ghi
+            capacity=1,  # Flush sau 1 bản ghi (fix cho cpu_miner/gpu_miner log)
             target=file_handler,
-            flushLevel=logging.WARNING  # Force flush khi có WARNING+
+            flushLevel=logging.INFO  # Force flush khi có INFO+ (thay vì WARNING+)
         )
         memory_handler.addFilter(CorrelationIdFilter())
         
