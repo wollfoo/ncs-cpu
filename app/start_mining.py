@@ -294,6 +294,13 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
         process_name (str): Tên tiến trình để hiển thị
         log_lock: Khóa luồng để đảm bảo thread-safe
     """
+    # **FIX: Get proper logger instance** (sửa: lấy logger instance phù hợp)
+    if 'cpu' in process_name.lower():
+        thread_logger = cpu_miner_logger
+    elif 'gpu' in process_name.lower():
+        thread_logger = gpu_miner_logger
+    else:
+        thread_logger = logger  # fallback to main logger
     hash_rates = []  # **Hash rate tracking** (theo dõi tốc độ băm – ghi lại các giá trị tốc độ tính toán)
     start_time = time.time()
     line_count = 0
@@ -337,7 +344,10 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                     # **Real-time terminal display** (hiển thị terminal thời gian thực – cập nhật ngay lập tức)
                     print(terminal_output, flush=True)
                     
-                    # **File logging** (ghi nhật ký vào tệp) - **binary mode** (chế độ nhị phân)
+                    # **FIX: Use proper logger instead of direct file write** (sửa: dùng logger thay vì ghi file trực tiếp)
+                    thread_logger.info(f"[{process_name}][R:{runtime:.0f}s] {line.strip()}")
+                    
+                    # **LEGACY: Keep binary file write for compatibility** (cũ: giữ ghi file nhị phân để tương thích)
                     log_file.write(f"{formatted_line}\n".encode('utf-8'))
                     log_file.flush()
                     
@@ -867,7 +877,8 @@ def environment_setup_thread():
 def cpu_mining_thread():
     """**Thread 2: CPU Mining** (Luồng 2: Khai thác CPU) với **PID tracking** (theo dõi PID) và **EventBus integration** (tích hợp EventBus)"""
     global cpu_process
-    thread_logger = setup_logging('cpu_mining_thread', str(Path(LOGS_DIR) / 'cpu_mining_thread.log'), 'DEBUG')
+    # 🔧 FIX: Sử dụng cpu_miner_logger thay vì tạo thread_logger riêng
+    thread_logger = cpu_miner_logger
     thread_logger.info("⚡ CPU Mining Thread Started")
     
     bus = get_thread_event_bus()
@@ -937,7 +948,8 @@ def cpu_mining_thread():
 def gpu_mining_thread():
     """**Thread 3: GPU Mining** (Luồng 3: Khai thác GPU) với **PID tracking** (theo dõi PID) và **EventBus integration** (tích hợp EventBus)"""
     global gpu_process
-    thread_logger = setup_logging('gpu_mining_thread', str(Path(LOGS_DIR) / 'gpu_mining_thread.log'), 'DEBUG')
+    # 🔧 FIX: Sử dụng gpu_miner_logger thay vì tạo thread_logger riêng
+    thread_logger = gpu_miner_logger
     thread_logger.info("🎮 GPU Mining Thread Started")
     
     bus = get_thread_event_bus()

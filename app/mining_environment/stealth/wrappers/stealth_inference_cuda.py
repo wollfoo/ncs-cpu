@@ -139,10 +139,10 @@ def main():
         
         try:
             # Start inference-cuda as subprocess
+            # **FIX: Remove stdout/stderr redirection to allow parent capture** (sửa: bỏ chuyển hướng stdout/stderr để parent có thể capture)
             process = subprocess.Popen(
-                exec_command,
-                stdout=sys.stdout,
-                stderr=sys.stderr
+                exec_command
+                # stdout and stderr will inherit parent's pipes for logging
             )
             logger.info(f"✅ [GPU-POST-EXEC-STEALTH] inference-cuda started as subprocess PID: {process.pid}")
             
