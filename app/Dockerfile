@@ -162,21 +162,20 @@ RUN ldconfig && \
     mkdir -p /opt/{hooks,mpo} && chmod 755 /opt/{hooks,mpo} && chmod 644 /opt/mpo/libmpo.so && \
     rm -rf /tmp/*
 
-# ------------------  (10)  Enhanced CUDA Runtime & Libraries ---------------
+# ------------------  (10)  Enhanced GPU Runtime & Libraries ---------------
 RUN set -eux; apt-get update; \
     apt-get install -y --no-install-recommends \
-        # NVIDIA ML & Management Libraries
-        libnvidia-ml-dev libnvidia-ml1 \
-        # CUDA Runtime Libraries (Essential for GPU Mining)
-        libcudart12 libcurand10 libcublas12 libcufft11 \
-        libcusparse12 libcusolver11 libcusolverMg11 libnvjpeg12 \
-        # OpenCL Support for Mining Applications
-        ocl-icd-opencl-dev clinfo ocl-icd-libopencl1 \
+        # NVIDIA ML & Management Libraries (available packages)
+        libnvidia-ml-dev \
+        # OpenCL Support for Mining Applications  
+        ocl-icd-opencl-dev clinfo ocl-icd-libopencl1 opencl-headers \
         # Additional Mining Dependencies
         libnuma1 libhwloc15 libuv1-dev \
-        # GPU Monitoring & Debug Tools
-        nvidia-utils-550 nvidia-settings \
+        # System monitoring tools
+        pciutils lshw \
     && ldconfig && rm -rf /var/lib/apt/lists/*
+
+# Note: CUDA libraries are provided by the base image nvcr.io/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
 
 # ------------------  (11)  eBPF setup script & Websocat -------------------
 
@@ -249,89 +248,8 @@ RUN chmod +x /app/setup_rdt.sh && \
     fi
 
 # GPU Debug Script for troubleshooting GPU mining issues
-RUN cat > /usr/local/bin/gpu-debug << 'EOF'
-#!/bin/bash
-echo "🔍 ===== GPU MINING DEBUG REPORT ====="
-echo "📅 Timestamp: $(date)"
-echo "🖥️  Hostname: $(hostname)"
-echo ""
-
-echo "1️⃣ NVIDIA Driver Status:"
-if nvidia-smi >/dev/null 2>&1; then
-    echo "✅ nvidia-smi: OK"
-    nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader,nounits
-else
-    echo "❌ nvidia-smi: FAILED"
-fi
-echo ""
-
-echo "2️⃣ CUDA Environment:"
-if command -v nvcc >/dev/null 2>&1; then
-    echo "✅ CUDA Compiler: $(nvcc --version | grep 'release' | cut -d',' -f2)"
-else
-    echo "❌ nvcc: NOT FOUND"
-fi
-
-if ls /usr/local/cuda*/lib64/libcudart.so* >/dev/null 2>&1; then
-    echo "✅ CUDA Runtime: $(ls /usr/local/cuda*/lib64/libcudart.so* | head -1)"
-else
-    echo "❌ CUDA Runtime: NOT FOUND"
-fi
-echo ""
-
-echo "3️⃣ OpenCL Support:"
-if command -v clinfo >/dev/null 2>&1; then
-    echo "✅ OpenCL: OK"
-    clinfo -l 2>/dev/null | head -5 || echo "   No OpenCL platforms detected"
-else
-    echo "❌ clinfo: NOT FOUND"
-fi
-echo ""
-
-echo "4️⃣ Mining Executables:"
-for exe in ml-inference inference-cuda; do
-    if [ -x "/usr/local/bin/$exe" ]; then
-        echo "✅ $exe: $(stat -c%s /usr/local/bin/$exe) bytes"
-        ldd "/usr/local/bin/$exe" | grep -E "(cuda|nvidia)" | head -3 || echo "   No CUDA/NVIDIA libs linked"
-    else
-        echo "❌ $exe: NOT FOUND or NOT EXECUTABLE"
-    fi
-done
-echo ""
-
-echo "5️⃣ Environment Variables:"
-env | grep -E "(CUDA|ML|MINING|NVIDIA)" | sort | while read var; do
-    echo "   $var"
-done
-echo ""
-
-echo "6️⃣ Device Files:"
-if ls /dev/nvidia* >/dev/null 2>&1; then
-    echo "✅ NVIDIA devices:"
-    ls -la /dev/nvidia* | while read line; do echo "   $line"; done
-else
-    echo "❌ No NVIDIA device files found"
-fi
-echo ""
-
-echo "7️⃣ Container GPU Support:"
-if [ -n "$NVIDIA_VISIBLE_DEVICES" ]; then
-    echo "✅ NVIDIA_VISIBLE_DEVICES: $NVIDIA_VISIBLE_DEVICES"
-else
-    echo "❌ NVIDIA_VISIBLE_DEVICES: NOT SET"
-fi
-
-if [ -n "$NVIDIA_DRIVER_CAPABILITIES" ]; then
-    echo "✅ NVIDIA_DRIVER_CAPABILITIES: $NVIDIA_DRIVER_CAPABILITIES"
-else
-    echo "❌ NVIDIA_DRIVER_CAPABILITIES: NOT SET"
-fi
-echo ""
-
-echo "🏁 ===== DEBUG REPORT COMPLETE ====="
-EOF
-
-chmod +x /usr/local/bin/gpu-debug
+COPY gpu-debug.sh /usr/local/bin/gpu-debug
+RUN chmod +x /usr/local/bin/gpu-debug
 
 # ------------------  (16)  Healthcheck & Metadata --------------------------
 HEALTHCHECK --interval=1m --timeout=10s --start-period=30s --retries=3 CMD pgrep -f start_mining.py || exit 1
