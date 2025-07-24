@@ -65,7 +65,7 @@ class StealthExecution:
         if logger is None:
             try:
                 # Sử dụng unified CPU cloaking logger
-                self.logger = get_unified_logger('mining_environment.cpu_cloaking')
+                self.logger = get_unified_logger('mining_environment.cpu_stealth')
                 self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with CPU-specific logger")
             except Exception:
                 # Fallback to module logger nếu unified system không khả dụng

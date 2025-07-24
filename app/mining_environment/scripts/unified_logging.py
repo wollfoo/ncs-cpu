@@ -44,10 +44,10 @@ class UnifiedLoggerManager:
             'description': 'Cloaking strategy implementations'
         },
         'mining_environment.cpu_cloaking': {
-            # 🔧 CPU-specific cloaking operations (Emergency Fix)
+            # 🔧 CPU cloaking operations (Legacy external stealth only)
             'level': logging.DEBUG,
             'file': 'cpu_cloaking_manager.log',
-            'description': 'CPU cloaking and stealth execution operations'
+            'description': 'CPU cloaking legacy operations and external stealth attempts'
         },
         'mining_environment.gpu_cloaking': {
             # 🔧 GPU-specific cloaking operations (Emergency Fix)

