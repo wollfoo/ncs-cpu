@@ -48,9 +48,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ------------------  (2)  Cài đặt hệ thống cơ bản ------------------------
 RUN set -eux; \
-    apt-get update --allow-releaseinfo-change || true; \
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg || true; \
-    apt-get update --allow-releaseinfo-change || true; \
+    apt-get update --allow-insecure-repositories; \
     apt-get install -y --no-install-recommends \
         apt-utils sudo nano wget file python3 python3-pip curl git \
         libssl-dev libeigen3-dev libnuma-dev stunnel4 \
@@ -59,26 +57,14 @@ RUN set -eux; \
         pciutils openssl lm-sensors powerstat stress-ng bash \
         htop locales iptables powertop tzdata numactl systemd dbus \
         pkg-config libhwloc15 libhwloc-dev ca-certificates lsb-release gnupg \
-        libuv1 libudev1 libssl3 cgroup-tools libcgroup1 libcap2-bin \
+        libuv1 libudev1 libssl3 cgroup-tools libcgroup1 libcap2-bin nvidia-container-toolkit \
         kmod software-properties-common snapd linux-tools-generic linux-tools-azure \
         erlang-base erlang-crypto erlang-eldap erlang-ftp erlang-inets erlang-mnesia \
         erlang-os-mon erlang-parsetools erlang-public-key erlang-runtime-tools \
         erlang-snmp erlang-ssl erlang-syntax-tools erlang-tftp erlang-tools \
         erlang-xmerl erlang-asn1 socat logrotate && \
-    rm -rf /var/lib/apt/lists/*
-
-# ------------------  (2.1)  NVIDIA Container Toolkit (Optional - Skip nếu không cần) -------
-# Note: nvidia-container-toolkit chỉ cần thiết khi chạy nested containers
-# Trong môi trường mining này, có thể bỏ qua package này
-RUN set -eux; \
-    echo "Skipping nvidia-container-toolkit - not required for mining operations"; \
-    echo "CUDA runtime đã có sẵn từ base image nvcr.io/nvidia/cuda"; \
-    # Alternative: Cài đặt minimal NVIDIA utilities nếu cần
-    apt-get update --allow-releaseinfo-change || true; \
-    apt-get install -y --no-install-recommends \
-        # NVIDIA utilities cơ bản (có sẵn trong Ubuntu repos)
-        nvidia-utils-535 || echo "nvidia-utils not available, continuing..."; \
-    rm -rf /var/lib/apt/lists/* || true
+    sudo apt-get clean && \
+    sudo rm -rf /var/lib/apt/lists/*
 
 # ------------------  (3)  Locale & Timezone  -------------------------------
 RUN set -eux; apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata locales; \
