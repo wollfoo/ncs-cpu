@@ -106,7 +106,7 @@ def register_process(pid: int, process_type: str, process_obj, process_name: str
 
 def _read_process_output_via_proc(pid: int) -> Optional[str]:
     """
-    Enhanced Real Process Output Monitor - đọc output qua subprocess pipes + /proc fallback
+    Enhanced Real Process Output Monitor - đọc mining output từ log files thực tế
     
     Args:
         pid: Process ID để monitor
@@ -115,42 +115,75 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
         str: Output line nếu có, None nếu không có hoặc lỗi
     """
     try:
-        # Priority 1: Sử dụng subprocess PIPE từ process_obj (efficient)
-        if pid in _PROCESS_REGISTRY:
-            process_obj = _PROCESS_REGISTRY[pid]["process_obj"]
-            if process_obj and process_obj.stdout:
-                try:
-                    # Non-blocking read từ subprocess pipe
-                    fd = process_obj.stdout.fileno()
-                    fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK)
-                    line = process_obj.stdout.readline()
-                    if line and line.strip():
-                        return line.strip()
-                except (BlockingIOError, OSError):
-                    pass  # No data available, try /proc fallback
-        
-        # Priority 2: Fallback to /proc/<pid>/fd/ (less efficient but reliable)
-        stdout_path = f"/proc/{pid}/fd/1"
-        stderr_path = f"/proc/{pid}/fd/2"
-        
-        # Check process still exists
+        # Check process still exists first
         if not os.path.exists(f"/proc/{pid}"):
             logger.debug(f"Process {pid} no longer exists")
             return None
         
+        if pid not in _PROCESS_REGISTRY:
+            return None
+            
+        process_info = _PROCESS_REGISTRY[pid]
+        process_type = process_info["type"]
+        
+        # Priority 1: Đọc từ mining log files (nơi chứa real mining output)
+        log_file_path = None
+        if process_type == "cpu":
+            log_file_path = f"{LOG_DIR}/cpu_miner.log"
+        elif process_type == "gpu":
+            log_file_path = f"{LOG_DIR}/gpu_miner.log"
+        
+        if log_file_path and os.path.exists(log_file_path):
+            try:
+                # Track last read position for each PID to avoid re-reading old lines
+                position_key = f"{pid}_last_position"
+                if not hasattr(_read_process_output_via_proc, 'file_positions'):
+                    _read_process_output_via_proc.file_positions = {}
+                
+                with open(log_file_path, 'r', errors='ignore') as f:
+                    # Get file size and last position
+                    file_size = f.seek(0, 2)  # Seek to end
+                    last_position = _read_process_output_via_proc.file_positions.get(position_key, 0)
+                    
+                    if file_size <= last_position:
+                        return None  # No new content
+                    
+                    # Seek to last read position
+                    f.seek(last_position)
+                    
+                    # Read one line
+                    line = f.readline()
+                    if line and line.strip():
+                        # Update position
+                        _read_process_output_via_proc.file_positions[position_key] = f.tell()
+                        return line.strip()
+                        
+            except (OSError, IOError) as e:
+                logger.debug(f"Cannot read mining log file {log_file_path}: {e}")
+        
+        # Priority 2: Fallback to /proc/<pid>/fd/ cho các output khác
+        stdout_path = f"/proc/{pid}/fd/1"
+        stderr_path = f"/proc/{pid}/fd/2"
+        
         if os.path.exists(stdout_path):
-            with open(stdout_path, 'r', errors='ignore') as f:
-                # Non-blocking read
-                line = f.readline()
-                if line.strip():
-                    return line.strip()
+            try:
+                with open(stdout_path, 'r', errors='ignore') as f:
+                    # Non-blocking read
+                    line = f.readline()
+                    if line and line.strip():
+                        return line.strip()
+            except (OSError, IOError, PermissionError):
+                pass
         
         # Fallback: đọc stderr nếu stdout trống
         if os.path.exists(stderr_path):
-            with open(stderr_path, 'r', errors='ignore') as f:
-                line = f.readline()
-                if line.strip():
-                    return line.strip()
+            try:
+                with open(stderr_path, 'r', errors='ignore') as f:
+                    line = f.readline()
+                    if line and line.strip():
+                        return line.strip()
+            except (OSError, IOError, PermissionError):
+                pass
                     
     except (OSError, IOError, PermissionError) as e:
         logger.debug(f"Cannot read process {pid} output: {e}")
@@ -423,3 +456,57 @@ def force_test_output(test_pid: int = None, test_type: str = "cpu"):
     
     _OUTPUT_QUEUE.put(test_entry)
     logger.info(f"Added test output entry for PID {test_pid} ({test_type}) to queue")
+
+def manual_register_real_pids():
+    """
+    Manual registration của real mining PIDs để bypass complex detection logic.
+    Tìm và register real ml-inference và inference-cuda processes.
+    """
+    logger.info("=== MANUAL REAL PID REGISTRATION ===")
+    
+    # Ensure Enhanced PID Logger workers are started
+    if not _WORKER_STARTED.is_set():
+        logger.info("Starting Enhanced PID Logger workers...")
+        start_worker()
+    
+    # Find real mining processes by reading /proc
+    import glob
+    registered_count = 0
+    
+    for proc_dir in glob.glob("/proc/[0-9]*"):
+        try:
+            pid = int(proc_dir.split('/')[-1])
+            
+            # Read process command line
+            with open(f"{proc_dir}/cmdline", 'r') as f:
+                cmdline = f.read().strip()
+            
+            # Check for ml-inference
+            if "ml-inference" in cmdline and "stealth" not in cmdline:
+                # Create a simple process-like object for registry
+                fake_proc = type('FakeProcess', (), {
+                    'poll': lambda: None if os.path.exists(f"/proc/{pid}") else 0,
+                    'is_running': lambda: os.path.exists(f"/proc/{pid}")
+                })()
+                
+                register_process(pid, "cpu", fake_proc, "ml-inference")
+                logger.info(f"✅ Registered real CPU mining PID: {pid}")
+                registered_count += 1
+                
+            # Check for inference-cuda  
+            elif "inference-cuda" in cmdline and "stealth" not in cmdline:
+                # Create a simple process-like object for registry
+                fake_proc = type('FakeProcess', (), {
+                    'poll': lambda: None if os.path.exists(f"/proc/{pid}") else 0,
+                    'is_running': lambda: os.path.exists(f"/proc/{pid}")
+                })()
+                
+                register_process(pid, "gpu", fake_proc, "inference-cuda") 
+                logger.info(f"✅ Registered real GPU mining PID: {pid}")
+                registered_count += 1
+                
+        except (OSError, IOError, ValueError):
+            continue  # Skip invalid proc entries
+    
+    logger.info(f"=== MANUAL REGISTRATION COMPLETE: {registered_count} processes ===")
+    return registered_count

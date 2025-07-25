@@ -10,6 +10,7 @@ API:
 Debug API:
     - debug_registry_status(): hiển thị trạng thái process registry.
     - force_test_output(test_pid, test_type): test output format.
+    - manual_register_real_pids(): manual registration của real mining PIDs.
 """
 
-from .worker import start_worker, log_pid, register_process, debug_registry_status, force_test_output
+from .worker import start_worker, log_pid, register_process, debug_registry_status, force_test_output, manual_register_real_pids, _WORKER_STARTED, _PROCESS_REGISTRY, force_restart_worker
