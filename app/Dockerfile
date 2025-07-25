@@ -8,12 +8,6 @@ FROM nvcr.io/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
 # Thiết lập non-interactive để tránh các câu hỏi khi cài đặt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Cấu hình locale để tránh lỗi "setlocale: LC_ALL: cannot change locale"
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
-
-# Ngăn start/restart service không cần thiết
-RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
 
 # ------------------  (1)  Biến môi trường & ARG giữ nguyên ------------------
 ARG AZURE_SUBSCRIPTION_ID
