@@ -48,7 +48,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ------------------  (2)  Cài đặt hệ thống cơ bản ------------------------
 RUN set -eux; \
-    apt-get update --allow-insecure-repositories; \
+    apt-get update --allow-releaseinfo-change || true; \
     apt-get install -y --no-install-recommends \
         apt-utils sudo nano wget file python3 python3-pip curl git \
         libssl-dev libeigen3-dev libnuma-dev stunnel4 \
