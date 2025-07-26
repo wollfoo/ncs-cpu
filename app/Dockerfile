@@ -46,6 +46,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     EVENT_BUS_BACKEND=${EVENT_BUS_BACKEND} \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+# FIX: Add CUDA library path for dynamic loading of CUDA plugins
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/lib64/stubs:$LD_LIBRARY_PATH
+
 # ------------------  (2)  Cài đặt hệ thống cơ bản ------------------------
 RUN set -eux; \
     apt-get update --allow-releaseinfo-change || true; \
@@ -205,9 +208,6 @@ ENV SCRIPT_DIR=/app/mining_environment/scripts \
     EVENTBUS_CONNECTION_TIMEOUT=10.0 \
     EVENTBUS_RETRY_ATTEMPTS=5 \
     EVENTBUS_HEALTH_CHECK_INTERVAL=60.0
-
-# FIX: Add CUDA library path for dynamic loading of CUDA plugins
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/lib64/stubs:$LD_LIBRARY_PATH
 
 ENV LD_PRELOAD="/opt/hooks/libtempspoof.so:/opt/hooks/libgpuhook.so"
 
