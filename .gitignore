@@ -5,13 +5,16 @@
 
 # ============================== PYTHON ==============================
 # Byte-compiled / optimized / DLL files
+
+
 __pycache__/
 *.py[cod]
 *$py.class
+.cladue
 
 # C extensions
 # *.so
-.cladue
+
 # Distribution / packaging
 .Python
 build/
