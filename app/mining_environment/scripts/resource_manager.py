@@ -9,7 +9,6 @@ Sau khi refactor, module này:
 
 import logging
 import psutil
-import pynvml
 import traceback
 import threading
 import concurrent.futures  # ✅ NEW: ThreadPoolExecutor for per-strategy timeout
@@ -64,12 +63,9 @@ class SharedResourceManager:
         self.logger.info(f"Security context: User={security_context['user']}, Root={security_context['is_root']}")
 
         self._nvml_init = False
-        try:
-            self.initialize_nvml()
-            self.logger.info("SharedResourceManager khởi tạo OK.")
-        except Exception as e:
-            self.logger.error(f"Lỗi init SharedResourceManager: {e}\n{traceback.format_exc()}")
-            raise
+        # CPU-only build: NVML disabled; skip initialization entirely
+        self.initialize_nvml()
+        self.logger.info("SharedResourceManager khởi tạo OK (CPU-only, NVML disabled).")
 
     def is_nvml_initialized(self) -> bool:
         return self._nvml_init
@@ -79,13 +75,10 @@ class SharedResourceManager:
         self._nvml_init = False
 
     def shutdown_nvml(self):
+        # CPU-only build: nothing to shutdown
         if self._nvml_init:
-            try:
-                pynvml.nvmlShutdown()
-                self._nvml_init = False
-                self.logger.debug("Đã shutdown NVML thành công.")
-            except pynvml.NVMLError as e:
-                self.logger.error(f"Lỗi khi shutdown NVML: {e}")
+            self._nvml_init = False
+            self.logger.debug("NVML shutdown skipped (CPU-only).")
 
     def get_process_cache_usage(self, pid: int) -> float:
         """

