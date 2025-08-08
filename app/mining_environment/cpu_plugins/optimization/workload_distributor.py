@@ -87,14 +87,14 @@ class AdaptiveLoadBalancer:
             name="LoadBalancer-Monitor"
         )
         self.monitoring_thread.start()
-        self.logger.info("Performance monitoring started")
+        self.logger.info("Giám sát hiệu năng (performance monitoring) đã khởi động")
     
     def stop_monitoring(self):
         """Stop background performance monitoring"""
         self.monitoring_active = False
         if self.monitoring_thread and self.monitoring_thread.is_alive():
             self.monitoring_thread.join(timeout=5.0)
-        self.logger.info("Performance monitoring stopped")
+        self.logger.info("Giám sát hiệu năng (performance monitoring) đã dừng")
     
     def _monitoring_loop(self):
         """Background thread for monitoring core performance"""
@@ -105,7 +105,7 @@ class AdaptiveLoadBalancer:
                 self._adapt_strategy_if_needed()
                 time.sleep(self.monitoring_interval)
             except Exception as e:
-                self.logger.error(f"Monitoring loop error: {e}")
+                self.logger.error(f"Lỗi trong vòng lặp giám sát (monitoring loop): {e}")
                 time.sleep(5.0)
     
     def _update_core_performance(self):
@@ -233,12 +233,12 @@ class WorkloadDistributor:
     def start(self):
         """Start the workload distributor"""
         self.load_balancer.start_monitoring()
-        self.logger.info("WorkloadDistributor started")
+            self.logger.info("WorkloadDistributor đã khởi động")
     
     def stop(self):
         """Stop the workload distributor"""
         self.load_balancer.stop_monitoring()
-        self.logger.info("WorkloadDistributor stopped")
+            self.logger.info("WorkloadDistributor đã dừng")
     
     def register_task_profile(self, task_type: str, profile: TaskProfile):
         """Register a task profile for optimization"""

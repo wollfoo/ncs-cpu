@@ -150,7 +150,7 @@ class OptimizedSystemIntegration:
             success = self.mining_adapter.start_mining_session(session_config)
             if success:
                 self.optimized_mining_active = True
-                self.logger.info("✅ Optimized mining session started")
+            self.logger.info("✅ Phiên khai thác tối ưu (optimized mining session) đã khởi động")
             
             return success
             

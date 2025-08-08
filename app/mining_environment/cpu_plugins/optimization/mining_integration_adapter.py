@@ -705,7 +705,7 @@ class MiningIntegrationAdapter:
                 name=f"MiningMonitor-{os.getpid()}"
             )
             self.monitoring_thread.start()
-            self.logger.info(f"[SESSION-LOG] Monitoring thread started: {self.monitoring_thread.name}")
+            self.logger.info(f"[SESSION-LOG] Luồng giám sát (monitoring thread) đã khởi động: {self.monitoring_thread.name}")
             
             # Start workload management
             self.workload_thread = threading.Thread(
@@ -714,7 +714,7 @@ class MiningIntegrationAdapter:
                 name=f"WorkloadManager-{os.getpid()}"
             )
             self.workload_thread.start()
-            self.logger.info(f"[SESSION-LOG] Workload thread started: {self.workload_thread.name}")
+            self.logger.info(f"[SESSION-LOG] Luồng tải công việc (workload thread) đã khởi động: {self.workload_thread.name}")
             
             # 🔧 Verify thread startup
             time.sleep(0.5)  # Short wait for threads to initialize
@@ -729,7 +729,7 @@ class MiningIntegrationAdapter:
                 return False
             
             self.is_running = True
-            self.logger.info(f"[SESSION-LOG] ✅ Mining session started successfully - Process PID: {os.getpid()}")
+            self.logger.info(f"[SESSION-LOG] ✅ Phiên khai thác đã khởi động thành công - Process PID: {os.getpid()}")
             
             # 🔧 Initial worker status check
             if hasattr(self.calculation_chain, 'get_performance_stats'):

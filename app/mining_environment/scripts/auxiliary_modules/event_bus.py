@@ -592,7 +592,7 @@ class RabbitMQEventBusBackend(EventBusBackend):
                     microseconds = int(time.time() * 1000000)  # Microsecond precision
                     random_suffix = random.randint(1000, 9999)
                     unique_consumer_tag = f"ctag-{uuid.uuid4().hex[:12]}-{microseconds}-{os.getpid()}-{random_suffix}"
-                    self._logger.debug(f"🏷️  Creating ultra-unique consumer tag: {unique_consumer_tag}")
+                    self._logger.debug(f"🏷️  Tạo [consumer tag] (thẻ consumer) cực kỳ duy nhất: {unique_consumer_tag}")
 
                     # **Thread-safe tag uniqueness verification** (xác minh tính duy nhất của thẻ an toàn luồng)
                     with self._consumer_tags_lock:

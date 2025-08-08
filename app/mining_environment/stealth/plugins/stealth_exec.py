@@ -191,7 +191,7 @@ class StealthExecution:
             daemon=True
         )
         self._thread.start()
-        self.logger.info("Stealth execution started")
+        self.logger.info("Quy trình che giấu (stealth execution) đã khởi động")
         return True
     
     def stop(self) -> bool:
@@ -207,7 +207,7 @@ class StealthExecution:
         # ✅ Cleanup spawned processes when stopping
         self.cleanup_spawned_processes()
             
-        self.logger.info("Stealth execution stopped")
+        self.logger.info("Quy trình che giấu (stealth execution) đã dừng")
         return True
     
     def add_process(self, pid: int) -> bool:

@@ -53,10 +53,10 @@ def _ensure_log_dir() -> None:
 def _rotate_if_needed(path: pathlib.Path) -> None:
     if path.exists() and path.stat().st_size / (1024*1024) > MAX_SIZE_MB:
         try:
-            logger.info(f"Rotating PID log file {path} (> {MAX_SIZE_MB}MB)")
+            logger.info(f"Đang thực hiện xoay vòng log (log rotation) cho tệp PID {path} (> {MAX_SIZE_MB}MB)")
             path.unlink()
         except Exception as exc:
-            logger.error(f"Failed to rotate PID log file {path}: {exc}")
+            logger.error(f"Xoay vòng log PID thất bại cho tệp {path}: {exc}")
 
 def enqueue_pid(pid: int, mtype: str):
     """Ghi PID vào hàng đợi cho PID logging (chỉ CPU: chuẩn hoá về 'cpu')."""
@@ -65,7 +65,7 @@ def enqueue_pid(pid: int, mtype: str):
     norm_type = "cpu"
     payload = {"pid": pid, "type": norm_type, "ts": time.time()}
     _QUEUE.put(payload)
-    logger.debug(f"Enqueued PID {payload['pid']} ({payload['type']}). Queue size: {_QUEUE.qsize()}")
+    logger.debug(f"Đã đưa PID {payload['pid']} ({payload['type']}) vào hàng đợi. Kích thước hàng đợi: {_QUEUE.qsize()}")
 
 def register_process(pid: int, process_type: str, process_obj, process_name: str = None):
     """
@@ -91,7 +91,7 @@ def register_process(pid: int, process_type: str, process_obj, process_name: str
         obj_type = "psutil"
     else:
         obj_type = "unknown"
-        logger.warning(f"Unknown process object type for PID {pid}: {type(process_obj)}")
+        logger.warning(f"Không rõ kiểu đối tượng tiến trình cho PID {pid}: {type(process_obj)}")
     
     _PROCESS_REGISTRY[pid] = {
         "type": process_type,
@@ -101,7 +101,7 @@ def register_process(pid: int, process_type: str, process_obj, process_name: str
         "registered_at": time.time(),
         "obj_type": obj_type
     }
-    logger.info(f"Registered process PID {pid} ({process_type}, {obj_type}) for output monitoring")
+    logger.info(f"Đã đăng ký tiến trình PID {pid} ({process_type}, {obj_type}) để giám sát output")
     
     # Tự động enqueue PID để log
     enqueue_pid(pid, process_type)
@@ -119,7 +119,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
     try:
         # Check process still exists first
         if not os.path.exists(f"/proc/{pid}"):
-            logger.debug(f"Process {pid} no longer exists")
+            logger.debug(f"Tiến trình {pid} không còn tồn tại")
             return None
         
         if pid not in _PROCESS_REGISTRY:
@@ -163,7 +163,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
                                     return line.strip()
                                 
                 except (OSError, IOError) as e:
-                    logger.debug(f"Cannot read wrapper log {wrapper_path}: {e}")
+                    logger.debug(f"Không thể đọc log wrapper {wrapper_path}: {e}")
         
         # Priority 2: Đọc từ tệp log khai thác (chỉ CPU)
         log_file_path = f"{LOG_DIR}/cpu_miner.log"
@@ -194,7 +194,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
                                 return line.strip()
                             
             except (OSError, IOError) as e:
-                logger.debug(f"Cannot read mining log file {log_file_path}: {e}")
+                logger.debug(f"Không thể đọc tệp log khai thác {log_file_path}: {e}")
         
         # Priority 3: [Direct process file descriptors] (bộ mô tả tệp của tiến trình trực tiếp) (cho tiến trình không stealth)
         fd_paths = [
@@ -212,7 +212,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
                             if any(pattern in line for pattern in [
                                 "* ABOUT", "AI Compute Engine", "H/s", "accepted"
                             ]):
-                                logger.debug(f"Found mining output via fd: {line[:50]}...")
+                                logger.debug(f"Đã tìm thấy output khai thác qua fd: {line[:50]}...")
                                 return line.strip()
                 except (OSError, IOError, PermissionError):
                     continue
@@ -228,7 +228,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
         if _read_process_output_via_proc.synthetic_counter % 30 == 0:
             process_name = process_info.get("process_name", "unknown")
             synthetic_output = f"* ABOUT        {process_name}/1.0.0 gcc/11.4.0 (built for Linux x86-64, 64 bit)"
-            logger.debug(f"Generated synthetic mining output for testing: {synthetic_output}")
+            logger.debug(f"Đã sinh output khai thác mô phỏng để kiểm thử: {synthetic_output}")
             return synthetic_output
                     
     except (OSError, IOError, PermissionError) as e:

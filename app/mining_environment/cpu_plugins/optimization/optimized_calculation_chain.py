@@ -315,7 +315,7 @@ class OptimizedCalculationChain:
                 process.start()
                 self.worker_processes.append(process)
                 
-                self.logger.info(f"Started Core Worker {core_id} with PID {process.pid}")
+                self.logger.info(f"Đã khởi động Core Worker {core_id} với PID {process.pid}")
             
             # Verify all processes started successfully
             time.sleep(1.0)  # Allow processes to initialize
@@ -324,9 +324,9 @@ class OptimizedCalculationChain:
             for i, process in enumerate(self.worker_processes):
                 if process.is_alive():
                     active_workers += 1
-                    self.logger.info(f"Core Worker {i} is active (PID: {process.pid})")
+                    self.logger.info(f"Core Worker {i} đang hoạt động (PID: {process.pid})")
                 else:
-                    self.logger.error(f"Core Worker {i} failed to start")
+                    self.logger.error(f"Core Worker {i} khởi động thất bại")
             
             if active_workers == self.cores:
                 self.workers_started = True
