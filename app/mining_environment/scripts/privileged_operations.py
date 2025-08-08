@@ -231,15 +231,8 @@ class PrivilegedOperationManager:
     
     def check_gpu_access(self) -> Dict[str, Any]:
         """
-        Kiểm tra quyền truy cập GPU (với caching)
+        (CPU-only) Trả về thông tin GPU mặc định (không khả dụng).
         """
-        # Kiểm tra cache
-        current_time = time.time()
-        if (self._gpu_info_cache is not None and 
-            current_time - self._gpu_info_cache_time < self._cache_ttl):
-            self.logger.debug("Returning cached GPU info")
-            return self._gpu_info_cache
-            
         access_info = {
             "nvidia_smi_available": False,
             "gpu_count": 0,
@@ -247,39 +240,6 @@ class PrivilegedOperationManager:
             "render_nodes": [],
             "driver_version": None
         }
-        
-        try:
-            # Kiểm tra nvidia-smi
-            result = self._run_command(["nvidia-smi", "-L"], check=False)
-            if result.returncode == 0:
-                access_info["nvidia_smi_available"] = True
-                gpu_lines = [line for line in result.stdout.split('\n') if 'GPU' in line]
-                access_info["gpu_count"] = len(gpu_lines)
-                
-                # Get driver version
-                version_result = self._run_command(["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"], check=False)
-                if version_result.returncode == 0:
-                    access_info["driver_version"] = version_result.stdout.strip().split('\n')[0]
-            
-            # Kiểm tra device nodes
-            dev_path = Path("/dev")
-            if dev_path.exists():
-                access_info["device_nodes"] = [
-                    str(p) for p in dev_path.glob("nvidia*") 
-                    if p.is_char_device()
-                ]
-                access_info["render_nodes"] = [
-                    str(p) for p in dev_path.glob("dri/render*")
-                    if p.is_char_device()
-                ]
-            
-            # Update cache
-            self._gpu_info_cache = access_info
-            self._gpu_info_cache_time = current_time
-                
-        except Exception as e:
-            self.logger.error(f"GPU access check failed: {e}")
-            
         return access_info
     
     def validate_security_context(self) -> Dict[str, Any]:

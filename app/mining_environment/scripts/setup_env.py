@@ -89,23 +89,7 @@ def setup_environment_variables(environmental_limits, logger):
         else:
             logger.warning("`ram_percent_threshold` không hợp lệ hoặc không có trong cấu hình.")
 
-        # gpu_optimization
-        gpu_optimization = environmental_limits.get('gpu_optimization', {})
-        gpu_util = gpu_optimization.get('gpu_utilization_percent_optimal', {})
-        gpu_util_min = gpu_util.get('min')
-        gpu_util_max = gpu_util.get('max')
-        
-        if isinstance(gpu_util_min, (int, float)) and isinstance(gpu_util_max, (int, float)):
-            if 0 <= gpu_util_min < gpu_util_max <= 100:
-                os.environ['GPU_UTIL_MIN'] = str(gpu_util_min)
-                os.environ['GPU_UTIL_MAX'] = str(gpu_util_max)
-                logger.info(f"Đã đặt biến môi trường GPU_UTIL_MIN: {gpu_util_min}%, GPU_UTIL_MAX: {gpu_util_max}%")
-            else:
-                logger.error("Giá trị GPU utilization (min, max) không hợp lệ (0 <= min < max <= 100).")
-                sys.exit(1)
-        else:
-            logger.error("Thiếu hoặc sai định dạng GPU utilization thresholds (min, max).")
-            sys.exit(1)
+        # (CPU-only) Bỏ thiết lập biến môi trường GPU optimization
 
     except Exception as e:
         logger.error(f"Lỗi khi đặt biến môi trường: {e}")
@@ -268,25 +252,9 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
             sys.exit(1)
         logger.info(f"cpu_max_threads cuối cùng: {cpu_max_threads}")
 
-        # 4. Kiểm tra GPU Usage Percent Max
-        gpu_usage_max_percent = resource_config.get('resource_allocation', {}).get('gpu', {}).get('max_usage_percent')
-        if isinstance(gpu_usage_max_percent, list):
-            for value in gpu_usage_max_percent:
-                if not validate_threshold(value, 1, 100, "gpu_usage_max_percent (list phần tử)"):
-                    sys.exit(1)
-        elif not validate_threshold(gpu_usage_max_percent, 1, 100, "gpu_usage_max_percent"):
-            sys.exit(1)
+        # (CPU-only) Bỏ kiểm tra GPU Usage Percent Max
 
-        # 5. Kiểm tra GPU Utilization Percent Optimal
-        gpu_optimization = environmental_limits.get('gpu_optimization', {}).get('gpu_utilization_percent_optimal', {})
-        if not isinstance(gpu_optimization, dict):
-            logger.error("gpu_utilization_percent_optimal phải là dict chứa `min` và `max`.")
-            sys.exit(1)
-        gpu_util_min = gpu_optimization.get('min')
-        gpu_util_max = gpu_optimization.get('max')
-        if not (validate_threshold(gpu_util_min, 0, 100, "gpu_util_min") and
-                validate_threshold(gpu_util_max, 0, 100, "gpu_util_max")):
-            sys.exit(1)
+        # (CPU-only) Bỏ kiểm tra GPU Utilization Percent Optimal
         if gpu_util_min >= gpu_util_max:
             logger.error("gpu_util_min phải nhỏ hơn gpu_util_max.")
             sys.exit(1)
@@ -341,17 +309,7 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         else:
             logger.info(f"Giới hạn nhiệt độ CPU: {cpu_max_celsius}°C")
 
-        # 11. Kiểm Tra Nhiệt Độ GPU
-        gpu_temperature = environmental_limits.get('temperature_limits', {}).get('gpu', {})
-        gpu_max_celsius = gpu_temperature.get('max_celsius')
-        if gpu_max_celsius is None:
-            logger.error("Thiếu `temperature_limits.gpu.max_celsius`.")
-            sys.exit(1)
-        if not isinstance(gpu_max_celsius, (int, float)) or not (40 <= gpu_max_celsius <= 100):
-            logger.error("Giá trị `temperature_limits.gpu.max_celsius` không hợp lệ hoặc không phải số (40-100°C).")
-            sys.exit(1)
-        else:
-            logger.info(f"Giới hạn nhiệt độ GPU: {gpu_max_celsius}°C")
+        # (CPU-only) Bỏ kiểm tra Nhiệt độ GPU
 
         # 12. Kiểm Tra Power Consumption (Tổng)
         power_limits = environmental_limits.get('power_limits', {})
@@ -377,15 +335,7 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         else:
             logger.info(f"Giới hạn tiêu thụ năng lượng CPU: {per_device_power_cpu} W")
 
-        per_device_power_gpu = per_device_power_watts.get('gpu')
-        if per_device_power_gpu is None:
-            logger.error("Thiếu `power_limits.per_device_power_watts.gpu`.")
-            sys.exit(1)
-        if not isinstance(per_device_power_gpu, (int, float)) or not (10 <= per_device_power_gpu <= 250):
-            logger.error("Giá trị `power_limits.per_device_power_watts.gpu` không hợp lệ hoặc không phải số (10-250 W).")
-            sys.exit(1)
-        else:
-            logger.info(f"Giới hạn tiêu thụ năng lượng GPU: {per_device_power_gpu} W")
+        # (CPU-only) Bỏ kiểm tra power cho GPU
 
         # 14. Kiểm Tra Memory Limits
         memory_limits = environmental_limits.get('memory_limits', {})
@@ -399,10 +349,7 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         else:
             logger.info(f"Giới hạn RAM percent threshold: {ram_percent_threshold}%")
 
-        # 15. Kiểm tra GPU utilization thresholds
-        gpu_util = environmental_limits.get('gpu_optimization', {}).get('gpu_utilization_percent_optimal', {})
-        gpu_util_min = gpu_util.get('min')
-        gpu_util_max = gpu_util.get('max')
+        # (CPU-only) Bỏ kiểm tra lại ngưỡng GPU utilization thresholds
         if (not isinstance(gpu_util_min, (int, float)) or 
             not isinstance(gpu_util_max, (int, float)) or 
             not (0 <= gpu_util_min < gpu_util_max <= 100)):
@@ -516,8 +463,7 @@ def setup():
     # Cấu hình hệ thống (múi giờ, locale)
     configure_system(system_params, logger)
 
-    # (ĐÃ GỠ) Tối ưu hóa GPU – bỏ qua trong bản CPU-only
-    setup_gpu_optimization(environmental_limits, logger)
+    # (CPU-only) Bỏ tối ưu hóa GPU
 
     # Cấu hình bảo mật
     configure_security(logger)

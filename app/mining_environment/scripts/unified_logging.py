@@ -49,12 +49,7 @@ class UnifiedLoggerManager:
             'file': 'cpu_cloaking_manager.log',
             'description': 'CPU cloaking legacy operations and external stealth attempts'
         },
-        'mining_environment.gpu_cloaking': {
-            # 🔧 GPU-specific cloaking operations (Emergency Fix)
-            'level': logging.DEBUG,
-            'file': 'gpu_cloaking_manager.log',
-            'description': 'GPU cloaking and thermal spoofing operations'
-        },
+        # (CPU-only) GPU cloaking logger removed
         'mining_environment.resource_control': {
             # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết điều khiển tài nguyên
             'level': logging.DEBUG,
