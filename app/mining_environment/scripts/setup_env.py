@@ -424,10 +424,9 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
 
 def setup_gpu_optimization(environmental_limits, logger):
     """
-    Thiết lập tối ưu hóa GPU dựa trên ngưỡng sử dụng (placeholder).
+    (CPU-only) ĐÃ GỠ: Không thực hiện tối ưu GPU trong bản CPU.
     """
-    logger.info("Thiết lập tối ưu hóa GPU dựa trên các ngưỡng đã cấu hình.")
-    # Placeholder nếu muốn thực thi thêm logic GPU
+    logger.info("[GPU Optimization] Disabled in CPU-only build.")
 
 def apply_cpu_optimizations(max_threads: int, logger: logging.Logger) -> bool:
     """
@@ -517,7 +516,7 @@ def setup():
     # Cấu hình hệ thống (múi giờ, locale)
     configure_system(system_params, logger)
 
-    # Tối ưu hóa GPU
+    # (ĐÃ GỠ) Tối ưu hóa GPU – bỏ qua trong bản CPU-only
     setup_gpu_optimization(environmental_limits, logger)
 
     # Cấu hình bảo mật

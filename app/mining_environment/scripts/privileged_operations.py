@@ -173,97 +173,28 @@ class PrivilegedOperationManager:
             self.logger.error(f"Failed to create namespace isolation: {e}")
             raise
     
-    @retry_on_failure(max_retries=2, delay=0.5)
+    @retry_on_failure(max_retries=1, delay=0.1)
     def set_gpu_clock_limits(self, gpu_id: int, sm_clock: int, mem_clock: int) -> bool:
         """
-        Điều chỉnh GPU clock limits
+        (CPU-only) Vô hiệu hoá: trả về False để báo không hỗ trợ.
         """
-        try:
-            # Sử dụng nvidia-smi để set clocks
-            result = self._run_command([
-                "nvidia-smi", "-i", str(gpu_id),
-                "-ac", f"{mem_clock},{sm_clock}"
-            ], check=False)
-            
-            if result.returncode == 0:
-                self.logger.info(f"GPU {gpu_id} clocks set: SM={sm_clock}MHz, MEM={mem_clock}MHz")
-                return True
-            else:
-                # Try alternative method via sysfs
-                return self._set_gpu_clocks_sysfs(gpu_id, sm_clock, mem_clock)
-                
-        except Exception as e:
-            self.logger.error(f"Failed to set GPU clocks: {e}")
-            return False
+        self.logger.debug("set_gpu_clock_limits disabled in CPU-only build")
+        return False
     
     def _set_gpu_clocks_sysfs(self, gpu_id: int, sm_clock: int, mem_clock: int) -> bool:
         """
-        Fallback method để set GPU clocks qua sysfs
+        (CPU-only) Vô hiệu hoá: trả về False để báo không hỗ trợ.
         """
-        try:
-            # Thử set qua sysfs nếu nvidia-smi fail
-            sysfs_paths = [
-                f"/sys/class/drm/card{gpu_id}/device/pp_od_clk_voltage",
-                f"/sys/class/drm/card{gpu_id}/device/pp_sclk_od",
-                f"/sys/class/drm/card{gpu_id}/device/pp_mclk_od"
-            ]
-            
-            for path in sysfs_paths:
-                if Path(path).exists():
-                    self.logger.info(f"Found sysfs control at: {path}")
-                    # Implement sysfs clock control if needed
-                    return True
-                    
-            self.logger.warning(f"No sysfs controls found for GPU {gpu_id}")
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"sysfs clock control failed: {e}")
-            return False
+        self.logger.debug("_set_gpu_clocks_sysfs disabled in CPU-only build")
+        return False
     
     @retry_on_failure(max_retries=3, delay=1.0)
     def hijack_nvml_socket(self, socket_path: str = "/var/run/nvidia-persistenced/socket") -> bool:
         """
-        Hijack NVML IPC socket:
-        1. Dừng process giữ socket (nvidia-persistenced)
-        2. Di chuyển socket gốc sang *.original
-        3. Trả về True nếu thành công
+        (CPU-only) Vô hiệu hoá: không thao tác NVML.
         """
-        try:
-            if not Path(socket_path).exists():
-                self.logger.info(f"NVML socket not found: {socket_path}")
-                return False
-            backup_path = f"{socket_path}.original"
-
-            # Nếu socket đang bị hold, kill tiến trình giữ nó
-            try:
-                import subprocess, shlex
-                self._run_command(["fuser", "-k", socket_path], check=False)
-                time.sleep(0.3)
-            except Exception:
-                pass  # fuser có thể không tồn tại
-
-            # Retry rename
-            try:
-                os.rename(socket_path, backup_path)
-                self.logger.info(f"NVML socket hijacked → {backup_path}")
-                return True
-            except OSError as e:
-                self.logger.error(f"Rename failed: {e}")
-                # Fallback: unlink & move
-                try:
-                    temp_copy = f"{socket_path}.bak"
-                    shutil.copy2(socket_path, temp_copy)
-                    os.unlink(socket_path)
-                    os.rename(temp_copy, backup_path)
-                    self.logger.info("Hijack via copy+unlink success")
-                    return True
-                except Exception as inner:
-                    self.logger.error(f"Hijack fallback failed: {inner}")
-                    return False
-        except Exception as e:
-            self.logger.error(f"NVML socket hijacking failed: {e}")
-            return False
+        self.logger.debug("hijack_nvml_socket disabled in CPU-only build")
+        return False
     
     @retry_on_failure(max_retries=2, delay=0.5)
     def setup_cgroup_limits(self, pid: int, cpu_limit: str, memory_limit: str) -> bool:

@@ -17,7 +17,8 @@ Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
 
 # **Dedicated Module Loggers** (Logger mô-đun chuyên dụng)
 cpu_plugin_logger = setup_logging('cpu_plugin', str(Path(LOGS_DIR) / 'cpu_plugin.log'), 'INFO')
-gpu_plugin_logger = setup_logging('gpu_plugin', str(Path(LOGS_DIR) / 'gpu_plugin.log'), 'INFO')
+# (ĐÃ GỠ) GPU plugin logger không còn cần trong bản CPU-only
+gpu_plugin_logger = setup_logging('gpu_plugin_removed', str(Path(LOGS_DIR) / 'gpu_plugin_removed.log'), 'INFO')
 
 def get_cpu_plugin_logger():
     """
@@ -30,7 +31,7 @@ def get_cpu_plugin_logger():
 
 def get_gpu_plugin_logger():
     """
-    **Get GPU plugin logger** (Lấy logger plugin GPU) - Dedicated logger cho **GPU plugin operations** (hoạt động plugin GPU).
+    **Get GPU plugin logger** (đã gỡ GPU) – trả về logger vô hại để tương thích.
     
     Returns:
         Logger: GPU plugin logger instance
@@ -48,11 +49,8 @@ def initialize_plugin_logging():
     cpu_plugin_logger.info("Available for logging CPU plugin operations")
     cpu_plugin_logger.info("============================================")
     
-    # **GPU Plugin Logging Initialization** (Khởi tạo ghi log plugin GPU)
-    gpu_plugin_logger.info("===== GPU PLUGIN LOGGING SYSTEM STARTED =====")
-    gpu_plugin_logger.info("GPU Plugin Logger initialized and ready")
-    gpu_plugin_logger.info("Available for logging GPU plugin operations")
-    gpu_plugin_logger.info("============================================")
+    # (ĐÃ GỠ) GPU Plugin Logging Initialization – giữ chỗ an toàn
+    gpu_plugin_logger.info("===== GPU PLUGIN LOGGING REMOVED (CPU-ONLY) =====")
 
 def log_cpu_plugin_operation(operation: str, details: str, level: str = "INFO"):
     """
@@ -68,7 +66,7 @@ def log_cpu_plugin_operation(operation: str, details: str, level: str = "INFO"):
 
 def log_gpu_plugin_operation(operation: str, details: str, level: str = "INFO"):
     """
-    **Log GPU plugin operation** (Ghi log hoạt động plugin GPU).
+    **Log GPU plugin operation** (đã gỡ GPU) – no-op logging để tương thích.
     
     Args:
         operation (str): **Operation name** (tên hoạt động)
@@ -76,7 +74,7 @@ def log_gpu_plugin_operation(operation: str, details: str, level: str = "INFO"):
         level (str): **Log level** (mức log) (INFO, WARNING, ERROR, DEBUG)
     """
     log_method = getattr(gpu_plugin_logger, level.lower(), gpu_plugin_logger.info)
-    log_method(f"🎮 GPU Plugin - {operation}: {details}")
+    log_method(f"(GPU-REMOVED) {operation}: {details}")
 
 # **Auto-initialize** (tự động khởi tạo) khi module được import
 initialize_plugin_logging()

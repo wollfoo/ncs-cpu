@@ -75,42 +75,8 @@ class SharedResourceManager:
         return self._nvml_init
 
     def initialize_nvml(self):
-        """**Thread-safe NVML initialization** (khởi tạo NVML an toàn luồng) với **threading-based timeout** (thời gian chờ dựa trên luồng)"""
-        if not self._nvml_init:
-            try:
-                # ✅ FIXED: Thread-safe NVML initialization với concurrent.futures timeout
-                self.logger.debug("Thread-safe NVML initialization...")
-                
-                # ✅ THREADING-BASED TIMEOUT: Safer for multi-threading environment
-                import time
-                
-                def nvml_init_worker():
-                    """Worker function for NVML initialization"""
-                    try:
-                        pynvml.nvmlInit()
-                        return True
-                    except Exception as e:
-                        self.logger.debug(f"NVML init worker exception: {e}")
-                        raise
-                
-                # ✅ THREAD-SAFE: Use ThreadPoolExecutor với timeout
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="NVML_Init") as executor:
-                    future = executor.submit(nvml_init_worker)
-                    
-                    try:
-                        # ✅ CONFIGURABLE TIMEOUT: 3-second timeout for NVML init
-                        result = future.result(timeout=3.0)
-                        self._nvml_init = True
-                        self.logger.info("✅ NVML đã được khởi tạo thành công (thread-safe mode)")
-                        
-                    except concurrent.futures.TimeoutError:
-                        self.logger.warning("⏰ NVML initialization timeout after 3s - continuing without GPU support")
-                        future.cancel()  # Cancel the running task
-                        self._nvml_init = False
-                    
-            except Exception as e:
-                self.logger.warning(f"❌ NVML initialization failed: {e} - continuing without GPU support")
-                self._nvml_init = False
+        """(CPU-only) NVML bị vô hiệu hoá – không khởi tạo."""
+        self._nvml_init = False
 
     def shutdown_nvml(self):
         if self._nvml_init:
