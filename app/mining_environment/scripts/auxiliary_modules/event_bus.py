@@ -125,7 +125,7 @@ class RedisEventBusBackend(EventBusBackend):
             
             # Test connection
             self._redis_client.ping()
-            self._logger.info("Redis connection established successfully")
+            self._logger.info("Kết nối [Redis] (hệ quản trị key-value) được thiết lập thành công")},{
             
             # Initialize pubsub
             self._pubsub = self._redis_client.pubsub()
@@ -133,7 +133,7 @@ class RedisEventBusBackend(EventBusBackend):
         except ImportError:
             raise ImportError("Redis package not installed. Run: pip install redis>=4.5.0")
         except Exception as e:
-            self._logger.error(f"Failed to initialize Redis connection: {e}")
+            self._logger.error(f"Khởi tạo kết nối [Redis] (hệ quản trị key-value) thất bại: {e}")
             raise
     
     def _retry_operation(self, operation, *args, **kwargs):
@@ -147,10 +147,10 @@ class RedisEventBusBackend(EventBusBackend):
             except Exception as e:
                 retry_count += 1
                 if retry_count >= self._retry_config['max_retries']:
-                    self._logger.error(f"Redis operation failed after {retry_count} retries: {e}")
+                    self._logger.error(f"Thao tác [Redis] (hệ quản trị key-value) thất bại after {retry_count} retries: {e}")
                     raise
                 
-                self._logger.warning(f"Redis operation failed (attempt {retry_count}): {e}. Retrying in {delay}s...")
+                self._logger.warning(f"Thao tác [Redis] (hệ quản trị key-value) thất bại (attempt {retry_count}): {e}. Retrying in {delay}s...")
                 time.sleep(delay)
                 delay = min(delay * self._retry_config['backoff_factor'], self._retry_config['max_delay'])
     
@@ -171,7 +171,7 @@ class RedisEventBusBackend(EventBusBackend):
                 return published
             
             self._retry_operation(_publish_operation)
-            self._logger.debug(f"Published message to topic '{topic}': {payload}")
+            self._logger.debug(f"Đã publish (xuất bản) message tới topic '{topic}': {payload}")
             
         except Exception as e:
             self._logger.error(f"Failed to publish message to topic '{topic}': {e}")
@@ -472,7 +472,7 @@ class RabbitMQEventBusBackend(EventBusBackend):
                 )
             
             self._retry_operation(_publish_operation)
-            self._logger.debug(f"Published message to topic '{topic}': {payload}")
+            self._logger.debug(f"Đã publish (xuất bản) message tới topic '{topic}': {payload}")
             
         except Exception as e:
             self._logger.error(f"Failed to publish message to topic '{topic}': {e}")

