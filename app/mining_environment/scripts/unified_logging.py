@@ -1,7 +1,7 @@
 """
 ✅ UNIFIED LOGGING SYSTEM
-Centralized logging management cho tất cả mining environment modules.
-Eliminates duplicate loggers và standardizes log formatting across system.
+Hệ thống quản lý [Logging] (ghi log) tập trung cho tất cả mô-đun của môi trường khai thác.
+Loại bỏ [duplicate loggers] (các logger trùng lặp) và chuẩn hoá [log formatting] (định dạng log) trên toàn hệ thống.
 """
 
 import logging
@@ -14,57 +14,57 @@ import time
 
 class UnifiedLoggerManager:
     """
-    ✅ CENTRALIZED: Unified logger management system cho consistent logging.
-    Single point of control cho tất cả module loggers với standardized formatting.
+    ✅ CENTRALIZED: Hệ thống quản lý [Unified Logger] (logger hợp nhất) cho [consistent logging] (ghi log nhất quán).
+    Một điểm kiểm soát duy nhất cho tất cả logger của mô-đun với [standardized formatting] (định dạng chuẩn hoá).
     """
     
     _instance: Optional['UnifiedLoggerManager'] = None
     _lock = threading.RLock()
     
-    # ✅ STANDARDIZED: Common log format cho all modules
+    # ✅ STANDARDIZED: Định dạng log chung cho tất cả mô-đun
     STANDARD_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
     DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
     
-    # ✅ HIERARCHY: Logger name hierarchy cho organized logging
+    # ✅ HIERARCHY: Cây tên [Logger] (bộ ghi log) cho [organized logging] (ghi log có tổ chức)
     LOGGER_HIERARCHY = {
         'mining_environment': {
             'level': logging.INFO,
             'file': 'mining_environment.log',
-            'description': 'Main mining environment logger'
+            'description': "[Main Mining Environment Logger] (bộ ghi log chính cho môi trường khai thác)"
         },
         'mining_environment.resource_manager': {
             'level': logging.INFO,
             'file': 'resource_manager.log',
-            'description': 'Resource management operations'
+            'description': "[Resource Management Operations] (các thao tác quản lý tài nguyên)"
         },
         'mining_environment.cloak_strategies': {
             # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết chiến lược cloaking
             'level': logging.DEBUG,
             'file': 'cloak_strategies.log',
-            'description': 'Cloaking strategy implementations'
+            'description': "[Cloaking Strategy Implementations] (các triển khai chiến lược che giấu)"
         },
         'mining_environment.cpu_cloaking': {
             # 🔧 CPU cloaking operations (Legacy external stealth only)
             'level': logging.DEBUG,
             'file': 'cpu_cloaking_manager.log',
-            'description': 'CPU cloaking legacy operations and external stealth attempts'
+            'description': "[CPU Cloaking Legacy Operations] (thao tác che giấu CPU kiểu cũ) và [External Stealth Attempts] (thử nghiệm che giấu bên ngoài)"
         },
         # (CPU-only) GPU cloaking logger removed
         'mining_environment.resource_control': {
             # ⚙️ Nâng mức log lên DEBUG để ghi chi tiết điều khiển tài nguyên
             'level': logging.DEBUG,
             'file': 'resource_control.log',
-            'description': 'Low-level resource control operations'
+            'description': "[Low-level Resource Control Operations] (các thao tác điều khiển tài nguyên cấp thấp)"
         },
         'mining_environment.event_bus': {
             'level': logging.INFO,
             'file': 'event_bus.log',
-            'description': 'Event bus communication'
+            'description': "[Event Bus Communication] (giao tiếp qua bus sự kiện)"
         }
     }
     
     def __new__(cls) -> 'UnifiedLoggerManager':
-        """Singleton pattern implementation"""
+        """Triển khai [Singleton Pattern] (mẫu đơn thể – đảm bảo duy nhất một thể hiện)."""
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
@@ -72,7 +72,7 @@ class UnifiedLoggerManager:
             return cls._instance
     
     def __init__(self):
-        """Initialize unified logger manager"""
+        """Khởi tạo bộ quản lý [Unified Logger] (logger hợp nhất)."""
         if getattr(self, '_initialized', False):
             return
             
@@ -96,7 +96,7 @@ class UnifiedLoggerManager:
         print(f"✅ [UnifiedLogging] Initialized {len(self._loggers)} loggers in hierarchy")
     
     def _setup_logger_hierarchy(self) -> None:
-        """Setup complete logger hierarchy with standardized configuration"""
+        """Thiết lập đầy đủ cây [logger hierarchy] (phân cấp logger) với cấu hình chuẩn hoá."""
         try:
             for logger_name, config in self.LOGGER_HIERARCHY.items():
                 self._create_logger(
@@ -106,16 +106,16 @@ class UnifiedLoggerManager:
                     description=config['description']
                 )
             
-            # ✅ ROOT LOGGER: Setup root logger for fallback
+            # ✅ ROOT LOGGER: Thiết lập [root logger] (logger gốc) cho tình huống dự phòng
             root_logger = logging.getLogger()
             root_logger.setLevel(logging.WARNING)  # Only critical messages to root
             
         except Exception as e:
-            print(f"❌ [UnifiedLogging] Failed to setup logger hierarchy: {e}")
+            print(f"❌ [UnifiedLogging] Thiết lập hệ phân cấp [logger hierarchy] (cây phân cấp logger) thất bại: {e}")
             raise
     
     def _create_logger(self, name: str, level: int, log_file: str, description: str) -> logging.Logger:
-        """Create individual logger with standardized configuration"""
+        """Tạo [logger] (bộ ghi log) riêng lẻ với cấu hình chuẩn hoá."""
         try:
             logger = logging.getLogger(name)
             
@@ -126,7 +126,7 @@ class UnifiedLoggerManager:
             logger.setLevel(level)
             logger.propagate = False  # Prevent propagation to avoid duplicates
             
-            # ✅ FILE HANDLER: Rotating file handler cho log rotation
+            # ✅ FILE HANDLER: [Rotating file handler] (bộ xử lý file xoay vòng) cho [log rotation] (xoay vòng log)
             log_path = self.log_dir / log_file
             file_handler = RotatingFileHandler(
                 log_path,
@@ -136,39 +136,39 @@ class UnifiedLoggerManager:
             )
             file_handler.setLevel(level)
             
-            # ✅ CONSOLE HANDLER: Console output cho important messages
+            # ✅ CONSOLE HANDLER: [Console output] (xuất ra bảng điều khiển) cho các thông điệp quan trọng
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(logging.WARNING)  # Only warnings+ to console
             
-            # ✅ STANDARDIZED FORMATTING
+            # ✅ STANDARDIZED FORMATTING: [Định dạng chuẩn hoá]
             formatter = logging.Formatter(self.STANDARD_FORMAT, self.DATE_FORMAT)
             file_handler.setFormatter(formatter)
             console_handler.setFormatter(formatter)
             
-            # ✅ ADD HANDLERS
+            # ✅ ADD HANDLERS: Thêm các [handler] (bộ xử lý)
             logger.addHandler(file_handler)
             logger.addHandler(console_handler)
             
-            # ✅ STORE REFERENCES
+            # ✅ STORE REFERENCES: Lưu tham chiếu
             self._loggers[name] = logger
             self._handlers[f"{name}_file"] = file_handler
             self._handlers[f"{name}_console"] = console_handler
             
             # ✅ LOG CREATION
-            logger.info(f"📋 [UnifiedLogging] Logger '{name}' initialized: {description}")
+            logger.info(f"📋 [UnifiedLogging] [Logger] (bộ ghi log) '{name}' đã khởi tạo: {description}")
             
             return logger
             
         except Exception as e:
-            print(f"❌ [UnifiedLogging] Failed to create logger '{name}': {e}")
+            print(f"❌ [UnifiedLogging] Tạo [logger] (bộ ghi log) thất bại '{name}': {e}")
             raise
     
     def get_logger(self, name: str) -> logging.Logger:
         """
-        ✅ PRIMARY METHOD: Get logger by name from unified hierarchy.
+        ✅ PRIMARY METHOD: Lấy [logger] (bộ ghi log) theo tên từ cây hợp nhất.
         
-        :param name: Logger name (can be full hierarchy or module name)
-        :return: Configured logger instance
+        :param name: Tên [Logger] (có thể là tên đầy đủ theo phân cấp hoặc tên mô-đun)
+        :return: Thể hiện [logger] (bộ ghi log) đã được cấu hình
         """
         try:
             # ✅ DIRECT MATCH: Check if exact name exists
@@ -184,12 +184,12 @@ class UnifiedLoggerManager:
             return self._create_adhoc_logger(name)
             
         except Exception as e:
-            print(f"❌ [UnifiedLogging] Error getting logger '{name}': {e}")
+            print(f"❌ [UnifiedLogging] Lỗi khi lấy [logger] (bộ ghi log) '{name}': {e}")
             # ✅ SAFETY FALLBACK: Return basic logger
             return logging.getLogger(name)
     
     def _create_adhoc_logger(self, name: str) -> logging.Logger:
-        """Create ad-hoc logger for modules not in predefined hierarchy"""
+        """Tạo [ad-hoc logger] (logger tuỳ biến tức thời) cho mô-đun không nằm trong phân cấp định nghĩa trước."""
         try:
             logger_name = f"mining_environment.{name}" if not name.startswith('mining_environment') else name
             
@@ -197,18 +197,18 @@ class UnifiedLoggerManager:
                 name=logger_name,
                 level=logging.INFO,
                 log_file=f"{name.replace('.', '_')}.log",
-                description=f"Ad-hoc logger for {name}"
+                description=f"[Ad-hoc Logger] (logger tuỳ biến tức thời) cho {name}"
             )
             
         except Exception as e:
-            print(f"❌ [UnifiedLogging] Failed to create ad-hoc logger '{name}': {e}")
+            print(f"❌ [UnifiedLogging] Tạo [ad-hoc logger] (logger tuỳ biến tức thời) thất bại '{name}': {e}")
             return logging.getLogger(name)
     
     def get_logging_status(self) -> Dict[str, Any]:
         """
-        ✅ MONITORING: Get comprehensive logging system status.
+        ✅ MONITORING: Lấy trạng thái toàn diện của hệ thống [logging] (ghi log).
         
-        :return: Dictionary containing logging system metrics
+        :return: Từ điển chứa các chỉ số hệ thống ghi log
         """
         try:
             status = {
@@ -220,7 +220,7 @@ class UnifiedLoggerManager:
                 'disk_usage': {}
             }
             
-            # ✅ LOGGER DETAILS
+            # ✅ LOGGER DETAILS: Thông tin chi tiết các [logger]
             for name, logger in self._loggers.items():
                 status['loggers'][name] = {
                     'level': logging.getLevelName(logger.level),
@@ -228,7 +228,7 @@ class UnifiedLoggerManager:
                     'propagate': logger.propagate
                 }
             
-            # ✅ DISK USAGE
+            # ✅ DISK USAGE: Mức sử dụng đĩa
             try:
                 for log_file in self.log_dir.glob('*.log'):
                     size_mb = log_file.stat().st_size / (1024 * 1024)
@@ -239,14 +239,14 @@ class UnifiedLoggerManager:
             return status
             
         except Exception as e:
-            return {'error': f"Failed to get logging status: {e}"}
+            return {'error': f"Lấy [logging status] (trạng thái hệ thống ghi log) thất bại: {e}"}
     
     def cleanup_old_logs(self, days_to_keep: int = 7) -> int:
         """
-        ✅ MAINTENANCE: Clean up old log files to manage disk space.
+        ✅ MAINTENANCE: Dọn dẹp các tệp log cũ để quản lý dung lượng đĩa.
         
-        :param days_to_keep: Number of days to keep log files
-        :return: Number of files cleaned up
+        :param days_to_keep: Số ngày giữ lại tệp log
+        :return: Số tệp đã được dọn dẹp
         """
         try:
             import time
@@ -264,9 +264,9 @@ class UnifiedLoggerManager:
                     continue  # Skip files that can't be deleted
             
             if cleaned_count > 0:
-                # Log to main logger
+                # Ghi vào [main logger] (logger chính)
                 main_logger = self.get_logger('mining_environment')
-                main_logger.info(f"🧹 [UnifiedLogging] Cleaned up {cleaned_count} old log files")
+                main_logger.info(f"🧹 [UnifiedLogging] Đã dọn {cleaned_count} tệp log cũ")
             
             return cleaned_count
             
