@@ -11,17 +11,17 @@ from typing import Any, Dict, Optional
 # (ĐÃ GỠ) Các helper liên quan GPU đã bị loại bỏ
 
 ###############################################################################
-#                           DECORATOR retry (đồng bộ)                          #
+#                           **DECORATOR retry** (đồng bộ)                      #
 ###############################################################################
 def retry(exception_to_check: Any, tries: int = 4, delay: float = 3.0, backoff: float = 2.0):
     """
-    Decorator đồng bộ để retry một hàm nếu gặp exception cụ thể.
+    **Decorator** (bộ trang trí) đồng bộ để **retry** (thử lại) một hàm nếu gặp **exception** (ngoại lệ) cụ thể.
 
-    :param exception_to_check: Exception hoặc tuple exceptions cần bắt để retry.
+    :param exception_to_check: **Exception** (ngoại lệ) hoặc tuple **exceptions** cần bắt để **retry** (thử lại).
     :param tries: Số lần thử (int).
     :param delay: Thời gian chờ ban đầu giữa các lần thử (float, tính bằng giây).
     :param backoff: Hệ số nhân thời gian chờ (float).
-    :return: Giá trị hàm nếu thành công, hoặc raise exception nếu hết tries.
+    :return: Giá trị hàm nếu thành công, hoặc **raise exception** (ném ngoại lệ) nếu hết tries.
     """
     def decorator_retry(func):
         @functools.wraps(func)
@@ -47,12 +47,12 @@ def retry(exception_to_check: Any, tries: int = 4, delay: float = 3.0, backoff: 
 ###############################################################################
 
 ###############################################################################
-#                           LỚP MiningProcess                                  #
+#                           LỚP **MiningProcess**                              #
 ###############################################################################
 class MiningProcess:
     """
-    Lớp đại diện cho một tiến trình khai thác tiền điện tử (hoặc AI),
-    cung cấp thông tin về CPU usage, GPU usage, RAM, Disk I/O, Network I/O, v.v.
+    Lớp đại diện cho một tiến trình khai thác tiền điện tử (hoặc **AI**),
+    cung cấp thông tin về **CPU usage** (sử dụng CPU), **GPU usage** (sử dụng GPU), **RAM**, **Disk I/O**, **Network I/O**, v.v.
 
     Attributes:
         pid (int): PID tiến trình.

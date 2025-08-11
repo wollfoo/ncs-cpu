@@ -1,12 +1,12 @@
-"""cpu_plugins
+"""**cpu_plugins**
 
-Module quản lý CPU cho mining_environment, cung cấp các tính năng tối ưu hóa và che giấu.
+Module quản lý **CPU** cho **mining_environment** (môi trường khai thác), cung cấp các tính năng tối ưu hóa và che giấu.
 
 Phiên bản: 1.0.0
 """
 from __future__ import annotations
 
-# Xuất các API cốt lõi
+# Xuất các **API** (giao diện lập trình ứng dụng) cốt lõi
 from .core import (
     ICpuTechnique,
     register_plugin,
@@ -14,11 +14,11 @@ from .core import (
     load_plugin_config,
 )
 
-# Xuất các plugin tối ưu hóa
+# Xuất các **plugin** tối ưu hóa
 from .optimization import CpuThrottlePlugin
 
-# Stealth plugins moved to mining_environment.stealth module
-# from .cloaking import StealthExecutionPlugin  # REMOVED
+# **Stealth plugins** (plugin ẩn danh) đã chuyển sang module **mining_environment.stealth**
+# from .cloaking import StealthExecutionPlugin  # **REMOVED** (đã loại bỏ)
 
 # Xuất các tiện ích
 from .utils import (
@@ -31,7 +31,7 @@ from .utils import (
     BackoffStrategy,
 )
 
-# Xuất service cấu hình
+# Xuất **service** (dịch vụ) cấu hình
 from .config.inference_config import get_inference_config
 
 __version__ = "1.0.0"
@@ -45,7 +45,7 @@ __all__ = [
     
     # Plugins
     'CpuThrottlePlugin',
-    # 'StealthExecutionPlugin',  # REMOVED - use mining_environment.stealth
+    # 'StealthExecutionPlugin',  # **REMOVED** (đã loại bỏ) - use **mining_environment.stealth**
     
     # Utils
     'HardwareDetector',
@@ -62,7 +62,7 @@ __all__ = [
     # Version
     '__version__',
 ]
-# OptimizedCalculationChain Integration
+# **OptimizedCalculationChain Integration** (tích hợp chuỗi tính toán tối ưu)
 try:
     from .optimization.optimized_calculation_chain import OptimizedCalculationChain
     from .optimization.mining_integration_adapter import MiningIntegrationAdapter

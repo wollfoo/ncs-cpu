@@ -7,13 +7,13 @@ from logging import Logger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Giảm cảnh báo linter: chỉ import cryptography khi kiểm tra kiểu
+# Giảm cảnh báo **linter**: chỉ **import cryptography** (nhập thư viện mã hóa) khi kiểm tra kiểu
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet  # pragma: no cover
 else:
     try:
         from cryptography.fernet import Fernet  # type: ignore
-    except ImportError:  # Library có thể chưa cài khi static check
+    except ImportError:  # **Library** (thư viện) có thể chưa cài khi **static check** (kiểm tra tĩnh)
         Fernet = Any  # type: ignore
 import random
 import string
@@ -22,40 +22,40 @@ from typing import Optional
 
 
 ###############################################################################
-#                           ĐỊNH NGHĨA CORRELATION ID                        #
+#                           ĐỊNH NGHĨA **CORRELATION ID**                    #
 ###############################################################################
-# Định nghĩa một ContextVar để lưu trữ Correlation ID cho mỗi ngữ cảnh (context).
+# Định nghĩa một **ContextVar** để lưu trữ **Correlation ID** (mã định danh tương quan) cho mỗi ngữ cảnh (**context**).
 correlation_id: ContextVar[str] = ContextVar('correlation_id', default='unknown')
 
 
 ###############################################################################
-#                           CLASS: CorrelationIdFilter                       #
+#                           CLASS: **CorrelationIdFilter**                   #
 ###############################################################################
 class CorrelationIdFilter(logging.Filter):
     """
-    Bộ lọc logging để thêm Correlation ID vào mỗi bản ghi log.
+    Bộ lọc **logging** (ghi nhật ký) để thêm **Correlation ID** (mã định danh tương quan) vào mỗi bản ghi **log** (nhật ký).
     """
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        Thêm Correlation ID vào bản ghi log.
+        Thêm **Correlation ID** (mã định danh tương quan) vào bản ghi **log** (nhật ký).
         
         Args:
-            record (logging.LogRecord): Bản ghi log hiện tại.
+            record (logging.LogRecord): Bản ghi **log** (nhật ký) hiện tại.
         
         Returns:
-            bool: Luôn trả về True để cho phép bản ghi log được xử lý.
+            bool: Luôn trả về True để cho phép bản ghi **log** (nhật ký) được xử lý.
         """
         record.correlation_id = correlation_id.get()
         return True
 
 
 ###############################################################################
-#             CLASS: ObfuscatedEncryptedFileHandler (có tích hợp xoá file)   #
+#             CLASS: **ObfuscatedEncryptedFileHandler** (có tích hợp xoá file)   #
 ###############################################################################
 class ObfuscatedEncryptedFileHandler(logging.Handler):
     """
-    Custom logging handler để mã hóa và làm rối các log trước khi ghi vào tệp.
-    Đồng thời tự động xóa file log khi dung lượng vượt quá ngưỡng cho phép.
+    **Custom logging handler** (bộ xử lý ghi nhật ký tùy chỉnh) để mã hóa và làm rối các **log** (nhật ký) trước khi ghi vào tệp.
+    Đồng thời tự động xóa file **log** (nhật ký) khi dung lượng vượt quá ngưỡng cho phép.
     """
     def __init__(
         self,
