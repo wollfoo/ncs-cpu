@@ -148,7 +148,7 @@ class EnhancedProcessCloaking:
                     'fake_cmdline': fake_cmdline
                 }
                 self.audit_logger.log_error_with_context("spoof_cmdline", e, error_context)
-                self.logger.error(f"Cannot access process {pid}: {e}")
+                self.logger.error(f"Cannot access **[process]** (tiến trình) {pid}: {e}")
                 return False
             
             # Store original process info
@@ -180,7 +180,7 @@ class EnhancedProcessCloaking:
                     self.audit_logger.log_performance_metrics("cmdline_spoof_success", spoof_metrics)
                     self.audit_logger.log_cpu_metrics(pid, "post_spoof")
                     
-                    self.logger.info(f"✅ Applied cmdline spoofing for PID {pid}: {fake_cmdline}")
+                    self.logger.info(f"✅ Applied cmdline spoofing for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {fake_cmdline}")
                     return True
                 else:
                     raise Exception("Spoofing operation failed")
@@ -197,7 +197,7 @@ class EnhancedProcessCloaking:
                     'execution_time': time.time() - start_time
                 }
                 self.audit_logger.log_error_with_context("spoof_cmdline", e, error_context)
-                self.logger.error(f"❌ Failed to spoof cmdline for PID {pid}: {e}")
+                self.logger.error(f"❌ Failed to spoof cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
                 return False
                 
         except Exception as e:
@@ -208,7 +208,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("spoof_cmdline", e, error_context)
-            self.logger.error(f"❌ Error spoofing cmdline for PID {pid}: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) spoofing cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
         
         finally:
@@ -243,7 +243,7 @@ class EnhancedProcessCloaking:
                     Exception(f"No original cmdline stored for PID {pid}"), 
                     error_context
                 )
-                self.logger.warning(f"⚠️ No original cmdline stored for PID {pid}")
+                self.logger.warning(f"⚠️ No original cmdline stored for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                 return False
             
             # Get original process info
@@ -274,7 +274,7 @@ class EnhancedProcessCloaking:
             self.audit_logger.log_performance_metrics("cmdline_restore_success", restore_metrics)
             self.audit_logger.log_cpu_metrics(pid, "post_restore")
             
-            self.logger.info(f"✅ Restored original cmdline for PID {pid}")
+            self.logger.info(f"✅ Restored original cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
             return True
             
         except Exception as e:
@@ -283,7 +283,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("restore_cmdline", e, error_context)
-            self.logger.error(f"❌ Error restoring cmdline for PID {pid}: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) restoring cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
         
         finally:
@@ -409,7 +409,7 @@ class EnhancedProcessCloaking:
                     Exception("Cloaking library not available"),
                     error_context
                 )
-                self.logger.warning("Creating process without stealth (library unavailable)")
+                self.logger.warning("Creating **[process]** (tiến trình) without stealth (library unavailable)")
                 return subprocess.Popen(command, **popen_kwargs)
             
             # Setup stealth environment
@@ -438,9 +438,9 @@ class EnhancedProcessCloaking:
                 self.audit_logger.log_cpu_metrics(process.pid, "process_creation")
                 
                 if spoof_success:
-                    self.logger.info(f"✅ Created stealth process PID {process.pid} as '{fake_name}'")
+                    self.logger.info(f"✅ Created stealth **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid} as '{fake_name}'")
                 else:
-                    self.logger.warning(f"⚠️ Created process PID {process.pid} but cmdline spoofing failed")
+                    self.logger.warning(f"⚠️ Created **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid} but cmdline spoofing failed")
             
             return process
             
@@ -452,7 +452,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("create_stealth_process", e, error_context)
-            self.logger.error(f"❌ Failed to create stealth process: {e}")
+            self.logger.error(f"❌ Failed to create stealth **[process]** (tiến trình): {e}")
             return None
         
         finally:
@@ -519,7 +519,7 @@ class EnhancedProcessCloaking:
             self.audit_logger.log_performance_metrics("cpu_affinity_cloaking", affinity_metrics)
             self.audit_logger.log_cpu_metrics(pid, "post_affinity_cloaking")
             
-            self.logger.info(f"✅ Applied CPU affinity cloaking for PID {pid} on cores {real_cores}")
+            self.logger.info(f"✅ Applied **[CPU]** (bộ xử lý trung tâm) affinity cloaking for **[PID]** (Process ID - mã định danh tiến trình) {pid} on cores {real_cores}")
             return True
             
         except Exception as e:
@@ -529,7 +529,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("apply_cpu_affinity_cloaking", e, error_context)
-            self.logger.error(f"❌ Failed to apply CPU affinity cloaking: {e}")
+            self.logger.error(f"❌ Failed to apply **[CPU]** (bộ xử lý trung tâm) affinity cloaking: {e}")
             return False
         
         finally:
@@ -619,7 +619,7 @@ class EnhancedProcessCloaking:
                 'execution_time': time.time() - start_time
             }
             self.audit_logger.log_error_with_context("monitor_stealth_status", e, error_context)
-            self.logger.error(f"❌ Error monitoring stealth status: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) monitoring stealth status: {e}")
             return {}
         
         finally:
@@ -684,7 +684,7 @@ class EnhancedProcessCloaking:
                 'cloaked_processes': self.cloaked_processes.copy()
             }
             self.audit_logger.log_error_with_context("cleanup_all_cloaking", e, error_context)
-            self.logger.error(f"❌ Error during cloaking cleanup: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) during cloaking cleanup: {e}")
         
         finally:
             execution_time = time.time() - start_time
@@ -711,7 +711,7 @@ class EnhancedProcessCloaking:
             self.logger.info(f"📊 Performance summary: {summary['total_operations']} operations tracked")
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to export audit report: {e}")
+            self.logger.error(f"❌ Failed to **[export]** (xuất khẩu) audit report: {e}")
 
 
 # Global enhanced instance
@@ -772,7 +772,7 @@ if __name__ == "__main__":
             )
             
             if process:
-                logger.info(f"✅ Created enhanced stealth process PID {process.pid}")
+                logger.info(f"✅ Created enhanced stealth **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid}")
                 time.sleep(2)
                 
                 # Monitor enhanced stealth status
@@ -784,7 +784,7 @@ if __name__ == "__main__":
                 
                 process.terminate()
                 process.wait()
-                logger.info("✅ Enhanced stealth process terminated")
+                logger.info("✅ Enhanced stealth **[process]** (tiến trình) terminated")
         
         # Cleanup
         enhanced_cloaking.cleanup_all_cloaking()

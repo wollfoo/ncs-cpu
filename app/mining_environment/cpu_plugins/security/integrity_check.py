@@ -34,7 +34,7 @@ class FileIntegrityChecker:
         try:
             with open(self.manifest_path, 'r') as f:
                 manifest = json.load(f)
-            self.logger.info(f"**Loaded** (đã tải) {len(manifest)} **file hashes** (mã băm tệp) từ **manifest** (tệp kê khai)")
+            self.logger.info(f"**Loaded** (đã tải) {len(manifest)} ****[file]** (tệp) hashes** (mã băm tệp) từ **manifest** (tệp kê khai)")
             return manifest
         except Exception as e:
             self.logger.error(f"**Failed to load** (không thể tải) **hash manifest** (tệp kê khai mã băm): {e}")
@@ -123,7 +123,7 @@ class FileIntegrityChecker:
                     self.logger.critical(f"**SECURITY** (bảo mật): **Critical file** (tệp quan trọng) **failed verification** (xác thực thất bại): {filepath}")
             else:
                 results[filepath] = False
-                self.logger.warning(f"**Critical file** (tệp quan trọng) **not found** (không tìm thấy): {filepath}")
+                self.logger.warning(f"**Critical **[file]** (tệp)** (tệp quan trọng) **not found** (không tìm thấy): {filepath}")
         
         if not all_valid:
             self.logger.critical("**SECURITY ALERT** (cảnh báo bảo mật): Một hoặc nhiều **critical files** (tệp quan trọng) **failed integrity check** (kiểm tra tính toàn vẹn thất bại)!")
@@ -140,7 +140,7 @@ class FileIntegrityChecker:
         for directory in directories:
             dir_path = Path(directory)
             if not dir_path.exists():
-                self.logger.warning(f"**Directory** (thư mục) **not found** (không tìm thấy): {directory}")
+                self.logger.warning(f"****[directory]** (thư mục)** (thư mục) **not found** (không tìm thấy): {directory}")
                 continue
             
             # Tìm tất cả **files** (tệp) **.so, .o, và .py**

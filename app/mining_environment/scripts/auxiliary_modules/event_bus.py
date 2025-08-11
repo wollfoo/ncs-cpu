@@ -125,7 +125,7 @@ class RedisEventBusBackend(EventBusBackend):
             
             # Kiểm tra kết nối ([Test connection])
             self._redis_client.ping()
-            self._logger.info("Kết nối [Redis] (hệ quản trị key-value) được thiết lập thành công")},{
+            self._logger.info("Kết nối [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)) được thiết lập thành công")},{
             
             # Initialize pubsub
             self._pubsub = self._redis_client.pubsub()
@@ -133,7 +133,7 @@ class RedisEventBusBackend(EventBusBackend):
         except ImportError:
             raise ImportError("Redis package not installed. Run: pip install redis>=4.5.0")
         except Exception as e:
-            self._logger.error(f"Khởi tạo kết nối [Redis] (hệ quản trị key-value) thất bại: {e}")
+            self._logger.error(f"Khởi tạo kết nối [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)) thất bại: {e}")
             raise
     
     def _retry_operation(self, operation, *args, **kwargs):
@@ -147,10 +147,10 @@ class RedisEventBusBackend(EventBusBackend):
             except Exception as e:
                 retry_count += 1
                 if retry_count >= self._retry_config['max_retries']:
-                    self._logger.error(f"Thao tác [Redis] (hệ quản trị key-value) thất bại after {retry_count} retries: {e}")
+                    self._logger.error(f"Thao tác [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)) thất bại after {retry_count} retries: {e}")
                     raise
                 
-                 self._logger.warning(f"Thao tác [Redis] (hệ quản trị key-value) thất bại (attempt {retry_count}): {e}. [Retrying] (thử lại) sau {delay}s...")
+                 self._logger.warning(f"Thao tác [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)) thất bại (attempt {retry_count}): {e}. [Retrying] (thử lại) sau {delay}s...")
                 time.sleep(delay)
                 delay = min(delay * self._retry_config['backoff_factor'], self._retry_config['max_delay'])
     
@@ -201,7 +201,7 @@ class RedisEventBusBackend(EventBusBackend):
         self._stop_listening = False
         self._listener_thread = threading.Thread(target=self._listen_for_messages, daemon=True)
         self._listener_thread.start()
-        self._logger.info("Luồng listener [Redis] (hệ quản trị key-value) đã khởi động")
+        self._logger.info("Luồng listener [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)) đã khởi động")
     
     def _listen_for_messages(self) -> None:
         """Background thread để lắng nghe Redis messages."""
@@ -235,11 +235,11 @@ class RedisEventBusBackend(EventBusBackend):
                             
                 except Exception as e:
                     if not self._stop_listening:
-                        self._logger.error(f"Lỗi trong [listener] (bộ lắng nghe) [Redis] (hệ quản trị key-value): {e}")
+                        self._logger.error(f"Lỗi trong [listener] (bộ lắng nghe) [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)): {e}")
                         time.sleep(1)  # Avoid tight loop on persistent errors
                         
         except Exception as e:
-            self._logger.error(f"Lỗi nghiêm trọng trong luồng [listener] (bộ lắng nghe) [Redis] (hệ quản trị key-value): {e}")
+            self._logger.error(f"Lỗi nghiêm trọng trong luồng [listener] (bộ lắng nghe) [Redis] (hệ quản trị **[key]** (khóa)-**[value]** (giá trị)): {e}")
     
     def stop(self) -> None:
         """Dừng [Redis backend] (hậu phương Redis) và dọn dẹp tài nguyên."""
@@ -263,7 +263,7 @@ class RedisEventBusBackend(EventBusBackend):
             try:
                 self._redis_client.close()
             except Exception as e:
-                self._logger.error(f"Lỗi khi đóng [Redis client] (khách hàng Redis): {e}")
+                self._logger.error(f"Lỗi khi đóng [Redis **[client]** (máy khách)] (khách hàng Redis): {e}")
         
         # Xoá danh sách [subscribers] (người đăng ký)
         with self._lock:
@@ -506,7 +506,7 @@ class RabbitMQEventBusBackend(EventBusBackend):
 
                         # Verify queue declaration result
                         if hasattr(queue_result, 'method') and hasattr(queue_result.method, 'queue'):
-                            self._logger.debug(f"✅ Queue declared successfully: {queue_result.method.queue}")
+                            self._logger.debug(f"✅ **[queue]** (hàng đợi) declared successfully: {queue_result.method.queue}")
 
                         # Bind queue to exchange
                         self._channel.queue_bind(
@@ -515,11 +515,11 @@ class RabbitMQEventBusBackend(EventBusBackend):
                             routing_key=topic
                         )
 
-                        self._logger.debug(f"Declared and bound queue '{queue_name}' for topic '{topic}'")
+                        self._logger.debug(f"Declared and bound **[queue]** (hàng đợi) '{queue_name}' for topic '{topic}'")
 
                     except Exception as e:
-                        self._logger.error(f"❌ Failed to setup queue for topic '{topic}': {e}")
-                        self._logger.warning(f"🔄 Subscriber for '{topic}' will use degraded mode (no persistent queue)")
+                        self._logger.error(f"❌ Failed to setup **[queue]** (hàng đợi) for topic '{topic}': {e}")
+                        self._logger.warning(f"🔄 Subscriber for '{topic}' will use degraded mode (no persistent **[queue]** (hàng đợi))")
                         # Don't raise - allow subscription to continue in degraded mode
                         # The callback will still be registered for in-memory delivery
     
@@ -580,7 +580,7 @@ class RabbitMQEventBusBackend(EventBusBackend):
                                 # Reject message with no requeue
                                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                             except Exception as e:
-                                self._logger.error(f"Error processing message from topic '{topic_name}': {e}")
+                                self._logger.error(f"**[error]** (lỗi) processing message from topic '{topic_name}': {e}")
                                 # Reject message with requeue for retry
                                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
@@ -614,7 +614,7 @@ class RabbitMQEventBusBackend(EventBusBackend):
                         # **Thread-safe consumer tag storage** (lưu trữ [consumer tag] – thẻ consumer – an toàn luồng)
                         with self._consumer_tags_lock:
                             self._consumer_tags[topic] = consumer_tag
-                        self._logger.debug(f"Đã bắt đầu [consuming] (tiêu thụ) [queue] (hàng đợi) '{queue_name}' cho [topic] (chủ đề) '{topic}'")
+                        self._logger.debug(f"Đã bắt đầu [consuming] (tiêu thụ) [**[queue]** (hàng đợi)] (hàng đợi) '{queue_name}' cho [topic] (chủ đề) '{topic}'")
 
                     except Exception as consumer_error:
                         self._logger.error(f"Thiết lập [consumer] (bộ tiêu thụ) cho [topic] (chủ đề) '{topic}' thất bại: {consumer_error}")
@@ -714,10 +714,10 @@ class RabbitMQEventBusBackend(EventBusBackend):
         
         # **Phase 3: Thread management** (Giai đoạn 3: quản lý luồng)
         if self._listener_thread and self._listener_thread.is_alive():
-            self._logger.info("🧹 Phase 3: Thread cleanup with extended timeout...")
+            self._logger.info("🧹 Phase 3: **[thread]** (luồng) cleanup with extended timeout...")
             self._listener_thread.join(timeout=15.0)  # **Increased timeout** (tăng timeout) 10s -> 15s
             if self._listener_thread.is_alive():
-                self._logger.warning("⚠️ [Listener thread] (luồng lắng nghe) vẫn còn sau thời gian chờ 15s")
+                self._logger.warning("⚠️ [Listener **[thread]** (luồng)] (luồng lắng nghe) vẫn còn sau thời gian chờ 15s")
                 cleanup_errors.append("Thread cleanup timeout after 15s")
         
         # **Phase 4: Connection closure with advanced retry** (Giai đoạn 4: đóng kết nối với cơ chế thử lại nâng cao)
@@ -857,7 +857,7 @@ class EventBusSchemaValidator:
     def _load_schemas(self) -> None:
         """Tải tất cả tệp [schema] (lược đồ) từ thư mục [schemas]."""
         if not self._schema_dir.exists():
-            self._logger.warning(f"Schema directory không tồn tại: {self._schema_dir}")
+            self._logger.warning(f"Schema **[directory]** (thư mục) không tồn tại: {self._schema_dir}")
             return
         
         for schema_file in self._schema_dir.glob("*.json"):
@@ -947,13 +947,13 @@ class EventBus:
 
             # Rơi về [memory backend] (hậu phương bộ nhớ) nếu backend yêu cầu thất bại
             if backend_type.lower() != "memory":
-                self._logger.warning(f"🔄 Falling back to memory backend due to {backend_type} failure")
+                self._logger.warning(f"🔄 Falling back to **[memory]** (bộ nhớ) backend due to {backend_type} failure")
                 try:
                     fallback_backend = MemoryEventBusBackend(self._logger)
-                    self._logger.info("✅ Đã tạo thành công [fallback memory backend] (hậu phương bộ nhớ dự phòng)")
+                    self._logger.info("✅ Đã tạo thành công [fallback **[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ dự phòng)")
                     return fallback_backend
                 except Exception as fallback_error:
-                    self._logger.error(f"❌ Ngay cả [fallback memory backend] (hậu phương bộ nhớ dự phòng) cũng thất bại: {fallback_error}")
+                    self._logger.error(f"❌ Ngay cả [fallback **[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ dự phòng) cũng thất bại: {fallback_error}")
                     raise RuntimeError(f"Failed to create both {backend_type} and fallback memory backend")
             else:
                 # If memory backend itself fails, there's no fallback
@@ -989,12 +989,12 @@ class EventBus:
 
             # Thử rơi về [memory backend] (hậu phương bộ nhớ) nếu backend hiện tại thất bại
             if not isinstance(self._backend, MemoryEventBusBackend):
-                self._logger.warning("🔄 Đang thử rơi về [memory backend] (hậu phương bộ nhớ) cho lần xuất bản này")
+                self._logger.warning("🔄 Đang thử rơi về [**[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ) cho lần xuất bản này")
                 try:
                     # Tạo [memory backend] (hậu phương bộ nhớ) tạm thời cho thao tác này
                     temp_memory_backend = MemoryEventBusBackend(self._logger)
                     temp_memory_backend.publish(topic, payload)
-                    self._logger.info(f"✅ Đã xuất bản thành công tới [fallback memory backend] (hậu phương bộ nhớ dự phòng): {topic}")
+                    self._logger.info(f"✅ Đã xuất bản thành công tới [fallback **[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ dự phòng): {topic}")
                 except Exception as fallback_error:
                     self._logger.error(f"❌ Xuất bản dự phòng cũng thất bại: {fallback_error}")
                     raise RuntimeError(f"Both primary and fallback publish failed for topic '{topic}'")
@@ -1017,12 +1017,12 @@ class EventBus:
 
             # Thử rơi về [memory backend] (hậu phương bộ nhớ) nếu backend hiện tại thất bại
             if not isinstance(self._backend, MemoryEventBusBackend):
-                self._logger.warning(f"🔄 Đang thử rơi về [memory backend] (hậu phương bộ nhớ) cho đăng ký vào '{topic}'")
+                self._logger.warning(f"🔄 Đang thử rơi về [**[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ) cho đăng ký vào '{topic}'")
                 try:
                     # Chuyển sang [memory backend] (hậu phương bộ nhớ) vĩnh viễn cho thể hiện [EventBus] này
                     self._backend = MemoryEventBusBackend(self._logger)
                     self._backend.subscribe(topic, callback)
-                    self._logger.info(f"✅ Đã đăng ký thành công vào '{topic}' bằng [fallback memory backend] (hậu phương bộ nhớ dự phòng)")
+                    self._logger.info(f"✅ Đã đăng ký thành công vào '{topic}' bằng [fallback **[memory]** (bộ nhớ) backend] (hậu phương bộ nhớ dự phòng)")
                 except Exception as fallback_error:
                     self._logger.error(f"❌ Đăng ký dự phòng cũng thất bại: {fallback_error}")
                     raise RuntimeError(f"Both primary and fallback subscribe failed for topic '{topic}'")

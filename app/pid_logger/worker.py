@@ -1,6 +1,6 @@
 """worker.py (nằm trong `app/pid_logger`)
-PID Logger nâng cao với [Real Process Output Monitor] (bộ giám sát output tiến trình thực).
-Ghi PID và [runtime output] (output thời gian chạy) cho tiến trình khai thác CPU/GPU.
+**[PID Logger]** (trình ghi PID) nâng cao với **[Real Process Output Monitor]** (bộ giám sát output tiến trình thực).
+Ghi **[PID]** (Process ID - mã định danh tiến trình) và **[runtime output]** (output thời gian chạy) cho tiến trình khai thác CPU/GPU.
 """
 from __future__ import annotations
 
@@ -17,30 +17,30 @@ import fcntl
 from datetime import datetime
 from typing import Dict, Optional, Any
 
-# Cấu hình - Tự động phát hiện đường dẫn dựa trên script location
+# Cấu hình - Tự động phát hiện đường dẫn dựa trên **[script location]** (vị trí kịch bản)
 _SCRIPT_DIR = pathlib.Path(__file__).parent.parent
 LOG_DIR = os.getenv("LOGS_DIR", str(_SCRIPT_DIR / "mining_environment" / "logs"))
 PID_CPU_FILE = pathlib.Path(LOG_DIR) / "pid_cpu.log"
 MAX_SIZE_MB = 3
 
-# [Output format configuration] (cấu hình định dạng output)
-# "raw" = định dạng văn bản thô với tiền tố [timestamp] (dấu thời gian)
-# "json" = [JSON structured format] (định dạng có cấu trúc JSON)  
+# **[Output format configuration]** (cấu hình định dạng output)
+# "raw" = định dạng văn bản thô với tiền tố **[timestamp]** (dấu thời gian)
+# "json" = **[JSON structured format]** (định dạng có cấu trúc JSON)  
 OUTPUT_FORMAT = os.getenv("PID_LOG_FORMAT", "raw")
 
-# [Queues] (hàng đợi) và [Events] (sự kiện)
+# **[Queues]** (hàng đợi) và **[Events]** (sự kiện)
 _QUEUE: "queue.Queue[dict]" = queue.Queue()
 _OUTPUT_QUEUE: "queue.Queue[dict]" = queue.Queue()
 _STOP_EVENT = threading.Event()
 _WORKER_STARTED = threading.Event()
 _OUTPUT_MONITOR_STARTED = threading.Event()
 
-# [Process Registry] (sổ đăng ký tiến trình) để theo dõi tiến trình đã đăng ký
+# **[Process Registry]** (sổ đăng ký tiến trình) để theo dõi tiến trình đã đăng ký
 _PROCESS_REGISTRY: Dict[int, Dict[str, Any]] = {}
 
-# Thiết lập [logger] (bộ ghi log) cho PID Logger
+# Thiết lập **[logger]** (bộ ghi log) cho PID Logger
 logger = logging.getLogger("pid_logger")
-# Nếu chưa có handler, tạo cấu hình cơ bản
+# Nếu chưa có **[handler]** (bộ xử lý), tạo cấu hình cơ bản
 if not logger.handlers:
     logging.basicConfig(
         level=os.getenv("PID_LOGGER_LEVEL", "INFO"),
@@ -53,45 +53,45 @@ def _ensure_log_dir() -> None:
 def _rotate_if_needed(path: pathlib.Path) -> None:
     if path.exists() and path.stat().st_size / (1024*1024) > MAX_SIZE_MB:
         try:
-            logger.info(f"Đang thực hiện xoay vòng log (log rotation) cho tệp PID {path} (> {MAX_SIZE_MB}MB)")
+            logger.info(f"Đang thực hiện **[log rotation]** (xoay vòng log) cho tệp PID {path} (> {MAX_SIZE_MB}MB)")
             path.unlink()
         except Exception as exc:
-            logger.error(f"Xoay vòng log PID thất bại cho tệp {path}: {exc}")
+            logger.error(f"**[Log rotation]** (xoay vòng log) PID thất bại cho tệp {path}: {exc}")
 
 def enqueue_pid(pid: int, mtype: str):
-    """Ghi PID vào hàng đợi cho PID logging (chỉ CPU: chuẩn hoá về 'cpu')."""
+    """Ghi **[PID]** (mã tiến trình) vào hàng đợi cho **[PID logging]** (ghi log PID) (chỉ CPU: chuẩn hoá về 'cpu')."""
     if mtype not in ("cpu", "gpu"):
         raise ValueError("mtype must be 'cpu' or 'gpu'")
     norm_type = "cpu"
     payload = {"pid": pid, "type": norm_type, "ts": time.time()}
     _QUEUE.put(payload)
-    logger.debug(f"Đã đưa PID {payload['pid']} ({payload['type']}) vào hàng đợi. Kích thước hàng đợi: {_QUEUE.qsize()}")
+    logger.debug(f"Đã đưa **[PID]** (mã tiến trình) {payload['pid']} ({payload['type']}) vào hàng đợi. Kích thước hàng đợi: {_QUEUE.qsize()}")
 
 def register_process(pid: int, process_type: str, process_obj, process_name: str = None):
     """
-    Đăng ký tiến trình để giám sát output thời gian chạy.
+    Đăng ký tiến trình để giám sát **[output]** (đầu ra) thời gian chạy.
     
     Args:
-        pid: [Process ID] (mã tiến trình)
+        pid: **[Process ID]** (mã tiến trình)
         process_type: 'cpu' hoặc 'gpu'
         process_obj: đối tượng `subprocess.Popen` hoặc `psutil.Process`
         process_name: Tên tiến trình (tuỳ chọn)
     """
     if process_type not in ("cpu", "gpu"):
         raise ValueError("process_type must be 'cpu' or 'gpu'")
-    # CPU-only: map mọi process_type về 'cpu'
+    # **[CPU-only]** (chỉ CPU): map mọi process_type về 'cpu'
     process_type = "cpu"
     
-    # Handle both subprocess.Popen and psutil.Process objects
+    # Handle both **[subprocess.Popen]** (tiến trình con Popen) and **[psutil.Process]** (tiến trình psutil) objects
     if hasattr(process_obj, 'poll'):
-        # subprocess.Popen object
+        # **[subprocess.Popen object]** (đối tượng subprocess.Popen)
         obj_type = "subprocess"
     elif hasattr(process_obj, 'is_running'):
-        # psutil.Process object  
+        # **[psutil.Process object]** (đối tượng psutil.Process)
         obj_type = "psutil"
     else:
         obj_type = "unknown"
-        logger.warning(f"Không rõ kiểu đối tượng tiến trình cho PID {pid}: {type(process_obj)}")
+        logger.warning(f"Không rõ kiểu đối tượng tiến trình cho **[PID]** (mã tiến trình) {pid}: {type(process_obj)}")
     
     _PROCESS_REGISTRY[pid] = {
         "type": process_type,
@@ -101,7 +101,7 @@ def register_process(pid: int, process_type: str, process_obj, process_name: str
         "registered_at": time.time(),
         "obj_type": obj_type
     }
-    logger.info(f"Đã đăng ký tiến trình PID {pid} ({process_type}, {obj_type}) để giám sát output")
+    logger.info(f"Đã đăng ký tiến trình **[PID]** (mã tiến trình) {pid} ({process_type}, {obj_type}) để giám sát output")
     
     # Tự động enqueue PID để log
     enqueue_pid(pid, process_type)
@@ -111,7 +111,7 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
     Trình giám sát output tiến trình thực nâng cao - đọc mining output từ nhiều nguồn.
     
     Args:
-        pid: [Process ID] để giám sát
+        pid: **[Process ID]** để giám sát
         
     Returns:
         str: Dòng output nếu có, None nếu không có hoặc xảy ra lỗi
@@ -159,11 +159,11 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
                                     "hashrate", "speed", "temperature", "GPU", "CPU"
                                 ]):
                                     _read_process_output_via_proc.file_positions[position_key] = f.tell()
-                                    logger.debug(f"Found mining output in wrapper log: {line[:50]}...")
+                                    logger.debug(f"Found mining output in wrapper **[log]** (nhật ký): {line[:50]}...")
                                     return line.strip()
                                 
                 except (OSError, IOError) as e:
-                    logger.debug(f"Không thể đọc log wrapper {wrapper_path}: {e}")
+                    logger.debug(f"Không thể đọc **[log]** (nhật ký) wrapper {wrapper_path}: {e}")
         
         # Priority 2: Đọc từ tệp log khai thác (chỉ CPU)
         log_file_path = f"{LOG_DIR}/cpu_miner.log"
@@ -190,11 +190,11 @@ def _read_process_output_via_proc(pid: int) -> Optional[str]:
                                 "Thread Started", "attempt", "Starting", "Manager"
                             ]):
                                 _read_process_output_via_proc.file_positions[position_key] = f.tell()
-                                logger.debug(f"Found mining output in main log: {line[:50]}...")
+                                logger.debug(f"Found mining output in main **[log]** (nhật ký): {line[:50]}...")
                                 return line.strip()
                             
             except (OSError, IOError) as e:
-                logger.debug(f"Không thể đọc tệp log khai thác {log_file_path}: {e}")
+                logger.debug(f"Không thể đọc tệp **[log]** (nhật ký) khai thác {log_file_path}: {e}")
         
         # Priority 3: [Direct process file descriptors] (bộ mô tả tệp của tiến trình trực tiếp) (cho tiến trình không stealth)
         fd_paths = [
@@ -245,7 +245,7 @@ def _output_monitor_loop():
     """
     Vòng lặp Giám sát Output Tiến trình Thực - giám sát và ghi log output thời gian chạy
     """
-    logger.info("[Process Output Monitor] (trình giám sát output tiến trình) đã khởi động")
+    logger.info("[**[process]** (tiến trình) Output Monitor] (trình giám sát output tiến trình) đã khởi động")
     
     while not _STOP_EVENT.is_set():
         try:
@@ -298,7 +298,7 @@ def _output_monitor_loop():
                     
                     # Enqueue để _output_writer_loop xử lý
                     _OUTPUT_QUEUE.put(output_entry)
-                    logger.debug(f"Đã bắt được output từ PID {pid}: {output_line[:50]}...")
+                    logger.debug(f"Đã bắt được output từ **[PID]** (Process ID - mã định danh tiến trình) {pid}: {output_line[:50]}...")
             
             # Ngủ ngắn để không tốn quá nhiều CPU
             time.sleep(0.5)
@@ -307,13 +307,13 @@ def _output_monitor_loop():
             logger.error(f"Lỗi trong vòng lặp giám sát output: {e}")
             time.sleep(2)
     
-    logger.info("[Process Output Monitor] (trình giám sát output tiến trình) đã dừng")
+    logger.info("[**[process]** (tiến trình) Output Monitor] (trình giám sát output tiến trình) đã dừng")
 
 def _output_writer_loop():
     """
     Vòng lặp Ghi Output - ghi output thời gian chạy vào tệp riêng biệt
     """
-    logger.info("[Output Writer Loop] (vòng ghi output) đã khởi động [CPU-only] (chỉ bản CPU)")
+    logger.info("[Output Writer Loop] (vòng ghi output) đã khởi động [**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm))")
     _ensure_log_dir()
     
     # Mở file để ghi runtime output (CPU-only)
@@ -356,10 +356,10 @@ def _output_writer_loop():
             
             f.write(log_line)
             f.flush()
-            logger.debug(f"Đã ghi output thời gian chạy định dạng {OUTPUT_FORMAT} cho PID {output_entry['pid']}")
+            logger.debug(f"Đã ghi output thời gian chạy định dạng {OUTPUT_FORMAT} cho **[PID]** (Process ID - mã định danh tiến trình) {output_entry['pid']}")
             
         except Exception as write_err:
-            logger.error(f"Ghi log output thất bại: {write_err}")
+            logger.error(f"Ghi **[log]** (nhật ký) output thất bại: {write_err}")
     
     # Cleanup
     for f in files.values():
@@ -375,41 +375,41 @@ def _writer_loop_wrapper():
     try:
         _writer_loop()
     except Exception as exc:
-        logger.error(f"Luồng worker PID logger bị crash (sập): {exc}")
+        logger.error(f"Luồng worker **[PID]** (Process ID - mã định danh tiến trình) logger bị crash (sập): {exc}")
         # Reset worker started flag để có thể restart
         _WORKER_STARTED.clear()
 
 def _writer_loop():
-    logger.info("Luồng worker PID Logger đã khởi động [CPU-only] (chỉ bản CPU)")
+    logger.info("Luồng worker **[PID]** (Process ID - mã định danh tiến trình) Logger đã khởi động [**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm))")
     _ensure_log_dir()
-    logger.info(f"Thư mục log đã xác nhận: {LOG_DIR}")
+    logger.info(f"Thư mục **[log]** (nhật ký) đã xác nhận: {LOG_DIR}")
     files = {
         "cpu": PID_CPU_FILE.open("a", buffering=1, encoding="utf-8"),
     }
-    logger.info(f"Đã mở file log - CPU: {PID_CPU_FILE}")
+    logger.info(f"Đã mở **[file]** (tệp) **[log]** (nhật ký) - **[CPU]** (bộ xử lý trung tâm): {PID_CPU_FILE}")
     
     while not _STOP_EVENT.is_set():
         try:
             item = _QUEUE.get(timeout=1)
         except queue.Empty:
             continue
-    logger.info(f"Đang xử lý mục ghi [PID]: {item}")
+    logger.info(f"Đang xử lý mục ghi [**[PID]** (Process ID - mã định danh tiến trình)]: {item}")
         # CPU-only: mọi type ghi vào CPU log
         f = files["cpu"]
         _rotate_if_needed(f.name if isinstance(f,str) else pathlib.Path(f.name))
         try:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
             f.flush()  # Đảm bảo ghi ngay lập tức
-            logger.info(f"Ghi thành công PID {item['pid']} vào log {item['type']}")
+            logger.info(f"Ghi thành công **[PID]** (Process ID - mã định danh tiến trình) {item['pid']} vào **[log]** (nhật ký) {item['type']}")
         except Exception as write_exc:
-            logger.error(f"Ghi log PID thất bại: {write_exc}")
+            logger.error(f"Ghi **[log]** (nhật ký) **[PID]** (Process ID - mã định danh tiến trình) thất bại: {write_exc}")
             try:
                 f.close()
             except Exception:
                 pass
             files["cpu"] = PID_CPU_FILE.open("a", buffering=1, encoding="utf-8")
     
-    logger.info("Luồng worker PID logger đang tắt")
+    logger.info("Luồng worker **[PID]** (Process ID - mã định danh tiến trình) logger đang tắt")
     for f in files.values():
         try:
             f.close()
@@ -421,7 +421,7 @@ def start_worker():
     if _WORKER_STARTED.is_set():
         return
     
-    logger.info("Khởi động [Enhanced PID Logger] (trình ghi PID nâng cao) [CPU-only] (chỉ bản CPU) với [Real Process Output Monitor] (bộ giám sát output tiến trình thực)")
+    logger.info("Khởi động [Enhanced **[PID]** (Process ID - mã định danh tiến trình) Logger] (trình ghi **[PID]** (Process ID - mã định danh tiến trình) nâng cao) [**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm)) với [Real **[process]** (tiến trình) Output Monitor] (bộ giám sát output tiến trình thực)")
     
     # Start PID Logger thread
     pid_thread = threading.Thread(target=_writer_loop_wrapper, daemon=True, name="PIDLoggerWorker")
@@ -437,20 +437,20 @@ def start_worker():
     _WORKER_STARTED.set()
     _OUTPUT_MONITOR_STARTED.set()
     
-    logger.info("[Enhanced PID Logger] (trình ghi PID nâng cao) khởi động thành công:")
-    logger.info("  - [PID Logger Worker] (luồng ghi PID): ACTIVE (đang hoạt động)")
-    logger.info("  - [Process Output Monitor] (trình giám sát output tiến trình): ACTIVE (đang hoạt động)") 
+    logger.info("[Enhanced **[PID]** (Process ID - mã định danh tiến trình) Logger] (trình ghi **[PID]** (Process ID - mã định danh tiến trình) nâng cao) khởi động thành công:")
+    logger.info("  - [**[PID]** (Process ID - mã định danh tiến trình) Logger Worker] (luồng ghi **[PID]** (Process ID - mã định danh tiến trình)): ACTIVE (đang hoạt động)")
+    logger.info("  - [**[process]** (tiến trình) Output Monitor] (trình giám sát output tiến trình): ACTIVE (đang hoạt động)") 
     logger.info("  - [Output Writer] (trình ghi output): ACTIVE (đang hoạt động)")
 
 def force_restart_worker():
     """Buộc khởi động lại worker (chỉ dùng khi [debug] – gỡ lỗi)"""
     global _WORKER_STARTED
     _WORKER_STARTED.clear()
-    logger.info("Buộc khởi động lại worker PID Logger")
+    logger.info("Buộc khởi động lại worker **[PID]** (Process ID - mã định danh tiến trình) Logger")
     start_worker()
 
 def log_pid(pid: int, is_cpu: bool):
-    logger.info(f"Ghi log PID {pid} (is_cpu={is_cpu})")
+    logger.info(f"Ghi **[log]** (nhật ký) **[PID]** (Process ID - mã định danh tiến trình) {pid} (is_cpu={is_cpu})")
     # Đảm bảo worker đang chạy trước khi enqueue
     if not _WORKER_STARTED.is_set():
         logger.warning("Worker chưa khởi động, đang cố gắng khởi động ngay")
@@ -459,12 +459,12 @@ def log_pid(pid: int, is_cpu: bool):
 
 def debug_registry_status():
     """Debug function để kiểm tra trạng thái process registry"""
-    logger.info(f"=== [PROCESS REGISTRY DEBUG] (gỡ lỗi sổ đăng ký tiến trình) ===")
+    logger.info(f"=== [**[process]** (tiến trình) REGISTRY **[debug]** (gỡ lỗi)] (gỡ lỗi sổ đăng ký tiến trình) ===")
     logger.info(f"Tổng số tiến trình đã đăng ký: {len(_PROCESS_REGISTRY)}")
     logger.info(f"Định dạng output: {OUTPUT_FORMAT}")
     
     for pid, info in _PROCESS_REGISTRY.items():
-        logger.info(f"PID {pid}: type={info['type']}, name={info['process_name']}, obj_type={info.get('obj_type', 'unknown')}")
+        logger.info(f"**[PID]** (Process ID - mã định danh tiến trình) {pid}: type={info['type']}, name={info['process_name']}, obj_type={info.get('obj_type', 'unknown')}")
         
         # Kiểm tra process có còn sống không
         try:
@@ -476,7 +476,7 @@ def debug_registry_status():
         except Exception as e:
             logger.info(f"  └─ Kiểm tra trạng thái thất bại: {e}")
     
-    logger.info(f"Kích thước hàng đợi: PID={_QUEUE.qsize()}, OUTPUT={_OUTPUT_QUEUE.qsize()}")
+    logger.info(f"Kích thước hàng đợi: **[PID]** (Process ID - mã định danh tiến trình)={_QUEUE.qsize()}, OUTPUT={_OUTPUT_QUEUE.qsize()}")
     logger.info(f"Trạng thái worker: STARTED={_WORKER_STARTED.is_set()}, OUTPUT_MONITOR={_OUTPUT_MONITOR_STARTED.is_set()}")
     logger.info(f"===============================")
 
@@ -510,20 +510,20 @@ def force_test_output(test_pid: int = None, test_type: str = "cpu"):
         }
         
         _OUTPUT_QUEUE.put(test_entry)
-        logger.info(f"Đã thêm mục output kiểm thử #{i+1} cho PID {test_pid} ({test_type}): {output[:50]}...")
+        logger.info(f"Đã thêm mục output kiểm thử #{i+1} cho **[PID]** (Process ID - mã định danh tiến trình) {test_pid} ({test_type}): {output[:50]}...")
     
-    logger.info(f"Đã thêm {len(test_outputs)} mục output kiểm thử cho PID {test_pid} ({test_type}) vào hàng đợi")
+    logger.info(f"Đã thêm {len(test_outputs)} mục output kiểm thử cho **[PID]** (Process ID - mã định danh tiến trình) {test_pid} ({test_type}) vào hàng đợi")
 
 def manual_register_real_pids():
     """
     Đăng ký thủ công các PID khai thác thực để bỏ qua logic phát hiện phức tạp.
     Tìm và đăng ký các tiến trình `ml-inference` thực (bản CPU-only).
     """
-    logger.info("=== [MANUAL REAL PID REGISTRATION] (đăng ký PID thật thủ công) ===")
+    logger.info("=== [MANUAL REAL **[PID]** (Process ID - mã định danh tiến trình) REGISTRATION] (đăng ký **[PID]** (Process ID - mã định danh tiến trình) thật thủ công) ===")
     
     # Ensure Enhanced PID Logger workers are started
     if not _WORKER_STARTED.is_set():
-        logger.info("Đang khởi động các worker của [Enhanced PID Logger] (trình ghi PID nâng cao)...")
+        logger.info("Đang khởi động các worker của [Enhanced **[PID]** (Process ID - mã định danh tiến trình) Logger] (trình ghi **[PID]** (Process ID - mã định danh tiến trình) nâng cao)...")
         start_worker()
     
     # Find real mining processes by reading /proc
@@ -547,7 +547,7 @@ def manual_register_real_pids():
                 })()
                 
                 register_process(pid, "cpu", fake_proc, "ml-inference")
-                logger.info(f"✅ Đã đăng ký PID khai thác CPU thật: {pid}")
+                logger.info(f"✅ Đã đăng ký **[PID]** (Process ID - mã định danh tiến trình) khai thác **[CPU]** (bộ xử lý trung tâm) thật: {pid}")
                 registered_count += 1
                 
             # GPU (inference-cuda) đã bị loại bỏ trong bản CPU-only

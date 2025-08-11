@@ -42,9 +42,9 @@ class InferenceConfigService:
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
-            self.logger.info(f"✅ Loaded configuration from {self.config_path}")
+            self.logger.info(f"✅ Loaded **[configuration]** (cấu hình) from {self.config_path}")
         except Exception as e:
-            self.logger.error(f"Failed to load config from {self.config_path}: {e}")
+            self.logger.error(f"Failed to load **[config]** (cấu hình) from {self.config_path}: {e}")
             self.config = self._default_config()
 
     def _default_config(self) -> Dict[str, Any]:
@@ -129,7 +129,7 @@ class InferenceConfigService:
             # Check CPU process name
             cpu_process_name = self.get_cpu_process_name()
             if cpu_process_name != "ml-inference":
-                self.logger.warning(f"CPU process name is '{cpu_process_name}', expected 'ml-inference' but continuing")
+                self.logger.warning(f"**[CPU]** (bộ xử lý trung tâm) **[process]** (tiến trình) name is '{cpu_process_name}', expected 'ml-inference' but continuing")
             
             # Check max threads
             mt = self.get_max_cpu_threads()

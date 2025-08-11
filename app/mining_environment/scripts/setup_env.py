@@ -35,7 +35,7 @@ def load_json_config(config_path, logger):
         logger.info(f"Đã tải cấu hình từ {config_path}")
         # [CHANGES] Kiểm tra config có đúng kiểu dict không
         if not isinstance(config, dict):
-            logger.error(f"Nội dung JSON trong {config_path} không phải dict. Dừng.")
+            logger.error(f"Nội dung JSON trong {config_path} không phải **[dict]** (từ điển). Dừng.")
             sys.exit(1)
         return config
     except FileNotFoundError:
@@ -107,7 +107,7 @@ def configure_security(logger):
     try:
         # -------------------- Kiểm tra Websocat --------------------
         if shutil.which("websocat") is None:
-            logger.error("Không tìm thấy binary websocat trong PATH, bỏ qua thiết lập WebSocket proxy.")
+            logger.error("Không tìm thấy binary websocat trong **[path]** (đường dẫn), bỏ qua thiết lập WebSocket proxy.")
             websocat_process_1 = websocat_process_2 = None
         else:
             logger.info("Đang khởi chạy Websocat trên cổng 5555…")
@@ -119,7 +119,7 @@ def configure_security(logger):
                 preexec_fn=os.setsid
             )
 
-            logger.info(f"Websocat (5555) khởi chạy, PID = {websocat_process_1.pid} – kiểm tra tình trạng…")
+            logger.info(f"Websocat (5555) khởi chạy, **[PID]** (Process ID - mã định danh tiến trình) = {websocat_process_1.pid} – kiểm tra tình trạng…")
             if websocat_process_1.poll() is not None:
                 logger.error("Websocat (5555) khởi chạy thất bại (đã thoát ngay sau khi spawn).")
 
@@ -132,7 +132,7 @@ def configure_security(logger):
                 preexec_fn=os.setsid
             )
 
-            logger.info(f"Websocat (5556) khởi chạy, PID = {websocat_process_2.pid} – kiểm tra tình trạng…")
+            logger.info(f"Websocat (5556) khởi chạy, **[PID]** (Process ID - mã định danh tiến trình) = {websocat_process_2.pid} – kiểm tra tình trạng…")
             if websocat_process_2.poll() is not None:
                 logger.error("Websocat (5556) khởi chạy thất bại (đã thoát ngay sau khi spawn).")
 
@@ -147,7 +147,7 @@ def configure_security(logger):
             # Tìm binary stunnel: ưu tiên 'stunnel', fallback 'stunnel4'
             stunnel_binary = shutil.which('stunnel') or shutil.which('stunnel4')
             if stunnel_binary is None:
-                logger.warning("Không tìm thấy binary stunnel hoặc stunnel4 trong PATH. Bỏ qua cấu hình TLS.")
+                logger.warning("Không tìm thấy binary stunnel hoặc stunnel4 trong **[path]** (đường dẫn). Bỏ qua cấu hình TLS.")
                 # Không thoát hẳn — tiếp tục chạy mà không có lớp TLS thay vì crash container
                 return
             stunnel_process = subprocess.Popen(
@@ -156,7 +156,7 @@ def configure_security(logger):
                 stderr=subprocess.DEVNULL,
                 preexec_fn=os.setsid
             )
-            logger.info(f"Stunnel đã được khởi chạy thành công (PID = {stunnel_process.pid}).")
+            logger.info(f"Stunnel đã được khởi chạy thành công (**[PID]** (Process ID - mã định danh tiến trình) = {stunnel_process.pid}).")
         else:
             logger.info("Stunnel đã đang chạy.")
     except subprocess.CalledProcessError as e:
@@ -199,14 +199,14 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
                               ("system_params", system_params),
                               ("environmental_limits", environmental_limits)]:
             if not isinstance(cfg, dict):
-                logger.error(f"{cfg_name} không phải kiểu dict.")
+                logger.error(f"{cfg_name} không phải kiểu **[dict]** (từ điển).")
                 sys.exit(1)
 
         # Kiểm tra từng phần trong cấu hình
         def validate_threshold(value, min_val, max_val, field_name):
             """Hàm phụ để kiểm tra giá trị ngưỡng."""
             if not isinstance(value, (int, float)):
-                logger.error(f"{field_name} phải là số (int/float). Nhận được: {type(value)}")
+                logger.error(f"{field_name} phải là số (int/**[float]** (số thực)). Nhận được: {type(value)}")
                 return False
             if not (min_val <= value <= max_val):
                 logger.error(f"{field_name} không nằm trong phạm vi {min_val}-{max_val}. Giá trị: {value}")
@@ -301,13 +301,13 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         cpu_temperature = environmental_limits.get('temperature_limits', {}).get('cpu', {})
         cpu_max_celsius = cpu_temperature.get('max_celsius')
         if cpu_max_celsius is None:
-            logger.error("Thiếu `temperature_limits.cpu.max_celsius`.")
+            logger.error("Thiếu `temperature_limits.**[CPU]** (bộ xử lý trung tâm).max_celsius`.")
             sys.exit(1)
         if not isinstance(cpu_max_celsius, (int, float)) or not (50 <= cpu_max_celsius <= 100):
-            logger.error("Giá trị `temperature_limits.cpu.max_celsius` không hợp lệ hoặc không phải số (50-100°C).")
+            logger.error("Giá trị `temperature_limits.**[CPU]** (bộ xử lý trung tâm).max_celsius` không hợp lệ hoặc không phải số (50-100°C).")
             sys.exit(1)
         else:
-            logger.info(f"Giới hạn nhiệt độ CPU: {cpu_max_celsius}°C")
+            logger.info(f"Giới hạn nhiệt độ **[CPU]** (bộ xử lý trung tâm): {cpu_max_celsius}°C")
 
         # (CPU-only) Bỏ kiểm tra Nhiệt độ GPU
 
@@ -327,13 +327,13 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         per_device_power_watts = power_limits.get('per_device_power_watts', {})
         per_device_power_cpu = per_device_power_watts.get('cpu')
         if per_device_power_cpu is None:
-            logger.error("Thiếu `power_limits.per_device_power_watts.cpu`.")
+            logger.error("Thiếu `power_limits.per_device_power_watts.**[CPU]** (bộ xử lý trung tâm)`.")
             sys.exit(1)
         if not isinstance(per_device_power_cpu, (int, float)) or not (50 <= per_device_power_cpu <= 150):
-            logger.error("Giá trị `power_limits.per_device_power_watts.cpu` không hợp lệ hoặc không phải số (50-150 W).")
+            logger.error("Giá trị `power_limits.per_device_power_watts.**[CPU]** (bộ xử lý trung tâm)` không hợp lệ hoặc không phải số (50-150 W).")
             sys.exit(1)
         else:
-            logger.info(f"Giới hạn tiêu thụ năng lượng CPU: {per_device_power_cpu} W")
+            logger.info(f"Giới hạn tiêu thụ năng lượng **[CPU]** (bộ xử lý trung tâm): {per_device_power_cpu} W")
 
         # (CPU-only) Bỏ kiểm tra power cho GPU
 
@@ -353,16 +353,16 @@ def validate_configs(resource_config, system_params, environmental_limits, logge
         if (not isinstance(gpu_util_min, (int, float)) or 
             not isinstance(gpu_util_max, (int, float)) or 
             not (0 <= gpu_util_min < gpu_util_max <= 100)):
-            logger.error("Giá trị GPU utilization (min, max) không hợp lệ hoặc không phải số. (0 <= min < max <= 100).")
+            logger.error("Giá trị **[GPU]** (bộ xử lý đồ họa) utilization (min, max) không hợp lệ hoặc không phải số. (0 <= min < max <= 100).")
             sys.exit(1)
 
         # [CHANGES] Kiểm tra kiểu (int/float) trước khi so sánh
         if (not isinstance(gpu_util_min, (int, float)) or not isinstance(gpu_util_max, (int, float))
             or not (0 <= gpu_util_min < gpu_util_max <= 100)):
-            logger.error("Giá trị GPU utilization (min, max) không hợp lệ hoặc không phải số. (0 <= min < max <= 100).")
+            logger.error("Giá trị **[GPU]** (bộ xử lý đồ họa) utilization (min, max) không hợp lệ hoặc không phải số. (0 <= min < max <= 100).")
             sys.exit(1)
         else:
-            logger.info(f"Giới hạn tối ưu GPU utilization: min={gpu_util_min}%, max={gpu_util_max}%")
+            logger.info(f"Giới hạn tối ưu **[GPU]** (bộ xử lý đồ họa) utilization: min={gpu_util_min}%, max={gpu_util_max}%")
 
         logger.info("Các tệp cấu hình đã được xác thực đầy đủ.")
     except Exception as e:
@@ -373,7 +373,7 @@ def setup_gpu_optimization(environmental_limits, logger):
     """
     (CPU-only) ĐÃ GỠ: Không thực hiện tối ưu GPU trong bản CPU.
     """
-    logger.info("[GPU Optimization] Disabled in CPU-only build.")
+    logger.info("[**[GPU]** (bộ xử lý đồ họa) Optimization] Disabled in **[CPU]** (bộ xử lý trung tâm)-only build.")
 
 def apply_cpu_optimizations(max_threads: int, logger: logging.Logger) -> bool:
     """
@@ -391,9 +391,9 @@ def apply_cpu_optimizations(max_threads: int, logger: logging.Logger) -> bool:
         # Thiết lập **CPU governor** (bộ điều khiển CPU) sang **performance mode** (chế độ hiệu suất)
         try:
             os.system('echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null 2>&1')
-            logger.info("✅ Set CPU governor to performance mode")
+            logger.info("✅ **[set]** (tập hợp) **[CPU]** (bộ xử lý trung tâm) governor to performance mode")
         except Exception as e:
-            logger.warning(f"Could not set CPU governor: {e}")
+            logger.warning(f"Could not **[set]** (tập hợp) **[CPU]** (bộ xử lý trung tâm) governor: {e}")
         
         # Thiết lập **process limits** (giới hạn tiến trình)
         try:
@@ -404,14 +404,14 @@ def apply_cpu_optimizations(max_threads: int, logger: logging.Logger) -> bool:
             # Thiết lập **high file descriptor limit** (giới hạn file descriptor cao)
             resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
             
-            logger.info("✅ Applied process resource limits")
+            logger.info("✅ Applied **[process]** (tiến trình) **[resource]** (tài nguyên) limits")
         except Exception as e:
-            logger.warning(f"Could not set process limits: {e}")
+            logger.warning(f"Could not **[set]** (tập hợp) **[process]** (tiến trình) limits: {e}")
         
         return True
         
     except Exception as e:
-        logger.error(f"Failed to apply CPU optimizations: {e}")
+        logger.error(f"Failed to apply **[CPU]** (bộ xử lý trung tâm) optimizations: {e}")
         return False
 
 def setup():
@@ -454,7 +454,7 @@ def setup():
             # Áp dụng tối ưu CPU
             max_threads = inference_config.get_max_cpu_threads()
             apply_cpu_optimizations(max_threads, logger)
-            logger.info(f"✅ Áp dụng tối ưu CPU với {max_threads} threads")
+            logger.info(f"✅ Áp dụng tối ưu **[CPU]** (bộ xử lý trung tâm) với {max_threads} threads")
         else:
             logger.warning("Validation của InferenceConfigService thất bại, sử dụng cấu hình mặc định")
     except Exception as e:

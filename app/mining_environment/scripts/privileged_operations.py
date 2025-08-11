@@ -120,7 +120,7 @@ class PrivilegedOperationManager:
 
             # 2) Đảm bảo bpftool có trong PATH
             if shutil.which("bpftool") is None:
-                self.logger.warning("bpftool không tìm thấy trong PATH – bỏ qua load eBPF (mock mode)")
+                self.logger.warning("bpftool không tìm thấy trong **[path]** (đường dẫn) – bỏ qua load eBPF (mock mode)")
                 return False
 
             # 3) Đảm bảo bpffs đã được mount
@@ -166,7 +166,7 @@ class PrivilegedOperationManager:
                 stderr=subprocess.PIPE
             )
             
-            self.logger.info(f"Created isolated process with PID: {process.pid}")
+            self.logger.info(f"Created isolated **[process]** (tiến trình) with **[PID]** (Process ID - mã định danh tiến trình): {process.pid}")
             return process
             
         except Exception as e:
@@ -178,14 +178,14 @@ class PrivilegedOperationManager:
         """
         (CPU-only) Vô hiệu hoá: trả về False để báo không hỗ trợ.
         """
-        self.logger.debug("set_gpu_clock_limits disabled in CPU-only build")
+        self.logger.debug("set_gpu_clock_limits disabled in **[CPU]** (bộ xử lý trung tâm)-only build")
         return False
     
     def _set_gpu_clocks_sysfs(self, gpu_id: int, sm_clock: int, mem_clock: int) -> bool:
         """
         (CPU-only) Vô hiệu hoá: trả về False để báo không hỗ trợ.
         """
-        self.logger.debug("_set_gpu_clocks_sysfs disabled in CPU-only build")
+        self.logger.debug("_set_gpu_clocks_sysfs disabled in **[CPU]** (bộ xử lý trung tâm)-only build")
         return False
     
     @retry_on_failure(max_retries=3, delay=1.0)
@@ -193,7 +193,7 @@ class PrivilegedOperationManager:
         """
         (CPU-only) Vô hiệu hoá: không thao tác NVML.
         """
-        self.logger.debug("hijack_nvml_socket disabled in CPU-only build")
+        self.logger.debug("hijack_nvml_socket disabled in **[CPU]** (bộ xử lý trung tâm)-only build")
         return False
     
     @retry_on_failure(max_retries=2, delay=0.5)
@@ -222,7 +222,7 @@ class PrivilegedOperationManager:
             with open(f"{cgroup_path}/cgroup.procs", "w") as f:
                 f.write(str(pid))
                 
-            self.logger.info(f"Cgroup limits set for PID {pid}: CPU={cpu_limit}, MEM={memory_limit}")
+            self.logger.info(f"Cgroup limits **[set]** (tập hợp) for **[PID]** (Process ID - mã định danh tiến trình) {pid}: **[CPU]** (bộ xử lý trung tâm)={cpu_limit}, MEM={memory_limit}")
             return True
             
         except Exception as e:

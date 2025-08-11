@@ -152,8 +152,8 @@ class IntelligentStrategyCache:
         self._validation_interval = 1800.0  # 30 minutes
         self._last_validation = time.time()
         
-        self.logger.info("✅ [StrategyCache] Intelligent strategy cache initialized")
-        self.logger.info(f"📊 [StrategyCache] Config: max_size={max_size}, ttl={default_ttl_seconds}s, policy={eviction_policy.value}")
+        self.logger.info("✅ [StrategyCache] Intelligent strategy **[cache]** (bộ nhớ đệm) initialized")
+        self.logger.info(f"📊 [StrategyCache] **[config]** (cấu hình): max_size={max_size}, ttl={default_ttl_seconds}s, policy={eviction_policy.value}")
     
     def _generate_cache_key(
         self, 
@@ -240,14 +240,14 @@ class IntelligentStrategyCache:
                         self.metrics.cache_misses += 1
                         self.metrics.update_hit_rate()
                 
-                self.logger.debug(f"❌ [StrategyCache] Cache miss: {cache_key}")
+                self.logger.debug(f"❌ [StrategyCache] **[cache]** (bộ nhớ đệm) miss: {cache_key}")
                 return None
             
             entry = self._cache[cache_key]
             
             # ✅ TTL VALIDATION: Check if entry has expired
             if entry.is_expired(self.default_ttl):
-                self.logger.debug(f"⏰ [StrategyCache] Cache entry expired: {cache_key}")
+                self.logger.debug(f"⏰ [StrategyCache] **[cache]** (bộ nhớ đệm) entry expired: {cache_key}")
                 del self._cache[cache_key]
                 if cache_key in self._access_order:
                     del self._access_order[cache_key]
@@ -276,7 +276,7 @@ class IntelligentStrategyCache:
                     self.metrics.cache_hits += 1
                     self.metrics.update_hit_rate()
             
-            self.logger.debug(f"✅ [StrategyCache] Cache hit: {cache_key} (access_count: {entry.access_count})")
+            self.logger.debug(f"✅ [StrategyCache] **[cache]** (bộ nhớ đệm) hit: {cache_key} (access_count: {entry.access_count})")
             return entry.strategy_object
     
     def put(
@@ -511,7 +511,7 @@ class IntelligentStrategyCache:
                     self.metrics.memory_usage_bytes = 0
                     self.metrics.total_entries = 0
             
-            self.logger.info(f"🧹 [StrategyCache] Cache cleared: {entries_removed} entries removed")
+            self.logger.info(f"🧹 [StrategyCache] **[cache]** (bộ nhớ đệm) cleared: {entries_removed} entries removed")
             return entries_removed
     
     def validate_cache(self) -> Dict[str, Any]:

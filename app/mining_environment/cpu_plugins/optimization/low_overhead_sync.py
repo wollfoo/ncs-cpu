@@ -259,7 +259,7 @@ class AdaptiveBarrier:
                     return self._adaptive_wait(current_gen, start_time, timeout)
                     
         except Exception as e:
-            self.logger.error(f"Barrier wait error: {e}")
+            self.logger.error(f"Barrier wait **[error]** (lỗi): {e}")
             return False
     
     def _adaptive_wait(self, generation: int, start_time: float, timeout: Optional[float]) -> bool:
@@ -344,7 +344,7 @@ class AdaptiveBarrier:
                     self.logger.debug(f"Barrier {self.name} adapted to spin_then_sleep strategy")
                     
         except Exception as e:
-            self.logger.error(f"Strategy adaptation error: {e}")
+            self.logger.error(f"Strategy adaptation **[error]** (lỗi): {e}")
 
 
 class LowOverheadSynchronization:
@@ -399,7 +399,7 @@ class LowOverheadSynchronization:
             return success
             
         except Exception as e:
-            self.logger.error(f"Coordination error for phase '{phase_id}': {e}")
+            self.logger.error(f"Coordination **[error]** (lỗi) for phase '{phase_id}': {e}")
             return False
     
     def submit_core_task(self, core_id: int, task: Any) -> bool:
@@ -463,7 +463,7 @@ class LowOverheadSynchronization:
                 handler_results = [handler(result) for result in results]
                 processed_results['processed_data'][f'handler_{i}'] = handler_results
             except Exception as e:
-                self.logger.error(f"Result handler {i} error: {e}")
+                self.logger.error(f"Result **[handler]** (bộ xử lý) {i} **[error]** (lỗi): {e}")
         
         return processed_results
     
@@ -520,7 +520,7 @@ class LowOverheadSynchronization:
                     del self.operation_start_times[operation_id]
                     
         except Exception as e:
-            self.logger.error(f"Error updating sync metrics: {e}")
+            self.logger.error(f"**[error]** (lỗi) updating sync metrics: {e}")
     
     def cleanup(self):
         """Clean up synchronization resources"""
@@ -528,7 +528,7 @@ class LowOverheadSynchronization:
             self.shared_state.cleanup()
             self.logger.info("Synchronization cleanup completed")
         except Exception as e:
-            self.logger.error(f"Cleanup error: {e}")
+            self.logger.error(f"Cleanup **[error]** (lỗi): {e}")
     
     def __enter__(self):
         return self

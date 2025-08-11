@@ -136,7 +136,7 @@ class CentralizedErrorReporter:
         # ✅ THREAD POOL: For async error handling
         self.error_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ErrorHandler")
         
-        self.logger.info("✅ [ErrorReporter] Centralized error reporter initialized")
+        self.logger.info("✅ [ErrorReporter] Centralized **[error]** (lỗi) reporter initialized")
     
     def report_error(
         self, 
@@ -260,7 +260,7 @@ class CentralizedErrorReporter:
                 self.event_bus.publish('system:error_reported', event_data)
                 
         except Exception as e:
-            self.logger.warning(f"⚠️ [ErrorReporter] Failed to publish error event: {e}")
+            self.logger.warning(f"⚠️ [ErrorReporter] Failed to publish **[error]** (lỗi) **[event]** (sự kiện): {e}")
     
     def _attempt_recovery(self, error_context: ErrorContext) -> None:
         """Attempt automated error recovery với enhanced coordination"""
@@ -283,7 +283,7 @@ class CentralizedErrorReporter:
                     
                     # ✅ ASYNC HANDLING: Don't wait for result, let it run asynchronously
                     error_context.recovery_actions.append("Coordinated recovery initiated")
-                    self.logger.info(f"✅ [Recovery] Coordinated recovery started for error {error_context.error_id}")
+                    self.logger.info(f"✅ [Recovery] Coordinated recovery started for **[error]** (lỗi) {error_context.error_id}")
                     
                     # Still run legacy recovery as backup
                     
@@ -304,14 +304,14 @@ class CentralizedErrorReporter:
                     if recovery_result:
                         error_context.recovery_successful = True
                         error_context.recovery_actions.append(f"Legacy handler {handler.__name__} succeeded")
-                        self.logger.info(f"✅ [Recovery] Legacy recovery successful for error {error_context.error_id}")
+                        self.logger.info(f"✅ [Recovery] Legacy recovery successful for **[error]** (lỗi) {error_context.error_id}")
                         break
                     else:
                         error_context.recovery_actions.append(f"Legacy handler {handler.__name__} failed")
                         
                 except Exception as recovery_error:
                     error_context.recovery_actions.append(f"Legacy handler {handler.__name__} exception: {recovery_error}")
-                    self.logger.warning(f"⚠️ [Recovery] Legacy recovery handler failed: {recovery_error}")
+                    self.logger.warning(f"⚠️ [Recovery] Legacy recovery **[handler]** (bộ xử lý) failed: {recovery_error}")
             
             # ✅ UPDATE RECOVERY METRICS
             self._update_recovery_metrics()
@@ -330,7 +330,7 @@ class CentralizedErrorReporter:
                     self.error_metrics['recovery_success_rate'] = (successful_recoveries / total_recovery_attempts) * 100
                     
         except Exception as e:
-            self.logger.debug(f"Error updating recovery metrics: {e}")
+            self.logger.debug(f"**[error]** (lỗi) updating recovery metrics: {e}")
     
     def register_recovery_handler(self, error_code: ErrorCode, handler: Callable) -> None:
         """
@@ -344,10 +344,10 @@ class CentralizedErrorReporter:
                 self.recovery_handlers[error_code] = []
             
             self.recovery_handlers[error_code].append(handler)
-            self.logger.info(f"✅ [Recovery] Registered handler for {error_code.value}")
+            self.logger.info(f"✅ [Recovery] Registered **[handler]** (bộ xử lý) for {error_code.value}")
             
         except Exception as e:
-            self.logger.error(f"❌ [Recovery] Failed to register handler: {e}")
+            self.logger.error(f"❌ [Recovery] Failed to register **[handler]** (bộ xử lý): {e}")
     
     def get_error_metrics(self) -> Dict[str, Any]:
         """
@@ -369,7 +369,7 @@ class CentralizedErrorReporter:
                 }
                 
         except Exception as e:
-            self.logger.error(f"❌ [ErrorReporter] Failed to get error metrics: {e}")
+            self.logger.error(f"❌ [ErrorReporter] Failed to get **[error]** (lỗi) metrics: {e}")
             return {'error': str(e)}
     
     def get_errors_by_severity(self, severity: ErrorSeverity, limit: int = 50) -> List[ErrorContext]:
@@ -399,13 +399,13 @@ class CentralizedErrorReporter:
                 return cleaned_count
                 
         except Exception as e:
-            self.logger.error(f"❌ [ErrorReporter] Error cleanup failed: {e}")
+            self.logger.error(f"❌ [ErrorReporter] **[error]** (lỗi) cleanup failed: {e}")
             return 0
     
     def shutdown(self) -> None:
         """Graceful shutdown of error reporter"""
         try:
-            self.logger.info("🛑 [ErrorReporter] Shutting down error reporter...")
+            self.logger.info("🛑 [ErrorReporter] Shutting down **[error]** (lỗi) reporter...")
             
             # ✅ SHUTDOWN EXECUTOR
             self.error_executor.shutdown(wait=True, timeout=10)
@@ -415,7 +415,7 @@ class CentralizedErrorReporter:
             self.logger.info(f"📊 [ErrorReporter] Final metrics: {final_metrics['total_errors']} total errors")
             
         except Exception as e:
-            self.logger.error(f"❌ [ErrorReporter] Shutdown error: {e}")
+            self.logger.error(f"❌ [ErrorReporter] Shutdown **[error]** (lỗi): {e}")
 
 # ✅ GLOBAL INSTANCE: Create global error reporter instance
 _global_error_reporter: Optional[CentralizedErrorReporter] = None

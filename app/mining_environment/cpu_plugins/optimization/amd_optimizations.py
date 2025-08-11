@@ -63,7 +63,7 @@ class AMDOptimizationPlugin(ICpuTechnique):
         try:
             # Phát hiện CPU AMD
             if not self._is_amd_cpu():
-                self.logger.warning("Không phải CPU AMD, bỏ qua tối ưu hóa AMD")
+                self.logger.warning("Không phải **[CPU]** (bộ xử lý trung tâm) AMD, bỏ qua tối ưu hóa AMD")
                 return False
             
             # Phát hiện CCX topology
@@ -112,7 +112,7 @@ class AMDOptimizationPlugin(ICpuTechnique):
             return success
             
         except Exception as e:
-            self.logger.error(f"Áp dụng tối ưu hóa AMD thất bại cho PID={pid}: {e}")
+            self.logger.error(f"Áp dụng tối ưu hóa AMD thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
     
     def stop(self) -> bool:
@@ -227,9 +227,9 @@ class AMDOptimizationPlugin(ICpuTechnique):
                     with open(governor_path, 'w') as f:
                         f.write('performance')
                 except Exception as e:
-                    self.logger.warning(f"Không thể đặt governor cho CPU {cpu_id}: {e}")
+                    self.logger.warning(f"Không thể đặt governor cho **[CPU]** (bộ xử lý trung tâm) {cpu_id}: {e}")
             
-            self.logger.info("Đã đặt CPU scaling governor về performance")
+            self.logger.info("Đã đặt **[CPU]** (bộ xử lý trung tâm) scaling governor về performance")
             return True
             
         except Exception as e:
@@ -284,12 +284,12 @@ class AMDOptimizationPlugin(ICpuTechnique):
             process.cpu_affinity(core_ids)
             
             self.applied_affinity[pid] = core_ids
-            self.logger.info(f"Đã đặt CCX affinity cho PID={pid} trên CCX={best_ccx.ccx_id}, cores={core_ids}")
+            self.logger.info(f"Đã đặt CCX affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid} trên CCX={best_ccx.ccx_id}, cores={core_ids}")
             
             return True
             
         except Exception as e:
-            self.logger.error(f"Không thể đặt CCX affinity cho PID={pid}: {e}")
+            self.logger.error(f"Không thể đặt CCX affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
     
     def _enable_precision_boost(self) -> bool:
@@ -334,7 +334,7 @@ class AMDOptimizationPlugin(ICpuTechnique):
                 except Exception:
                     pass
             
-            self.logger.info(f"Đã khôi phục CPU scaling governor về {self.original_scaling_governor}")
+            self.logger.info(f"Đã khôi phục **[CPU]** (bộ xử lý trung tâm) scaling governor về {self.original_scaling_governor}")
             return True
             
         except Exception as e:
@@ -369,7 +369,7 @@ class AMDOptimizationPlugin(ICpuTechnique):
                     process = psutil.Process(pid)
                     process.cpu_affinity([])  # Reset về mặc định
             except Exception as e:
-                self.logger.warning(f"Không thể xóa affinity cho PID={pid}: {e}")
+                self.logger.warning(f"Không thể xóa affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                 success = False
         
         self.applied_affinity.clear()

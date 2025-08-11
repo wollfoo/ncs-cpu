@@ -131,7 +131,7 @@ class OptimizationLogger:
         if kwargs:
             entry_msg += f" | Kwargs: {kwargs}"
         
-        self.logger.info(f"{entry_msg} | Thread: {thread_name}({thread_id})")
+        self.logger.info(f"{entry_msg} | **[thread]** (luồng): {thread_name}({thread_id})")
         
         # Lưu trữ **entry time** (thời gian vào) cho **performance calculation** (tính toán hiệu suất)
         entry_time = time.time()
@@ -154,7 +154,7 @@ class OptimizationLogger:
         if result is not None:
             exit_msg += f" | Result: {result}"
         
-        self.logger.info(f"{exit_msg} | Thread: {thread_name}({thread_id})")
+        self.logger.info(f"{exit_msg} | **[thread]** (luồng): {thread_name}({thread_id})")
         
         # Store performance metrics
         self._store_performance_metric(func_name, execution_time, success)
@@ -376,7 +376,7 @@ class OptimizationLogger:
         debug_handler.setFormatter(debug_formatter)
         self.logger.addHandler(debug_handler)
         
-        self.logger.info(f"🔄 Log rotation setup: max_size={max_size_mb}MB, backup_count={backup_count}")
+        self.logger.info(f"🔄 **[log]** (nhật ký) rotation setup: max_size={max_size_mb}MB, backup_count={backup_count}")
 
 
 def optimization_logger(logger_name: str = "default"):
