@@ -2,14 +2,14 @@ FROM ubuntu:22.04
 
 
 # =============================================================================
-# UNIFIED STAGE: Runtime-only approach (KHÔNG build BCC từ source)
+# **UNIFIED STAGE**: **Runtime-only approach** (phương pháp chỉ runtime) (KHÔNG **build BCC** từ **source** – mã nguồn)
 # =============================================================================
 
-# Thiết lập non-interactive để tránh các câu hỏi khi cài đặt
+# Thiết lập **non-interactive** (không tương tác) để tránh các câu hỏi khi cài đặt
 ENV DEBIAN_FRONTEND=noninteractive
 
 
-# ------------------  (1)  Biến môi trường & ARG giữ nguyên ------------------
+# ------------------  (1)  Biến môi trường & **ARG** (đối số) giữ nguyên ------------------
 ARG AZURE_SUBSCRIPTION_ID
 ARG AZURE_CLIENT_ID
 ARG AZURE_CLIENT_SECRET
@@ -43,7 +43,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 
-# ------------------  (2)  Cài đặt hệ thống cơ bản ------------------------
+# ------------------  (2)  Cài đặt **system base** (hệ thống cơ bản) ------------------------
 RUN set -eux; \
     apt-get update --allow-releaseinfo-change || true; \
     apt-get install -y --no-install-recommends \

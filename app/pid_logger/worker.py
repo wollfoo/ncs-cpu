@@ -1,6 +1,6 @@
-"""worker.py (nằm trong `app/pid_logger`)
-PID Logger nâng cao với [Real Process Output Monitor] (bộ giám sát output tiến trình thực).
-Ghi PID và [runtime output] (output thời gian chạy) cho tiến trình khai thác CPU/GPU.
+"""**worker.py** (nằm trong `app/pid_logger`)
+**PID Logger** (trình ghi PID) nâng cao với **Real Process Output Monitor** (bộ giám sát đầu ra tiến trình thực).
+Ghi **PID** (mã định danh tiến trình) và **runtime output** (đầu ra thời gian chạy) cho tiến trình khai thác **CPU/GPU**.
 """
 from __future__ import annotations
 
@@ -17,28 +17,28 @@ import fcntl
 from datetime import datetime
 from typing import Dict, Optional, Any
 
-# Cấu hình - Tự động phát hiện đường dẫn dựa trên script location
+# Cấu hình - Tự động phát hiện đường dẫn dựa trên **script location** (vị trí script)
 _SCRIPT_DIR = pathlib.Path(__file__).parent.parent
 LOG_DIR = os.getenv("LOGS_DIR", str(_SCRIPT_DIR / "mining_environment" / "logs"))
 PID_CPU_FILE = pathlib.Path(LOG_DIR) / "pid_cpu.log"
 MAX_SIZE_MB = 3
 
-# [Output format configuration] (cấu hình định dạng output)
-# "raw" = định dạng văn bản thô với tiền tố [timestamp] (dấu thời gian)
-# "json" = [JSON structured format] (định dạng có cấu trúc JSON)  
+# **Output format configuration** (cấu hình định dạng đầu ra)
+# "raw" = định dạng văn bản thô với tiền tố **timestamp** (dấu thời gian)
+# "json" = **JSON structured format** (định dạng có cấu trúc JSON)  
 OUTPUT_FORMAT = os.getenv("PID_LOG_FORMAT", "raw")
 
-# [Queues] (hàng đợi) và [Events] (sự kiện)
+# **Queues** (hàng đợi) và **Events** (sự kiện)
 _QUEUE: "queue.Queue[dict]" = queue.Queue()
 _OUTPUT_QUEUE: "queue.Queue[dict]" = queue.Queue()
 _STOP_EVENT = threading.Event()
 _WORKER_STARTED = threading.Event()
 _OUTPUT_MONITOR_STARTED = threading.Event()
 
-# [Process Registry] (sổ đăng ký tiến trình) để theo dõi tiến trình đã đăng ký
+# **Process Registry** (sổ đăng ký tiến trình) để theo dõi tiến trình đã đăng ký
 _PROCESS_REGISTRY: Dict[int, Dict[str, Any]] = {}
 
-# Thiết lập [logger] (bộ ghi log) cho PID Logger
+# Thiết lập **logger** (bộ ghi nhật ký) cho **PID Logger** (trình ghi PID)
 logger = logging.getLogger("pid_logger")
 # Nếu chưa có handler, tạo cấu hình cơ bản
 if not logger.handlers:
@@ -59,39 +59,39 @@ def _rotate_if_needed(path: pathlib.Path) -> None:
             logger.error(f"Xoay vòng log PID thất bại cho tệp {path}: {exc}")
 
 def enqueue_pid(pid: int, mtype: str):
-    """Ghi PID vào hàng đợi cho PID logging (chỉ CPU: chuẩn hoá về 'cpu')."""
+    """Ghi **PID** (mã định danh tiến trình) vào hàng đợi cho **PID logging** (ghi nhật ký PID) (chỉ **CPU**: chuẩn hoá về 'cpu')."""
     if mtype not in ("cpu", "gpu"):
         raise ValueError("mtype must be 'cpu' or 'gpu'")
     norm_type = "cpu"
     payload = {"pid": pid, "type": norm_type, "ts": time.time()}
     _QUEUE.put(payload)
-    logger.debug(f"Đã đưa PID {payload['pid']} ({payload['type']}) vào hàng đợi. Kích thước hàng đợi: {_QUEUE.qsize()}")
+    logger.debug(f"Đã đưa **PID** {payload['pid']} ({payload['type']}) vào hàng đợi. Kích thước hàng đợi: {_QUEUE.qsize()}")
 
 def register_process(pid: int, process_type: str, process_obj, process_name: str = None):
     """
-    Đăng ký tiến trình để giám sát output thời gian chạy.
+    Đăng ký tiến trình để **monitor runtime output** (giám sát đầu ra thời gian chạy).
     
     Args:
-        pid: [Process ID] (mã tiến trình)
+        pid: **Process ID** (mã định danh tiến trình)
         process_type: 'cpu' hoặc 'gpu'
-        process_obj: đối tượng `subprocess.Popen` hoặc `psutil.Process`
+        process_obj: đối tượng **subprocess.Popen** hoặc **psutil.Process**
         process_name: Tên tiến trình (tuỳ chọn)
     """
     if process_type not in ("cpu", "gpu"):
         raise ValueError("process_type must be 'cpu' or 'gpu'")
-    # CPU-only: map mọi process_type về 'cpu'
+    # **CPU-only**: ánh xạ mọi **process_type** về 'cpu'
     process_type = "cpu"
     
-    # Handle both subprocess.Popen and psutil.Process objects
+    # Xử lý cả đối tượng **subprocess.Popen** và **psutil.Process**
     if hasattr(process_obj, 'poll'):
-        # subprocess.Popen object
+        # Đối tượng **subprocess.Popen**
         obj_type = "subprocess"
     elif hasattr(process_obj, 'is_running'):
-        # psutil.Process object  
+        # Đối tượng **psutil.Process**
         obj_type = "psutil"
     else:
         obj_type = "unknown"
-        logger.warning(f"Không rõ kiểu đối tượng tiến trình cho PID {pid}: {type(process_obj)}")
+        logger.warning(f"Không rõ kiểu đối tượng tiến trình cho **PID** {pid}: {type(process_obj)}")
     
     _PROCESS_REGISTRY[pid] = {
         "type": process_type,
@@ -101,20 +101,20 @@ def register_process(pid: int, process_type: str, process_obj, process_name: str
         "registered_at": time.time(),
         "obj_type": obj_type
     }
-    logger.info(f"Đã đăng ký tiến trình PID {pid} ({process_type}, {obj_type}) để giám sát output")
+    logger.info(f"Đã đăng ký tiến trình **PID** {pid} ({process_type}, {obj_type}) để **monitor output** (giám sát đầu ra)")
     
-    # Tự động enqueue PID để log
+    # Tự động **enqueue PID** (đưa PID vào hàng đợi) để **log** (ghi nhật ký)
     enqueue_pid(pid, process_type)
 
 def _read_process_output_via_proc(pid: int) -> Optional[str]:
     """
-    Trình giám sát output tiến trình thực nâng cao - đọc mining output từ nhiều nguồn.
+    **Enhanced Real Process Output Monitor** (trình giám sát đầu ra tiến trình thực nâng cao) - đọc **mining output** (đầu ra khai thác) từ nhiều nguồn.
     
     Args:
-        pid: [Process ID] để giám sát
+        pid: **Process ID** (mã định danh tiến trình) để giám sát
         
     Returns:
-        str: Dòng output nếu có, None nếu không có hoặc xảy ra lỗi
+        str: Dòng **output** (đầu ra) nếu có, None nếu không có hoặc xảy ra lỗi
     """
     try:
         # Check process still exists first
