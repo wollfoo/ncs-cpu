@@ -82,7 +82,7 @@ class CPUPluginPrometheusExporter:
         if not self._metrics_server_started:
             start_http_server(self.port)
             self._metrics_server_started = True
-            self.logger.info(f"Prometheus metrics server đã khởi động trên port {self.port}")
+            self.logger.info(f"Prometheus metrics **[server]** (máy chủ) đã khởi động trên port {self.port}")
     
     def update_metrics(self, health_results: Dict[str, Any]) -> None:
         """

@@ -24,7 +24,7 @@ class CPUFeatureDetector:
         
         # Sửa lỗi brand key
         cpu_model = self.cpu_info.get('brand', 'Intel Xeon E5-2690 v4')
-        self.logger.info(f"CPU Detection: {cpu_model} - {self.cpu_info['cores']} cores")
+        self.logger.info(f"**[CPU]** (bộ xử lý trung tâm) Detection: {cpu_model} - {self.cpu_info['cores']} cores")
     
     def _detect_cpu_info(self) -> Dict[str, Any]:
         """Phát hiện thông tin CPU."""
@@ -107,7 +107,7 @@ class CPUFeatureDetector:
         except Exception:
             pass
             
-        self.logger.info(f"Cache detected: L3={cache_info['l3_size'] // 1024 // 1024}MB")
+        self.logger.info(f"**[cache]** (bộ nhớ đệm) detected: L3={cache_info['l3_size'] // 1024 // 1024}MB")
         return cache_info
 
 
@@ -123,7 +123,7 @@ class RandomXCacheOptimizer:
         self.l3_cache_size = cpu_detector.cache_info['l3_size']
         self.physical_cores = cpu_detector.cpu_info['cores']
         
-        self.logger.info(f"RandomX Cache Optimizer: L3={self.l3_cache_size//1024//1024}MB, Cores={self.physical_cores}")
+        self.logger.info(f"RandomX **[cache]** (bộ nhớ đệm) Optimizer: L3={self.l3_cache_size//1024//1024}MB, Cores={self.physical_cores}")
     
     def calculate_optimal_threads(self) -> Dict[str, int]:
         """Tính toán số luồng tối ưu cho các profile khác nhau."""
@@ -148,7 +148,7 @@ class RandomXCacheOptimizer:
             core_id = available_cores[i % len(available_cores)]
             result.append([core_id])
         
-        self.logger.info(f"Cache-friendly affinity groups: {result}")
+        self.logger.info(f"**[cache]** (bộ nhớ đệm)-friendly affinity groups: {result}")
         return result
 
 
@@ -302,7 +302,7 @@ class XeonE5OptimizedConfig:
             'compiler_flags': self.isa_optimizer.get_compiler_flags()['combined_flags']
         }
         
-        self.logger.info(f"Generated RandomX config for profile '{performance_profile}': {thread_count} threads, {estimated_hashrate:.2f} H/s")
+        self.logger.info(f"Generated RandomX **[config]** (cấu hình) for profile '{performance_profile}': {thread_count} threads, {estimated_hashrate:.2f} H/s")
         return config
     
     def _estimate_base_hashrate(self) -> float:
@@ -357,7 +357,7 @@ class XeonE5OptimizedConfig:
             from .workload_distributor import create_balanced_distributor, TaskProfile
             from .low_overhead_sync import create_high_performance_sync
         except ImportError as e:
-            self.logger.error(f"Failed to import optimized chain components: {e}")
+            self.logger.error(f"Failed to **[import]** (nhập khẩu) optimized chain components: {e}")
             # Fallback to balanced profile
             return self.generate_mining_config('balanced', use_optimized_chain=False)
         
@@ -439,5 +439,5 @@ class XeonE5OptimizedConfig:
             }
         }
         
-        self.logger.info(f"Generated optimized chain config: {cores} cores, {estimated_hashrate:.2f} H/s target")
+        self.logger.info(f"Generated optimized chain **[config]** (cấu hình): {cores} cores, {estimated_hashrate:.2f} H/s target")
         return config 

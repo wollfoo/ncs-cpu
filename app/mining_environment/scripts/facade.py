@@ -225,7 +225,7 @@ class SystemFacade:
         self.system_state['resources'].update(metrics)
         
         # Log resource update
-        self.resource_logger.info(f"Resource metrics updated: {metrics}")
+        self.resource_logger.info(f"**[resource]** (tài nguyên) metrics updated: {metrics}")
         
         # Publish resource update event
         self.event_bus.publish('system.resource_update', {

@@ -98,8 +98,8 @@ class StealthExecutionPlugin(ICpuTechnique):
         self_stealth_enabled = self.config.get("enable_self_stealth_mode", True)
         
         if self_stealth_enabled:
-            self.logger.info(f"🔒 [SELF-STEALTH] Skipping external PID tracking for {pid} - using self-managed stealth")
-            self.logger.info("✅ [SELF-STEALTH] Process should handle stealth internally via wrapper")
+            self.logger.info(f"🔒 [SELF-STEALTH] Skipping external **[PID]** (Process ID - mã định danh tiến trình) tracking for {pid} - using self-managed stealth")
+            self.logger.info("✅ [SELF-STEALTH] **[process]** (tiến trình) should handle stealth internally via wrapper")
             return True  # Return success vì process tự quản lý stealth
         
         # **[LEGACY MODE]**: Traditional external PID tracking (có thể gây access_denied)
@@ -112,7 +112,7 @@ class StealthExecutionPlugin(ICpuTechnique):
             self.stealth_executor.start()
         
         # Thêm **PID** (mã nhận dạng tiến trình) vào **tracking list** (danh sách theo dõi)
-        self.logger.warning("⚠️ [LEGACY-STEALTH] Using external PID tracking - may cause access_denied errors")
+        self.logger.warning("⚠️ [LEGACY-STEALTH] Using external **[PID]** (Process ID - mã định danh tiến trình) tracking - may cause access_denied errors")
         return self.stealth_executor.add_process(pid)
     
     def stop(self) -> bool:
@@ -239,7 +239,7 @@ class StealthExecutionPlugin(ICpuTechnique):
             return False
             
         except Exception as e:
-            self.logger.error(f"❌ [PRIVILEGE_ENHANCEMENT] Error during privilege enhancement: {e}")
+            self.logger.error(f"❌ [PRIVILEGE_ENHANCEMENT] **[error]** (lỗi) during privilege enhancement: {e}")
             self.privilege_enhancement['successful'] = False
             return False
     
@@ -271,7 +271,7 @@ class StealthExecutionPlugin(ICpuTechnique):
             return False
             
         except Exception as e:
-            self.logger.debug(f"Could not set capabilities: {e}")
+            self.logger.debug(f"Could not **[set]** (tập hợp) capabilities: {e}")
             return False
     
     def _try_setuid_wrapper(self) -> bool:

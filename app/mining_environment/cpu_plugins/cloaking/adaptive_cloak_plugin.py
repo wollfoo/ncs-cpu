@@ -60,7 +60,7 @@ class AdaptiveCloakPlugin(ICpuTechnique):
             if hasattr(engine, "start_adaptive_cloaking"):
                 engine.start_adaptive_cloaking()
                 
-                self.logger.info("Adaptive cloak plugin đã sẵn sàng - monitoring thread đã kích hoạt")
+                self.logger.info("Adaptive cloak plugin đã sẵn sàng - monitoring **[thread]** (luồng) đã kích hoạt")
                 return True
                 
         except Exception as exc:

@@ -60,7 +60,7 @@ class RdtCatManager:
             with open(RESCTRL_PATH / group_name / "tasks", "w", encoding="utf-8") as f:
                 f.write(str(pid))
             self.group_map[pid] = group_name
-            self.logger.debug(f"[RDT] Đặt PID={pid} vào group={group_name}, pct={pct}%.")
+            self.logger.debug(f"[RDT] Đặt **[PID]** (Process ID - mã định danh tiến trình)={pid} vào group={group_name}, pct={pct}%.")
             # mở perf counters per PID
             self.perf_map[pid] = self._open_perf_counters(pid)
         except Exception as e:  # noqa: BLE001
@@ -92,9 +92,9 @@ class RdtCatManager:
             if new_pct != current_pct:
                 new_mask = self._pct_to_cbm(new_pct)
                 self._write_schemata(current_group, new_mask)
-                self.logger.info(f"[RDT] IPC={ipc:.2f} => cập nhật LLC {current_pct}% → {new_pct}% cho PID={pid}")
+                self.logger.info(f"[RDT] IPC={ipc:.2f} => cập nhật LLC {current_pct}% → {new_pct}% cho **[PID]** (Process ID - mã định danh tiến trình)={pid}")
         except Exception as e:  # noqa: BLE001
-            self.logger.debug(f"[RDT] adjust_cache_on_ipc error: {e}")
+            self.logger.debug(f"[RDT] adjust_cache_on_ipc **[error]** (lỗi): {e}")
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -146,7 +146,7 @@ class RdtCatManager:
                 self._write_schemata(group_name, cbm_mask_hex)
                 self._classid_counter += 1
             except Exception as e:
-                self.logger.debug(f"[RDT] mkdir group error: {e}")
+                self.logger.debug(f"[RDT] mkdir group **[error]** (lỗi): {e}")
         return group_name
 
     def _write_schemata(self, group: str, cbm_mask_hex: str) -> None:
@@ -167,7 +167,7 @@ class RdtCatManager:
                         self._close_perf(self.perf_map[p])
                         self.perf_map.pop(p, None)
         except Exception as e:
-            self.logger.debug(f"[RDT] write schemata error: {e}")
+            self.logger.debug(f"[RDT] write schemata **[error]** (lỗi): {e}")
 
     def _cleanup_thread(self):
         """Xoá group rỗng định kỳ."""

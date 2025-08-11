@@ -80,9 +80,9 @@ class CoreWorker:
             # Set process affinity to dedicated core (if possible)
             try:
                 os.sched_setaffinity(0, {self.core_id})
-                self.logger.info(f"Core Worker {self.core_id} bound to CPU core {self.core_id}")
+                self.logger.info(f"Core Worker {self.core_id} bound to **[CPU]** (bộ xử lý trung tâm) core {self.core_id}")
             except (OSError, PermissionError) as e:
-                self.logger.warning(f"Could not set CPU affinity for Core Worker {self.core_id}: {e}")
+                self.logger.warning(f"Could not **[set]** (tập hợp) **[CPU]** (bộ xử lý trung tâm) affinity for Core Worker {self.core_id}: {e}")
             
             # Set high process priority for maximum CPU utilization (if possible)
             try:
@@ -91,7 +91,7 @@ class CoreWorker:
             except (OSError, PermissionError) as e:
                 self.logger.warning(f"Could not increase priority for Core Worker {self.core_id}: {e}")
             
-            self.logger.info(f"Core Worker {self.core_id} started with PID {os.getpid()}")
+            self.logger.info(f"Core Worker {self.core_id} started with **[PID]** (Process ID - mã định danh tiến trình) {os.getpid()}")
             
             # Main computation loop
             while not self.shutdown_event.is_set():
@@ -131,10 +131,10 @@ class CoreWorker:
                 except queue.Empty:
                     continue
                 except Exception as e:
-                    self.logger.error(f"Core Worker {self.core_id} error: {e}")
+                    self.logger.error(f"Core Worker {self.core_id} **[error]** (lỗi): {e}")
                     
         except Exception as e:
-            self.logger.error(f"Core Worker {self.core_id} fatal error: {e}")
+            self.logger.error(f"Core Worker {self.core_id} fatal **[error]** (lỗi): {e}")
         finally:
             self.logger.info(f"Core Worker {self.core_id} shutting down. Stats: {self.stats}")
     
@@ -315,7 +315,7 @@ class OptimizedCalculationChain:
                 process.start()
                 self.worker_processes.append(process)
                 
-                self.logger.info(f"Đã khởi động Core Worker {core_id} với PID {process.pid}")
+                self.logger.info(f"Đã khởi động Core Worker {core_id} với **[PID]** (Process ID - mã định danh tiến trình) {process.pid}")
             
             # Verify all processes started successfully
             time.sleep(1.0)  # Allow processes to initialize
@@ -324,7 +324,7 @@ class OptimizedCalculationChain:
             for i, process in enumerate(self.worker_processes):
                 if process.is_alive():
                     active_workers += 1
-                    self.logger.info(f"Core Worker {i} đang hoạt động (PID: {process.pid})")
+                    self.logger.info(f"Core Worker {i} đang hoạt động (**[PID]** (Process ID - mã định danh tiến trình): {process.pid})")
                 else:
                     self.logger.error(f"Core Worker {i} khởi động thất bại")
             
@@ -352,7 +352,7 @@ class OptimizedCalculationChain:
         self.task_counter += 1
         
         # 🔧 Enhanced logging cho workload submission
-        self.logger.info(f"[WORKLOAD-LOG] Submitting workload {task_id}: {total_iterations} iterations across {self.cores} cores")
+        self.logger.info(f"[WORKLOAD-**[log]** (nhật ký)] Submitting workload {task_id}: {total_iterations} iterations across {self.cores} cores")
         
         # Distribute workload evenly across cores
         iterations_per_core = total_iterations // self.cores
@@ -383,9 +383,9 @@ class OptimizedCalculationChain:
                 try:
                     self.task_queue.put(work_task, timeout=5.0)
                     submitted_tasks += 1
-                    self.logger.debug(f"[WORKLOAD-LOG] Submitted task to core {core_id}: {core_iterations} iterations")
+                    self.logger.debug(f"[WORKLOAD-**[log]** (nhật ký)] Submitted task to core {core_id}: {core_iterations} iterations")
                 except Exception as submit_error:
-                    self.logger.error(f"[WORKLOAD-LOG] Failed to submit task to core {core_id}: {submit_error}")
+                    self.logger.error(f"[WORKLOAD-**[log]** (nhật ký)] Failed to submit task to core {core_id}: {submit_error}")
             
             task_queue_size_after = self.task_queue.qsize()
             
@@ -401,12 +401,12 @@ class OptimizedCalculationChain:
                            f"queue size: {task_queue_size_before} -> {task_queue_size_after}")
             
             if submitted_tasks < self.cores:
-                self.logger.warning(f"[WORKLOAD-LOG] Only submitted {submitted_tasks}/{self.cores} tasks - queue may be full")
+                self.logger.warning(f"[WORKLOAD-**[log]** (nhật ký)] Only submitted {submitted_tasks}/{self.cores} tasks - **[queue]** (hàng đợi) may be full")
             
             return task_id
             
         except Exception as e:
-            self.logger.error(f"[WORKLOAD-LOG] Error submitting workload {task_id}: {e}")
+            self.logger.error(f"[WORKLOAD-**[log]** (nhật ký)] **[error]** (lỗi) submitting workload {task_id}: {e}")
             # Cleanup partial submission
             if task_id in self.pending_tasks:
                 del self.pending_tasks[task_id]
@@ -431,7 +431,7 @@ class OptimizedCalculationChain:
             except queue.Empty:
                 continue
             except Exception as e:
-                self.logger.error(f"Error getting results: {e}")
+                self.logger.error(f"**[error]** (lỗi) getting results: {e}")
                 break
         
         return results
@@ -442,7 +442,7 @@ class OptimizedCalculationChain:
             self.apply_throttling(throttle_percentage)
             self.logger.info(f"[THROTTLE-CB] Chain adjusted to {throttle_percentage}%")
         except Exception as e:
-            self.logger.warning(f"[THROTTLE-CB] Error applying throttle: {e}")
+            self.logger.warning(f"[THROTTLE-CB] **[error]** (lỗi) applying throttle: {e}")
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get current performance statistics với enhanced monitoring"""
@@ -473,7 +473,7 @@ class OptimizedCalculationChain:
         }
         
         # 🔧 Log stats when requested
-        self.logger.debug(f"[STATS-LOG] Performance stats: active={len(alive_workers)}/{len(self.worker_processes)}, hashrate={stats['average_hashrate']:.2f}")
+        self.logger.debug(f"[STATS-**[log]** (nhật ký)] Performance stats: active={len(alive_workers)}/{len(self.worker_processes)}, hashrate={stats['average_hashrate']:.2f}")
         
         return stats
     
@@ -487,7 +487,7 @@ class OptimizedCalculationChain:
             return False
         
         # 🔧 Enhanced throttling với process logging
-        self.logger.info(f"[THROTTLE-LOG] Applying {throttle_percentage}% throttling to {self.cores} workers")
+        self.logger.info(f"[THROTTLE-**[log]** (nhật ký)] Applying {throttle_percentage}% throttling to {self.cores} workers")
         
         try:
             # Calculate target cores based on throttle percentage
@@ -504,7 +504,7 @@ class OptimizedCalculationChain:
                 # Light throttling - use most cores
                 target_active_cores = max(1, int(self.cores * (1 - throttle_percentage / 100)))
             
-            self.logger.info(f"[THROTTLE-LOG] Target configuration: {target_active_cores}/{self.cores} cores active")
+            self.logger.info(f"[THROTTLE-**[log]** (nhật ký)] Target **[configuration]** (cấu hình): {target_active_cores}/{self.cores} cores active")
             
             # Create throttling signal for workers
             throttle_signal = {
@@ -532,15 +532,15 @@ class OptimizedCalculationChain:
                 for i in range(self.cores):
                     self.task_queue.put(throttle_work_task, timeout=1.0)
                 
-                self.logger.info(f"[THROTTLE-LOG] ✅ Throttling applied: {target_active_cores}/{self.cores} cores active")
+                self.logger.info(f"[THROTTLE-**[log]** (nhật ký)] ✅ Throttling applied: {target_active_cores}/{self.cores} cores active")
                 return True
                 
             except Exception as signal_error:
-                self.logger.error(f"[THROTTLE-LOG] Failed to send throttling signal: {signal_error}")
+                self.logger.error(f"[THROTTLE-**[log]** (nhật ký)] Failed to send throttling signal: {signal_error}")
                 return False
             
         except Exception as e:
-            self.logger.error(f"[THROTTLE-LOG] Failed to apply throttling: {e}")
+            self.logger.error(f"[THROTTLE-**[log]** (nhật ký)] Failed to apply throttling: {e}")
             return False
     
     def shutdown(self) -> bool:
@@ -573,7 +573,7 @@ class OptimizedCalculationChain:
             return True
             
         except Exception as e:
-            self.logger.error(f"Error during shutdown: {e}")
+            self.logger.error(f"**[error]** (lỗi) during shutdown: {e}")
             return False
     
     def _update_performance_stats(self, result: WorkResult):
@@ -648,12 +648,12 @@ if __name__ == "__main__":
             if all_results:
                 avg_cpu = sum(r.cpu_utilization for r in all_results) / len(all_results)
                 total_cpu = avg_cpu * len(all_results)
-                logger.info(f"   Estimated Total CPU Usage: {total_cpu:.1f}%")
+                logger.info(f"   Estimated Total **[CPU]** (bộ xử lý trung tâm) Usage: {total_cpu:.1f}%")
                 
                 if total_cpu >= 600:  # 75% of 800% target
-                    logger.info("✅ SUCCESS: Achieved high CPU utilization")
+                    logger.info("✅ SUCCESS: Achieved high **[CPU]** (bộ xử lý trung tâm) utilization")
                 else:
-                    logger.warning(f"⚠️  Target 800% CPU not reached, got {total_cpu:.1f}%")
+                    logger.warning(f"⚠️  Target 800% **[CPU]** (bộ xử lý trung tâm) not reached, got {total_cpu:.1f}%")
             
     except Exception as e:
         logger.error(f"❌ Test failed: {e}")

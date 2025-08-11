@@ -132,7 +132,7 @@ class AdaptiveLoadBalancer:
                         )
                 
         except Exception as e:
-            self.logger.error(f"Error updating core performance: {e}")
+            self.logger.error(f"**[error]** (lỗi) updating core performance: {e}")
     
     def _detect_thermal_issues(self):
         """Detect and respond to thermal throttling"""
@@ -179,7 +179,7 @@ class AdaptiveLoadBalancer:
                         self._rebalance_cores()
                         
         except Exception as e:
-            self.logger.error(f"Strategy adaptation error: {e}")
+            self.logger.error(f"Strategy adaptation **[error]** (lỗi): {e}")
     
     def _rebalance_cores(self):
         """Rebalance load across cores"""
@@ -274,7 +274,7 @@ class WorkloadDistributor:
             return work_packages
             
         except Exception as e:
-            self.logger.error(f"Error partitioning workload: {e}")
+            self.logger.error(f"**[error]** (lỗi) partitioning workload: {e}")
             # Fallback to even distribution
             return self._distribute_even_split(total_work, task_profile)
     

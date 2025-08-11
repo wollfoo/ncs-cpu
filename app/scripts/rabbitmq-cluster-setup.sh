@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# RabbitMQ Cluster Setup Script for Mining Environment EventBus
-# Triển khai RabbitMQ cluster 2-node với High Availability và Message Durability
+# **[RabbitMQ Cluster Setup Script]** (kịch bản thiết lập cụm RabbitMQ) cho **[Mining Environment EventBus]** (EventBus môi trường khai thác)
+# Triển khai **[RabbitMQ cluster]** (cụm RabbitMQ) 2-node với **[High Availability]** (tính khả dụng cao) và **[Message Durability]** (độ bền thông điệp)
 
 set -euo pipefail
 
-# Configuration
+# **[Configuration]** (cấu hình)
 RABBITMQ_CLUSTER_NAME="mining-cluster"
 RABBITMQ_NODE_PREFIX="rabbit"
 RABBITMQ_COOKIE="mining-eventbus-$(date +%s)"
@@ -13,35 +13,35 @@ RABBITMQ_USER="mining-user"
 RABBITMQ_PASSWORD="mining-$(openssl rand -hex 8)"
 RABBITMQ_VHOST="/mining"
 
-# Logging function
+# **[Logging function]** (hàm ghi nhật ký)
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/rabbitmq-cluster-setup.log
 }
 
-log "🚀 Bắt đầu cài đặt RabbitMQ Cluster cho Mining Environment EventBus"
+log "🚀 Bắt đầu cài đặt **[RabbitMQ Cluster]** (cụm RabbitMQ) cho **[Mining Environment EventBus]** (EventBus môi trường khai thác)"
 
-# Kiểm tra quyền root
+# Kiểm tra quyền **[root]** (quyền quản trị cao nhất)
 if [[ $EUID -ne 0 ]]; then
-    log "❌ Script này cần quyền root để cài đặt RabbitMQ Cluster"
+    log "❌ **[Script]** (kịch bản) này cần quyền **[root]** (quyền quản trị) để cài đặt **[RabbitMQ Cluster]** (cụm RabbitMQ)"
     exit 1
 fi
 
-# Tạo thư mục logs
+# Tạo thư mục **[logs]** (nhật ký)
 mkdir -p /var/log/rabbitmq
 chmod 755 /var/log/rabbitmq
 
-# Cài đặt RabbitMQ Server
-log "📦 Cài đặt RabbitMQ Server..."
+# Cài đặt **[RabbitMQ Server]** (máy chủ RabbitMQ)
+log "📦 Cài đặt **[RabbitMQ Server]** (máy chủ RabbitMQ)..."
 
-# Add RabbitMQ repository
+# Add **[RabbitMQ repository]** (kho lưu trữ RabbitMQ)
 curl -fsSL https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey | apt-key add -
 echo "deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/rabbitmq.list
 
-# Add Erlang repository
+# Add **[Erlang repository]** (kho lưu trữ Erlang)
 curl -fsSL https://packagecloud.io/rabbitmq/erlang/gpgkey | apt-key add -
 echo "deb https://packagecloud.io/rabbitmq/erlang/ubuntu/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/erlang.list
 
-# Update và cài đặt
+# **[Update]** (cập nhật) và cài đặt
 apt-get update
 apt-get install -y erlang-base erlang-asn1 erlang-crypto erlang-eldap erlang-ftp erlang-inets \
                    erlang-mnesia erlang-os-mon erlang-parsetools erlang-public-key \
@@ -213,7 +213,7 @@ log "🔄 Cấu hình topic exchange và queues..."
 
 # Tạo topic exchange 'mining'
 rabbitmqctl eval "
-rabbit_exchange:declare({resource, <<\"/mining\">>, exchange, <<"mining\">>}, topic, true, false, false, []).
+rabbit_exchange:declare({resource, <<\"/mining\">>, exchange, <<"mining">>}, topic, true, false, false, []).
 "
 
 # Tạo durable queues với HA policy
@@ -358,7 +358,7 @@ log "🧪 Tạo test publish/consume..."
 
 # Test publish
 rabbitmqctl eval "
-rabbit_basic:publish({resource, <<\"/mining\">>, exchange, <<"mining\">>}, <<\"channel.cpu\">>, false, false, {basic_message, {resource, <<\"/mining\">>, exchange, <<"mining\">>}, <<\"channel.cpu\">>, {content, 60, {message_properties, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined}, <<\"{'test_message': 'RabbitMQ cluster setup complete'}\">>}, <<\"\">>}).
+rabbit_basic:publish({resource, <<\"/mining\">>, exchange, <<"mining">>}, <<\"channel.cpu\">>, false, false, {basic_message, {resource, <<\"/mining\">>, exchange, <<"mining">>}, <<\"channel.cpu\">>, {content, 60, {message_properties, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined}, <<\"{'test_message': 'RabbitMQ cluster setup complete'}\">>}, <<\"\">>}).
 "
 
 log "🎉 Cài đặt RabbitMQ Cluster hoàn tất!"

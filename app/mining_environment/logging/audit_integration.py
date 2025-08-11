@@ -327,7 +327,7 @@ class AuditIntegrationManager:
                            f"{cpu_metrics['memory_mb']}MB RAM")
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to audit CPU metrics for PID {pid}: {e}")
+            self.logger.error(f"❌ Failed to audit **[CPU]** (bộ xử lý trung tâm) metrics for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
     
     def get_audit_summary(self) -> Dict[str, Any]:
         """Get comprehensive audit summary."""
@@ -430,7 +430,7 @@ class AuditIntegrationManager:
             return str(output_path)
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to export audit report: {e}")
+            self.logger.error(f"❌ Failed to **[export]** (xuất khẩu) audit report: {e}")
             return None
     
     def cleanup_audit_session(self):
@@ -447,7 +447,7 @@ class AuditIntegrationManager:
             self.logger.info(f"🏁 Audit session completed: {session_duration:.2f}s, exported to {export_path}")
             
         except Exception as e:
-            self.logger.error(f"❌ Error during audit cleanup: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) during audit cleanup: {e}")
 
 
 # Global audit managers

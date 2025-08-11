@@ -211,7 +211,7 @@ def validate_eventbus_config(config: EventBusConfig, logger: Optional[logging.Lo
         logger.error(f"Invalid retry delay: {config.retry_delay}")
         return False
     
-    logger.info(f"EventBus configuration validated successfully: backend={config.backend_type}")
+    logger.info(f"EventBus **[configuration]** (cấu hình) validated successfully: backend={config.backend_type}")
     return True
 
 

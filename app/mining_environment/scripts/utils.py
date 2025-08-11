@@ -300,10 +300,10 @@ class MiningProcess:
                 f"DiskIO={self.disk_io}MB, NetIO={self.network_io}MB."
             )
         except psutil.NoSuchProcess:
-            self.logger.error(f"Tiến trình {self.name} (PID={self.pid}) không tồn tại.")
+            self.logger.error(f"Tiến trình {self.name} (**[PID]** (Process ID - mã định danh tiến trình)={self.pid}) không tồn tại.")
             self.cpu_usage = self.memory_usage = self.disk_io = self.network_io = self.gpu_usage = 0.0
         except Exception as e:
-            self.logger.error(f"Lỗi update_resource_usage PID={self.pid}: {e}")
+            self.logger.error(f"Lỗi update_resource_usage **[PID]** (Process ID - mã định danh tiến trình)={self.pid}: {e}")
             self.cpu_usage = self.memory_usage = self.disk_io = self.network_io = self.gpu_usage = 0.0
 
     def reset_network_io(self) -> None:
@@ -335,5 +335,5 @@ class MiningProcess:
                 'is_cloaked': self.is_cloaked
             }
         except Exception as e:
-            self.logger.error(f"Lỗi to_dict PID={self.pid}: {e}")
+            self.logger.error(f"Lỗi to_dict **[PID]** (Process ID - mã định danh tiến trình)={self.pid}: {e}")
             return {}

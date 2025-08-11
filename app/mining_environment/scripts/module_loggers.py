@@ -44,13 +44,13 @@ def initialize_plugin_logging():
     Tạo **initial log entries** (mục log ban đầu) trong các **plugin log files** (tệp log plugin).
     """
     # **CPU Plugin Logging Initialization** (Khởi tạo ghi log plugin CPU)
-    cpu_plugin_logger.info("===== CPU PLUGIN LOGGING SYSTEM STARTED =====")
-    cpu_plugin_logger.info("CPU Plugin Logger initialized and ready")
-    cpu_plugin_logger.info("Available for logging CPU plugin operations")
+    cpu_plugin_logger.info("===== **[CPU]** (bộ xử lý trung tâm) PLUGIN **[logging]** (ghi nhật ký) SYSTEM STARTED =====")
+    cpu_plugin_logger.info("**[CPU]** (bộ xử lý trung tâm) Plugin Logger initialized and ready")
+    cpu_plugin_logger.info("Available for **[logging]** (ghi nhật ký) **[CPU]** (bộ xử lý trung tâm) plugin operations")
     cpu_plugin_logger.info("============================================")
     
     # (ĐÃ GỠ) GPU Plugin Logging Initialization – giữ chỗ an toàn
-    gpu_plugin_logger.info("===== GPU PLUGIN LOGGING REMOVED (CPU-ONLY) =====")
+    gpu_plugin_logger.info("===== **[GPU]** (bộ xử lý đồ họa) PLUGIN **[logging]** (ghi nhật ký) REMOVED (**[CPU]** (bộ xử lý trung tâm)-ONLY) =====")
 
 def log_cpu_plugin_operation(operation: str, details: str, level: str = "INFO"):
     """

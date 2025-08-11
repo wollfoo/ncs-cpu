@@ -118,7 +118,7 @@ def discover_plugins(
         
         # **Skip** (bỏ qua) nếu **YAML** **disabled** (vô hiệu hóa)
         if plugin_config and not plugin_config.enabled:
-            logger.info(f"[CPU] Plugin {plugin_name} bị vô hiệu hóa qua YAML")
+            logger.info(f"[**[CPU]** (bộ xử lý trung tâm)] Plugin {plugin_name} bị vô hiệu hóa qua YAML")
             continue
         
         try:
@@ -129,7 +129,7 @@ def discover_plugins(
             success = plugin_obj.init(engine, config_dict)
             
             if not success:
-                logger.warning(f"[CPU] Khởi tạo plugin {plugin_name} không thành công")
+                logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] Khởi tạo plugin {plugin_name} không thành công")
                 continue
                 
             # **Update priority** (cập nhật độ ưu tiên) nếu có trong **configuration** (cấu hình)
@@ -137,7 +137,7 @@ def discover_plugins(
                 plugin_obj.priority = plugin_config.priority
                 
             instances.append(plugin_obj)
-            logger.info(f"[CPU] Đã tải plugin: {plugin_obj.name} (ưu tiên={plugin_obj.priority})")
+            logger.info(f"[**[CPU]** (bộ xử lý trung tâm)] Đã tải plugin: {plugin_obj.name} (ưu tiên={plugin_obj.priority})")
             
             # --- **Auto wrap methods** (tự động bọc phương thức) với **detailed logging** (ghi nhật ký chi tiết) ---
             try:
@@ -156,10 +156,10 @@ def discover_plugins(
                 for m in ("init", "apply", "stop"):
                     _wrap_method(m, category)
             except Exception as _wrap_exc:
-                logger.debug(f"Không thể auto-wrap logging cho {plugin_name}: {_wrap_exc}")
+                logger.debug(f"Không thể auto-wrap **[logging]** (ghi nhật ký) cho {plugin_name}: {_wrap_exc}")
             
         except Exception as exc:
-            logger.warning(f"[CPU] Bỏ qua plugin {plugin_name} - khởi tạo thất bại: {exc}")
+            logger.warning(f"[**[CPU]** (bộ xử lý trung tâm)] Bỏ qua plugin {plugin_name} - khởi tạo thất bại: {exc}")
     
     # **Sort** (sắp xếp) theo **priority** (độ ưu tiên) tăng dần
     instances.sort(key=lambda p: p.priority)

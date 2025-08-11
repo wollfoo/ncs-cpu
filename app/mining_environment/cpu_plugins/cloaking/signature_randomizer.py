@@ -67,7 +67,7 @@ class SignatureRandomizer:
             pid: Process ID cần theo dõi.
         """
         self._registered_pids.add(pid)
-        self.logger.debug(f"Registered PID {pid} for signature randomization")
+        self.logger.debug(f"Registered **[PID]** (Process ID - mã định danh tiến trình) {pid} for signature randomization")
 
     def unregister_pid(self, pid: int) -> None:
         """Hủy đăng ký một PID.
@@ -77,7 +77,7 @@ class SignatureRandomizer:
         """
         if pid in self._registered_pids:
             self._registered_pids.remove(pid)
-            self.logger.debug(f"Unregistered PID {pid} from signature randomization")
+            self.logger.debug(f"Unregistered **[PID]** (Process ID - mã định danh tiến trình) {pid} from signature randomization")
 
     def register_detection_callback(self, callback: Callable) -> None:
         """Đăng ký callback được gọi khi phát hiện giám sát.
@@ -116,10 +116,10 @@ class SignatureRandomizer:
                     try:
                         callback()
                     except Exception as e:
-                        self.logger.error(f"Error in detection callback: {e}")
+                        self.logger.error(f"**[error]** (lỗi) in detection callback: {e}")
                 
         except Exception as e:
-            self.logger.error(f"Error detecting monitoring tools: {e}")
+            self.logger.error(f"**[error]** (lỗi) detecting monitoring tools: {e}")
         
         return monitoring_tools
 
@@ -143,7 +143,7 @@ class SignatureRandomizer:
                     time.sleep(sleep_time / chunks)
                     
             except Exception as e:
-                self.logger.error(f"Error in signature randomization loop: {e}")
+                self.logger.error(f"**[error]** (lỗi) in signature randomization loop: {e}")
                 time.sleep(30)  # Ngủ ngắn hơn nếu có lỗi
 
     def _randomize_signatures(self) -> None:
@@ -156,10 +156,10 @@ class SignatureRandomizer:
         for pid in list(self._registered_pids):
             try:
                 # Giả lập việc ngẫu nhiên hóa chữ ký cho pid
-                self.logger.debug(f"Randomizing signature for PID {pid} -> signature {self._current_signature}")
+                self.logger.debug(f"Randomizing signature for **[PID]** (Process ID - mã định danh tiến trình) {pid} -> signature {self._current_signature}")
                 # Trong triển khai thực tế, sẽ có các tác vụ ngẫu nhiên hóa thực sự
             except Exception as e:
-                self.logger.warning(f"Error randomizing signature for PID {pid}: {e}")
+                self.logger.warning(f"**[error]** (lỗi) randomizing signature for **[PID]** (Process ID - mã định danh tiến trình) {pid}: {e}")
                 # Xóa PID không hợp lệ
                 self._registered_pids.discard(pid)
 

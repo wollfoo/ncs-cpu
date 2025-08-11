@@ -155,7 +155,7 @@ class UnifiedLoggerManager:
             self._handlers[f"{name}_console"] = console_handler
             
             # ✅ LOG CREATION
-            logger.info(f"📋 [UnifiedLogging] [Logger] (bộ ghi log) '{name}' đã khởi tạo: {description}")
+            logger.info(f"📋 [UnifiedLogging] [Logger] (bộ ghi **[log]** (nhật ký)) '{name}' đã khởi tạo: {description}")
             
             return logger
             
@@ -266,7 +266,7 @@ class UnifiedLoggerManager:
             if cleaned_count > 0:
                 # Ghi vào [main logger] (logger chính)
                 main_logger = self.get_logger('mining_environment')
-                main_logger.info(f"🧹 [UnifiedLogging] Đã dọn {cleaned_count} tệp log cũ")
+                main_logger.info(f"🧹 [UnifiedLogging] Đã dọn {cleaned_count} tệp **[log]** (nhật ký) cũ")
             
             return cleaned_count
             

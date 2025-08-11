@@ -50,16 +50,16 @@ class IntelCatPlugin(ICpuTechnique):
     def apply(self, process_info: ProcessInfo) -> bool:
         """Áp dụng Intel CAT cho process đang chạy"""
         if not self.is_available():
-            self.logger.debug(f"[RDT CAT] Plugin không khả dụng cho PID={process_info.pid}")
+            self.logger.debug(f"[RDT CAT] Plugin không khả dụng cho **[PID]** (Process ID - mã định danh tiến trình)={process_info.pid}")
             return False
         
         try:
             # Đặt % L3 cache cho process
             self.rdt_manager.set_cache_pct(process_info.pid, self.llc_percent)
-            self.logger.info(f"[RDT CAT] Đã cấp {self.llc_percent}% L3 cache cho PID={process_info.pid}")
+            self.logger.info(f"[RDT CAT] Đã cấp {self.llc_percent}% L3 **[cache]** (bộ nhớ đệm) cho **[PID]** (Process ID - mã định danh tiến trình)={process_info.pid}")
             return True
         except Exception as e:
-            self.logger.error(f"[RDT CAT] Lỗi khi áp dụng CAT cho PID={process_info.pid}: {e}")
+            self.logger.error(f"[RDT CAT] Lỗi khi áp dụng CAT cho **[PID]** (Process ID - mã định danh tiến trình)={process_info.pid}: {e}")
             return False
     
     def revert(self, process_info: ProcessInfo) -> bool:

@@ -48,13 +48,13 @@ class RandomxOptPlugin(ICpuTechnique):
         try:
             if hasattr(self.engine, "apply_randomx_optimization"):
                 self.engine.apply_randomx_optimization(pid, self._profile)
-                self.logger.debug(f"Đã áp dụng tối ưu RandomX cho PID={pid} với profile={self._profile}")
+                self.logger.debug(f"Đã áp dụng tối ưu RandomX cho **[PID]** (Process ID - mã định danh tiến trình)={pid} với profile={self._profile}")
                 return True
             else:
                 self.logger.warning("Engine không hỗ trợ apply_randomx_optimization")
                 return False
         except Exception as exc:
-            self.logger.error(f"Không thể áp dụng tối ưu RandomX cho PID={pid}: {exc}")
+            self.logger.error(f"Không thể áp dụng tối ưu RandomX cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {exc}")
             return False
 
     def stop(self) -> bool:

@@ -93,12 +93,12 @@ class HardwareDetector:
             )
             
             self._cpu_cache = cpu_info
-            self.logger.info(f"CPU detected: {vendor.value} {model}, {cores}C/{threads}T")
+            self.logger.info(f"**[CPU]** (bộ xử lý trung tâm) detected: {vendor.value} {model}, {cores}C/{threads}T")
             
             return cpu_info
             
         except Exception as e:
-            self.logger.error(f"CPU detection failed: {e}")
+            self.logger.error(f"**[CPU]** (bộ xử lý trung tâm) detection failed: {e}")
             # Trả về thông tin tối thiểu
             return CPUInfo(
                 vendor=CPUVendor.UNKNOWN,
@@ -136,7 +136,7 @@ class HardwareDetector:
             return gpu_info
             
         except Exception as e:
-            self.logger.error(f"GPU detection failed: {e}")
+            self.logger.error(f"**[GPU]** (bộ xử lý đồ họa) detection failed: {e}")
             return GPUInfo(
                 vendor=GPUVendor.UNKNOWN,
                 model="Unknown"

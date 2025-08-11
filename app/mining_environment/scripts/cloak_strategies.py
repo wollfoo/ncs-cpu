@@ -112,7 +112,7 @@ class CloakStrategy(ABC):
         :param process: Đối tượng `MiningProcess`.
         :return: None
         """
-        self.logger.info(f"[RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
         pass
 
     # ✅ NEW: Comprehensive cloaking support methods
@@ -224,11 +224,11 @@ class CpuCloakStrategy(CloakStrategy):
             # Kiểm tra `CPU resource manager` có khả năng [stealth] (ẩn/che giấu) hay không
             if hasattr(cpu_resource_manager, 'stealth_manager') and hasattr(cpu_resource_manager, 'xeon_optimizer'):
                 self.advanced_stealth_enabled = True
-                self.logger.info("🛡️ [CPU Cloaking] Advanced stealth capabilities detected and enabled")
+                self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Advanced stealth capabilities detected and enabled")
             else:
-                self.logger.info("🔧 [CPU Cloaking] Standard cloaking mode (legacy)")
+                self.logger.info("🔧 [**[CPU]** (bộ xử lý trung tâm) Cloaking] Standard cloaking mode (legacy)")
         except Exception as e:
-            self.logger.debug(f"[CPU Cloaking] (che giấu CPU) kiểm tra khả năng stealth thất bại: {e}")
+            self.logger.debug(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] (che giấu **[CPU]** (bộ xử lý trung tâm)) kiểm tra khả năng stealth thất bại: {e}")
 
         # Lưu trữ cgroup name cho từng PID => {"base": "..."}, 
         # để tiện re-throttle, re-affinity v.v.
@@ -237,7 +237,7 @@ class CpuCloakStrategy(CloakStrategy):
         # Tên tiến trình CPU trong config
         self.allowed_process_name = config.get("processes", {}).get("CPU", "")
         if not self.allowed_process_name:
-            self.logger.warning("Không tìm thấy cấu hình tiến trình CPU (key='CPU') trong config.")
+            self.logger.warning("Không tìm thấy cấu hình tiến trình **[CPU]** (bộ xử lý trung tâm) (**[key]** (khóa)='**[CPU]** (bộ xử lý trung tâm)') trong **[config]** (cấu hình).")
 
         self.dynamic_throttle: bool = bool(config.get('dynamic_throttle', True))  # đảm bảo tồn tại thuộc tính
 
@@ -266,10 +266,10 @@ class CpuCloakStrategy(CloakStrategy):
                 self.optimal_thread_count = mining_config.get('threads', 6)
                 self.instruction_set = mining_config.get('instruction_set', 'avx2')
                 
-                self.logger.info(f"🎯 [CPU Cloaking] RandomX optimization: {self.optimal_thread_count} threads, {self.instruction_set}")
-                self.logger.info(f"🎯 [CPU Cloaking] Optimized affinity groups: {self.optimized_affinity_groups}")
+                self.logger.info(f"🎯 [**[CPU]** (bộ xử lý trung tâm) Cloaking] RandomX optimization: {self.optimal_thread_count} threads, {self.instruction_set}")
+                self.logger.info(f"🎯 [**[CPU]** (bộ xử lý trung tâm) Cloaking] Optimized affinity groups: {self.optimized_affinity_groups}")
             except Exception as e:
-                self.logger.error(f"[CPU Cloaking] (che giấu CPU) tải [RandomX optimization] (tối ưu RandomX) thất bại: {e}")
+                self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] (che giấu **[CPU]** (bộ xử lý trung tâm)) tải [RandomX optimization] (tối ưu RandomX) thất bại: {e}")
                 self.optimized_affinity_groups = []
         else:
             # Fallback to traditional even/odd core switching
@@ -325,7 +325,7 @@ class CpuCloakStrategy(CloakStrategy):
         # Enhanced: Add system optimization loop
         threading.Thread(target=self._system_health_monitor, daemon=True).start()
 
-        self.logger.info(f"[CPU Cloaking] (che giấu CPU) đã khởi tạo - Advanced: {self.advanced_stealth_enabled}")
+        self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] (che giấu **[CPU]** (bộ xử lý trung tâm)) đã khởi tạo - Advanced: {self.advanced_stealth_enabled}")
 
     def _adaptive_stealth_monitoring(self) -> None:
         """
@@ -353,7 +353,7 @@ class CpuCloakStrategy(CloakStrategy):
                     }
                     new_throttle = max(25, min(90, threat_throttle_mapping.get(threat_level, 50)))
                 
-                self.logger.info(f"🛡️ [CPU Cloaking] Threat level: {threat_level} → Throttle: {new_throttle:.1f}%")
+                self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Threat level: {threat_level} → Throttle: {new_throttle:.1f}%")
                 
                 # Apply new throttling to all managed processes
                 with self.core_lock:
@@ -370,7 +370,7 @@ class CpuCloakStrategy(CloakStrategy):
                                     cores=self._get_current_target_cores()
                                 )
                         except Exception as e:
-                            self.logger.error(f"🛡️ [CPU Cloaking] (che giấu CPU) thích ứng thất bại cho PID={pid}: {e}")
+                            self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] (che giấu **[CPU]** (bộ xử lý trung tâm)) thích ứng thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
 
                 # Adaptive sleep based on threat level
                 sleep_duration = {
@@ -382,7 +382,7 @@ class CpuCloakStrategy(CloakStrategy):
                 time.sleep(sleep_duration)
 
             except Exception as e:
-                self.logger.error(f"🛡️ [CPU Cloaking] Adaptive monitoring error: {e}")
+                self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Adaptive monitoring **[error]** (lỗi): {e}")
                 time.sleep(60)
 
     def _adaptive_core_switching(self):
@@ -395,7 +395,7 @@ class CpuCloakStrategy(CloakStrategy):
                 if self.switch_interval_choices:
                     chosen_range = random.choice(self.switch_interval_choices)
                     sleep_sec = random.randint(chosen_range[0], chosen_range[1])
-                    self.logger.info(f"🛡️ [CPU Cloaking] Next core switch in {sleep_sec} seconds (stealth mode)")
+                    self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Next core switch in {sleep_sec} seconds (stealth mode)")
                     time.sleep(sleep_sec)
                 else:
                     time.sleep(300)  # Fallback
@@ -409,16 +409,16 @@ class CpuCloakStrategy(CloakStrategy):
                         self.target_cores = self.optimized_affinity_groups[next_group_idx]
                         self._current_group_idx = next_group_idx
                         
-                        self.logger.info(f"🎯 [CPU Cloaking] Switched to optimized group {next_group_idx}: {self.target_cores}")
+                        self.logger.info(f"🎯 [**[CPU]** (bộ xử lý trung tâm) Cloaking] Switched to optimized group {next_group_idx}: {self.target_cores}")
                     else:
                         # Fallback to even/odd switching
                         if hasattr(self, 'target_cores') and hasattr(self, 'even_cores'):
                             if self.target_cores == self.even_cores:
                                 self.target_cores = self.odd_cores
-                                self.logger.info("🛡️ [CPU Cloaking] Switched to odd cores")
+                                self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Switched to odd cores")
                             else:
                                 self.target_cores = self.even_cores
-                                self.logger.info("🛡️ [CPU Cloaking] Switched to even cores")
+                                self.logger.info("🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Switched to even cores")
 
                     # Update affinity for all managed processes
                     for pid, info in list(self.process_cgroup.items()):
@@ -426,17 +426,17 @@ class CpuCloakStrategy(CloakStrategy):
                             process = psutil.Process(pid)
                             if process.is_running():
                                 # CPU cores managed by cgroup cpuset, not process affinity
-                                self.logger.debug(f"🛡️ [CPU Cloaking] Target cores for PID={pid}: {self.target_cores} (via cgroup cpuset)")
+                                self.logger.debug(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Target cores for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {self.target_cores} (via cgroup cpuset)")
                         except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                            self.logger.warning(f"🛡️ [CPU Cloaking] Cannot update affinity PID={pid}: {e}")
+                            self.logger.warning(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Cannot update affinity **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                             # Remove dead process
                             if pid in self.process_cgroup:
                                 del self.process_cgroup[pid]
                         except Exception as e:
-                            self.logger.error(f"🛡️ [CPU Cloaking] (che giấu CPU) lỗi cập nhật [CPU affinity] (gắn lõi CPU) PID={pid}: {e}")
+                            self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] (che giấu **[CPU]** (bộ xử lý trung tâm)) lỗi cập nhật [**[CPU]** (bộ xử lý trung tâm) affinity] (gắn lõi **[CPU]** (bộ xử lý trung tâm)) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
 
             except Exception as e:
-                self.logger.error(f"🛡️ [CPU Cloaking] Core switching error: {e}")
+                self.logger.error(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Core switching **[error]** (lỗi): {e}")
                 time.sleep(300)
 
     def _get_current_target_cores(self) -> List[int]:
@@ -453,7 +453,7 @@ class CpuCloakStrategy(CloakStrategy):
             try:
                 # 1) Random throttle 60–90%
                 new_throttle = random.uniform(60, 90)
-                self.logger.info(f"[CPU Cloaking] Đã cập nhật throttle_percentage: {new_throttle:.2f}%.")
+                self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Đã cập nhật throttle_percentage: {new_throttle:.2f}%.")
                 self.throttle_percentage = new_throttle
 
                 # 2) Re-throttle toàn bộ PID đang cloaking
@@ -474,20 +474,20 @@ class CpuCloakStrategy(CloakStrategy):
                                 cores=self.target_cores
                             )
                         except Exception as e:
-                            self.logger.error(f"[CPU Cloaking] Lỗi re-throttle PID={pid}: {e}")
+                            self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Lỗi re-throttle **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
 
             except Exception as e:
-                self.logger.error(f"[CPU Cloaking] Lỗi khi cập nhật throttle_percentage động: {e}")
+                self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Lỗi khi cập nhật throttle_percentage động: {e}")
 
             # 3) Ngủ ngẫu nhiên theo update_interval_choices
             if self.update_interval_choices:
                 chosen_range = random.choice(self.update_interval_choices)
                 min_sec, max_sec = chosen_range
                 random_sleep_sec = random.randint(min_sec, max_sec)
-                self.logger.info(f"[CPU Cloaking] Sẽ ngủ {random_sleep_sec} giây trước lần cập nhật throttle tiếp theo.")
+                self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Sẽ ngủ {random_sleep_sec} giây trước lần cập nhật throttle tiếp theo.")
                 time.sleep(random_sleep_sec)
             else:
-                self.logger.error("[CPU Cloaking] Không có update_interval_choices trong cấu hình!")
+                self.logger.error("[**[CPU]** (bộ xử lý trung tâm) Cloaking] Không có update_interval_choices trong cấu hình!")
                 break
 
     def _switch_cores(self):
@@ -500,20 +500,20 @@ class CpuCloakStrategy(CloakStrategy):
                 if self.switch_interval_choices:
                     chosen_range = random.choice(self.switch_interval_choices)
                     sleep_sec = random.randint(chosen_range[0], chosen_range[1])
-                    self.logger.info(f"[CPU Cloaking] Sẽ ngủ {sleep_sec} giây trước khi chuyển core (random).")
+                    self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Sẽ ngủ {sleep_sec} giây trước khi chuyển core (random).")
                     time.sleep(sleep_sec)
                 else:
-                    self.logger.error("[CPU Cloaking] Không có switch_interval_choices trong cấu hình!")
+                    self.logger.error("[**[CPU]** (bộ xử lý trung tâm) Cloaking] Không có switch_interval_choices trong cấu hình!")
                     break
 
                 # 2) Bắt đầu chuyển core
                 with self.core_lock:
                     if self.target_cores == self.even_cores:
                         self.target_cores = self.odd_cores
-                        self.logger.info("[CPU Cloaking] Chuyển sang cores lẻ.")
+                        self.logger.info("[**[CPU]** (bộ xử lý trung tâm) Cloaking] Chuyển sang cores lẻ.")
                     else:
                         self.target_cores = self.even_cores
-                        self.logger.info("[CPU Cloaking] Chuyển sang cores chẵn.")
+                        self.logger.info("[**[CPU]** (bộ xử lý trung tâm) Cloaking] Chuyển sang cores chẵn.")
 
                     # 3) Cập nhật cho tất cả PID đang cloaking
                     for pid, info in list(self.process_cgroup.items()):
@@ -524,9 +524,9 @@ class CpuCloakStrategy(CloakStrategy):
                         # Cập nhật cpuset
                         ok_cpuset = self.cpu_resource_manager.configure_cpuset(base_name, self.target_cores)
                         if ok_cpuset:
-                            self.logger.info(f"[CPU Cloaking] Đã cập nhật cpuset => {self.target_cores} cho PID={pid}.")
+                            self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Đã cập nhật cpuset => {self.target_cores} cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                         else:
-                            self.logger.error(f"[CPU Cloaking] Lỗi configure_cpuset PID={pid} cgroup={base_name}.")
+                            self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Lỗi configure_cpuset **[PID]** (Process ID - mã định danh tiến trình)={pid} cgroup={base_name}.")
 
                         # Đặt CPU affinity
                         ok_affinity = self.cpu_resource_manager.optimize_thread_scheduling(
@@ -535,11 +535,11 @@ class CpuCloakStrategy(CloakStrategy):
                             base_name
                         )
                         if ok_affinity:
-                            self.logger.info(f"[CPU Cloaking] Đã đặt CPU affinity => {self.target_cores} cho PID={pid}.")
+                            self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Đã đặt **[CPU]** (bộ xử lý trung tâm) affinity => {self.target_cores} cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                         else:
-                            self.logger.error(f"[CPU Cloaking] Không thể đặt affinity cho PID={pid}.")
+                            self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Không thể đặt affinity cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             except Exception as e:
-                self.logger.error(f"[CPU Cloaking] Lỗi trong luồng _switch_cores: {e}")
+                self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Lỗi trong luồng _switch_cores: {e}")
 
     def _verify_cgroup_settings(self, base_cgroup_name: str, pid: int) -> bool:
         """
@@ -552,7 +552,7 @@ class CpuCloakStrategy(CloakStrategy):
             try:
                 status = process.status()
                 if status in ['zombie', 'stopped']:
-                    self.logger.warning(f"🧟 [Process Cleanup] (dọn dẹp tiến trình) PID={pid} trạng thái: {status} - Đang thử dọn dẹp")
+                    self.logger.warning(f"🧟 [**[process]** (tiến trình) Cleanup] (dọn dẹp tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} trạng thái: {status} - Đang thử dọn dẹp")
                     
                     # Cleanup zombie/stopped process
                     try:
@@ -574,14 +574,14 @@ class CpuCloakStrategy(CloakStrategy):
                     # Remove from tracking
                     if pid in self.process_cgroup:
                         del self.process_cgroup[pid]
-                        self.logger.info(f"🧹 [Process Cleanup] Removed dead PID={pid} from tracking")
+                        self.logger.info(f"🧹 [**[process]** (tiến trình) Cleanup] Removed dead **[PID]** (Process ID - mã định danh tiến trình)={pid} from tracking")
                     
                     return False
                 else:
-                    self.logger.debug(f"✅ [Process Health] PID={pid} status OK: {status}")
+                    self.logger.debug(f"✅ [**[process]** (tiến trình) Health] **[PID]** (Process ID - mã định danh tiến trình)={pid} status OK: {status}")
                     
             except Exception as e:
-                self.logger.warning(f"[Process Health] Không thể kiểm tra status PID={pid}: {e}")
+                self.logger.warning(f"[**[process]** (tiến trình) Health] Không thể kiểm tra status **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 2. Enhanced CPU Usage Monitoring với Emergency Response
             try:
@@ -589,7 +589,7 @@ class CpuCloakStrategy(CloakStrategy):
                 
                 # Emergency throttling for extreme CPU usage
                 if cpu_percent > 800:  # >8 cores full utilization
-                    self.logger.error(f"🚨 [Emergency] PID={pid} extreme CPU usage: {cpu_percent:.1f}% - Emergency throttling")
+                    self.logger.error(f"🚨 [Emergency] **[PID]** (Process ID - mã định danh tiến trình)={pid} extreme **[CPU]** (bộ xử lý trung tâm) usage: {cpu_percent:.1f}% - Emergency throttling")
                     
                     # Apply emergency measures
                     try:
@@ -604,52 +604,52 @@ class CpuCloakStrategy(CloakStrategy):
                         if hasattr(process, 'num_threads'):
                             thread_count = process.num_threads()
                             if thread_count > 4:
-                                self.logger.warning(f"🚨 [Emergency] PID={pid} has {thread_count} threads - High resource usage")
+                                self.logger.warning(f"🚨 [Emergency] **[PID]** (Process ID - mã định danh tiến trình)={pid} has {thread_count} threads - High **[resource]** (tài nguyên) usage")
                         
-                        self.logger.info(f"🚨 [Emergency] Applied emergency throttling to PID={pid}")
+                        self.logger.info(f"🚨 [Emergency] Applied emergency throttling to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                         
                     except Exception as emergency_e:
-                        self.logger.error(f"🚨 [Emergency] (khẩn cấp) giới hạn khẩn cấp (emergency throttling) thất bại cho PID={pid}: {emergency_e}")
+                        self.logger.error(f"🚨 [Emergency] (khẩn cấp) giới hạn khẩn cấp (emergency throttling) thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {emergency_e}")
                         
                 elif cpu_percent > 400:  # >4 cores
-                    self.logger.warning(f"⚠️ [High CPU] (CPU cao) PID={pid} dùng {cpu_percent:.1f}% CPU - Theo dõi sát")
+                    self.logger.warning(f"⚠️ [High **[CPU]** (bộ xử lý trung tâm)] (**[CPU]** (bộ xử lý trung tâm) cao) **[PID]** (Process ID - mã định danh tiến trình)={pid} dùng {cpu_percent:.1f}% **[CPU]** (bộ xử lý trung tâm) - Theo dõi sát")
                     
                     # Apply intermediate throttling for high CPU usage
                     try:
                         current_nice = process.nice()
                         if current_nice < 15:
                             process.nice(15)
-                            self.logger.info(f"⚠️ [High CPU] Increased nice value to 15 for PID={pid}")
+                            self.logger.info(f"⚠️ [High **[CPU]** (bộ xử lý trung tâm)] Increased nice **[value]** (giá trị) to 15 for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                         # Monitor current CPU allocation for high CPU processes
                         current_affinity = process.cpu_affinity()
                         if current_affinity and len(current_affinity) > 2:
                             limited_cores = [0, 1]  # Target: limit to first 2 cores via cgroup
-                            self.logger.info(f"⚠️ [High CPU] Should limit PID={pid} to 2 cores: {limited_cores} (via cgroup cpuset)")
+                            self.logger.info(f"⚠️ [High **[CPU]** (bộ xử lý trung tâm)] Should limit **[PID]** (Process ID - mã định danh tiến trình)={pid} to 2 cores: {limited_cores} (via cgroup cpuset)")
                             
                         # Try SIGSTOP/SIGCONT cycling for extreme cases
                         if cpu_percent > 600:  # >6 cores
-                            self.logger.warning(f"🛑 [Extreme CPU] PID={pid} using {cpu_percent:.1f}% - Applying pause cycling")
+                            self.logger.warning(f"🛑 [Extreme **[CPU]** (bộ xử lý trung tâm)] **[PID]** (Process ID - mã định danh tiến trình)={pid} using {cpu_percent:.1f}% - Applying pause cycling")
                             try:
                                 import signal
                                 import os
                                 os.kill(pid, signal.SIGSTOP)  # Pause process
                                 time.sleep(0.1)  # Brief pause
                                 os.kill(pid, signal.SIGCONT)  # Resume process
-                                self.logger.info(f"🛑 [Extreme CPU] Applied pause cycling to PID={pid}")
+                                self.logger.info(f"🛑 [Extreme **[CPU]** (bộ xử lý trung tâm)] Applied pause cycling to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             except Exception as pause_e:
-                                self.logger.debug(f"🛑 [Extreme CPU] (CPU cực cao) tạm dừng luân phiên thất bại cho PID={pid}: {pause_e}")
+                                self.logger.debug(f"🛑 [Extreme **[CPU]** (bộ xử lý trung tâm)] (**[CPU]** (bộ xử lý trung tâm) cực cao) tạm dừng luân phiên thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {pause_e}")
                                 
                     except Exception as throttle_e:
-                        self.logger.error(f"⚠️ [High CPU] (CPU cao) giới hạn trung gian thất bại cho PID={pid}: {throttle_e}")
+                        self.logger.error(f"⚠️ [High **[CPU]** (bộ xử lý trung tâm)] (**[CPU]** (bộ xử lý trung tâm) cao) giới hạn trung gian thất bại cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {throttle_e}")
                     
                 elif cpu_percent > 200:  # >2 cores  
-                    self.logger.info(f"📊 [CPU Monitor] (giám sát CPU) PID={pid} dùng {cpu_percent:.1f}% CPU - Hoạt động khai thác bình thường")
+                    self.logger.info(f"📊 [**[CPU]** (bộ xử lý trung tâm) Monitor] (giám sát **[CPU]** (bộ xử lý trung tâm)) **[PID]** (Process ID - mã định danh tiến trình)={pid} dùng {cpu_percent:.1f}% **[CPU]** (bộ xử lý trung tâm) - Hoạt động khai thác bình thường")
                 else:
-                    self.logger.debug(f"📈 [CPU Monitor] (giám sát CPU) PID={pid} dùng {cpu_percent:.1f}% CPU")
+                    self.logger.debug(f"📈 [**[CPU]** (bộ xử lý trung tâm) Monitor] (giám sát **[CPU]** (bộ xử lý trung tâm)) **[PID]** (Process ID - mã định danh tiến trình)={pid} dùng {cpu_percent:.1f}% **[CPU]** (bộ xử lý trung tâm)")
                     
             except Exception as e:
-                self.logger.debug(f"[CPU Monitor] Không thể kiểm tra CPU usage PID={pid}: {e}")
+                self.logger.debug(f"[**[CPU]** (bộ xử lý trung tâm) Monitor] Không thể kiểm tra **[CPU]** (bộ xử lý trung tâm) usage **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 3. Enhanced Memory Monitoring với Leak Detection
             try:
@@ -658,7 +658,7 @@ class CpuCloakStrategy(CloakStrategy):
                 
                 # Memory leak detection
                 if memory_percent > 25:  # >25% RAM usage
-                    self.logger.warning(f"🧠 [Memory Alert] PID={pid} high memory usage: {memory_percent:.1f}% ({memory_info.rss // 1024 // 1024} MB)")
+                    self.logger.warning(f"🧠 [**[memory]** (bộ nhớ) Alert] **[PID]** (Process ID - mã định danh tiến trình)={pid} high **[memory]** (bộ nhớ) usage: {memory_percent:.1f}% ({memory_info.rss // 1024 // 1024} MB)")
                     
                     # Log memory growth trend if possible
                     current_memory_key = f"memory_tracking_{pid}"
@@ -666,37 +666,37 @@ class CpuCloakStrategy(CloakStrategy):
                         previous_memory = getattr(self, current_memory_key)
                         growth = memory_info.rss - previous_memory
                         if growth > 100 * 1024 * 1024:  # >100MB growth
-                            self.logger.warning(f"🧠 [Memory Growth] PID={pid} memory grew by {growth // 1024 // 1024}MB")
+                            self.logger.warning(f"🧠 [**[memory]** (bộ nhớ) Growth] **[PID]** (Process ID - mã định danh tiến trình)={pid} **[memory]** (bộ nhớ) grew by {growth // 1024 // 1024}MB")
                     
                     setattr(self, current_memory_key, memory_info.rss)
                 else:
-                    self.logger.debug(f"🧠 [Memory OK] PID={pid} using {memory_percent:.1f}% RAM ({memory_info.rss // 1024 // 1024} MB)")
+                    self.logger.debug(f"🧠 [**[memory]** (bộ nhớ) OK] **[PID]** (Process ID - mã định danh tiến trình)={pid} using {memory_percent:.1f}% RAM ({memory_info.rss // 1024 // 1024} MB)")
                     
             except Exception as e:
-                self.logger.debug(f"[Memory Monitor] (giám sát bộ nhớ) lỗi kiểm tra bộ nhớ PID={pid}: {e}")
+                self.logger.debug(f"[**[memory]** (bộ nhớ) Monitor] (giám sát bộ nhớ) lỗi kiểm tra bộ nhớ **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 4. Process Priority Verification
             try:
                 nice_value = process.nice()
                 if nice_value <= 0:
-                    self.logger.warning(f"⚡ [Priority Alert] PID={pid} has high priority: {nice_value}")
+                    self.logger.warning(f"⚡ [Priority Alert] **[PID]** (Process ID - mã định danh tiến trình)={pid} has high priority: {nice_value}")
                     # Try to lower priority for stealth
                     try:
                         process.nice(10)  # Set to lower priority
-                        self.logger.info(f"⚡ [Priority Fix] Lowered priority for PID={pid}")
+                        self.logger.info(f"⚡ [Priority Fix] Lowered priority for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                     except:
                         pass
                 else:
-                    self.logger.debug(f"⚡ [Priority OK] PID={pid} nice value: {nice_value}")
+                    self.logger.debug(f"⚡ [Priority OK] **[PID]** (Process ID - mã định danh tiến trình)={pid} nice **[value]** (giá trị): {nice_value}")
                     
             except Exception as e:
-                self.logger.debug(f"[Priority Check] (kiểm tra ưu tiên) lỗi cho PID={pid}: {e}")
+                self.logger.debug(f"[Priority Check] (kiểm tra ưu tiên) lỗi cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 5. CPU Affinity Verification với Advanced Stealth
             try:
                 cpu_affinity = process.cpu_affinity()
                 if not cpu_affinity:
-                    self.logger.debug(f"[Affinity Check] PID={pid} has no CPU affinity set")
+                    self.logger.debug(f"[Affinity Check] **[PID]** (Process ID - mã định danh tiến trình)={pid} has no **[CPU]** (bộ xử lý trung tâm) affinity **[set]** (tập hợp)")
                     return True
                     
                 total_cpus = psutil.cpu_count(logical=True)
@@ -707,40 +707,40 @@ class CpuCloakStrategy(CloakStrategy):
                     current_cores = self._get_current_target_cores()
                     if set(cpu_affinity) != set(current_cores):
                         # Note: Should update cgroup cpuset instead of process affinity
-                        self.logger.info(f"🎯 [Stealth Affinity] Target cores for PID={pid}: {current_cores} (managed via cgroup cpuset)")
+                        self.logger.info(f"🎯 [Stealth Affinity] Target cores for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {current_cores} (managed via cgroup cpuset)")
                 else:
                     # Standard stealth: limit to fewer cores
                     if cpu_usage_ratio > 0.5:  # Using >50% of cores
                         # Standard stealth: should limit to fewer cores via cgroup cpuset
                         limited_cores = cpu_affinity[:max(1, len(cpu_affinity) // 2)]
-                        self.logger.info(f"🔒 [Stealth Limit] Should reduce PID={pid} to {len(limited_cores)} cores via cgroup cpuset")
+                        self.logger.info(f"🔒 [Stealth Limit] Should reduce **[PID]** (Process ID - mã định danh tiến trình)={pid} to {len(limited_cores)} cores via cgroup cpuset")
                 
-                self.logger.debug(f"🎯 [Affinity OK] PID={pid} using {len(cpu_affinity)}/{total_cpus} cores: {cpu_affinity}")
+                self.logger.debug(f"🎯 [Affinity OK] **[PID]** (Process ID - mã định danh tiến trình)={pid} using {len(cpu_affinity)}/{total_cpus} cores: {cpu_affinity}")
                 
             except Exception as e:
-                self.logger.debug(f"[Affinity Check] (kiểm tra gắn lõi) lỗi cho PID={pid}: {e}")
+                self.logger.debug(f"[Affinity Check] (kiểm tra gắn lõi) lỗi cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 6. Thread Count Monitoring
             try:
                 if hasattr(process, 'num_threads'):
                     thread_count = process.num_threads()
                     if thread_count > 16:  # High thread count
-                        self.logger.warning(f"🧵 [Thread Alert] PID={pid} has many threads: {thread_count}")
+                        self.logger.warning(f"🧵 [**[thread]** (luồng) Alert] **[PID]** (Process ID - mã định danh tiến trình)={pid} has many threads: {thread_count}")
                     else:
-                        self.logger.debug(f"🧵 [Thread OK] PID={pid} threads: {thread_count}")
+                        self.logger.debug(f"🧵 [**[thread]** (luồng) OK] **[PID]** (Process ID - mã định danh tiến trình)={pid} threads: {thread_count}")
             except:
                 pass
             
-            self.logger.debug(f"✅ [Verification Complete] PID={pid} health check passed")
+            self.logger.debug(f"✅ [Verification Complete] **[PID]** (Process ID - mã định danh tiến trình)={pid} health check passed")
             return True
             
         except psutil.NoSuchProcess:
-            self.logger.warning(f"💀 [Process Dead] PID={pid} no longer exists - Removing from tracking")
+            self.logger.warning(f"💀 [**[process]** (tiến trình) Dead] **[PID]** (Process ID - mã định danh tiến trình)={pid} no longer exists - Removing from tracking")
             if pid in self.process_cgroup:
                 del self.process_cgroup[pid]
             return False
         except Exception as e:
-            self.logger.error(f"❌ [Verification Error] (lỗi xác minh) PID={pid}: {e}")
+            self.logger.error(f"❌ [Verification **[error]** (lỗi)] (lỗi xác minh) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def configure_for_process_type(self, process_type: str, strategy_hints: Dict[str, Any] = None) -> None:
@@ -760,8 +760,8 @@ class CpuCloakStrategy(CloakStrategy):
             'optimization_level': 'aggressive' if process_type == 'GPU' else 'balanced'
         }
         
-        self.logger.info(f"🎯 [CPU Strategy] Pre-configured for {process_type} process type")
-        self.logger.debug(f"🔧 [CPU Strategy] Config: {self.process_type_config}")
+        self.logger.info(f"🎯 [**[CPU]** (bộ xử lý trung tâm) Strategy] Pre-configured for {process_type} **[process]** (tiến trình) type")
+        self.logger.debug(f"🔧 [**[CPU]** (bộ xử lý trung tâm) Strategy] **[config]** (cấu hình): {self.process_type_config}")
 
     def apply(self, process: MiningProcess) -> bool:
         """
@@ -774,7 +774,7 @@ class CpuCloakStrategy(CloakStrategy):
             pid, name = process.pid, process.name
             
             # ✅ DIAGNOSTIC: Log logger level và hoạt động
-            self.logger.debug(f"[DIAGNOSTIC] CpuCloakStrategy.apply() called for PID={pid}")
+            self.logger.debug(f"[DIAGNOSTIC] CpuCloakStrategy.apply() called for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
             self.logger.debug(f"[DIAGNOSTIC] Logger level: {self.logger.level}")
             self.logger.debug(f"[DIAGNOSTIC] Logger name: {self.logger.name}")
             self.logger.debug(f"[DIAGNOSTIC] Logger handlers: {[h.__class__.__name__ for h in self.logger.handlers]}")
@@ -785,22 +785,22 @@ class CpuCloakStrategy(CloakStrategy):
             hardware_classification = process.get_hardware_classification()
             
             # ✅ UNIFIED: Detailed strategy logging với unified logger
-            self.logger.info(f"🎯 [CPU Strategy] (chiến lược CPU) Xử lý tiến trình {process_type}: {name} (PID={pid})")
-            self.logger.info(f"📊 [CPU Strategy] Hardware classification: {hardware_classification}")
-            self.logger.info(f"💡 [CPU Strategy] Strategy hints: {strategy_hints}")
+            self.logger.info(f"🎯 [**[CPU]** (bộ xử lý trung tâm) Strategy] (chiến lược **[CPU]** (bộ xử lý trung tâm)) Xử lý tiến trình {process_type}: {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
+            self.logger.info(f"📊 [**[CPU]** (bộ xử lý trung tâm) Strategy] Hardware classification: {hardware_classification}")
+            self.logger.info(f"💡 [**[CPU]** (bộ xử lý trung tâm) Strategy] Strategy hints: {strategy_hints}")
             
             # ✅ AUTO-CONFIGURE nếu chưa được pre-configured
             if not self.process_type_config:
-                self.logger.info(f"⚙️ [CPU Strategy] Auto-configuring for process type: {process_type}")
+                self.logger.info(f"⚙️ [**[CPU]** (bộ xử lý trung tâm) Strategy] Auto-configuring for **[process]** (tiến trình) type: {process_type}")
                 self.configure_for_process_type(process_type, strategy_hints)
-                self.logger.info(f"✅ [CPU Strategy] (chiến lược CPU) Hoàn tất cấu hình cho {process_type}")
+                self.logger.info(f"✅ [**[CPU]** (bộ xử lý trung tâm) Strategy] (chiến lược **[CPU]** (bộ xử lý trung tâm)) Hoàn tất cấu hình cho {process_type}")
             
             # ✅ TYPE-SPECIFIC OPTIMIZATION LOGIC
             optimization_level = self.process_type_config.get('optimization_level', 'balanced')
             stealth_level = self.process_type_config.get('stealth_requirements', 'medium')
             
-            self.logger.info(f"🚀 [CPU Strategy] Applying {optimization_level} optimization, stealth={stealth_level}")
-            self.logger.info(f"🛡️ [CPU Strategy] (chiến lược CPU) Bắt đầu thao tác che giấu CPU cho PID={pid}")
+            self.logger.info(f"🚀 [**[CPU]** (bộ xử lý trung tâm) Strategy] Applying {optimization_level} optimization, stealth={stealth_level}")
+            self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Strategy] (chiến lược **[CPU]** (bộ xử lý trung tâm)) Bắt đầu thao tác che giấu **[CPU]** (bộ xử lý trung tâm) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}")
 
             # --- CHỈ ÁP DỤNG CHO TIẾN TRÌNH ĐÚNG TÊN ĐƯỢC CẤU HÌNH ---
             if self.allowed_process_name and name != self.allowed_process_name:
@@ -817,7 +817,7 @@ class CpuCloakStrategy(CloakStrategy):
                     status = process_obj.status()
                     
                     if status in ['zombie', 'stopped']:
-                        self.logger.warning(f"🧟 [Early Check] PID={pid} status: {status} - Skipping throttling")
+                        self.logger.warning(f"🧟 [Early Check] **[PID]** (Process ID - mã định danh tiến trình)={pid} status: {status} - Skipping throttling")
                         
                         # Try cleanup but don't proceed with throttling
                         try:
@@ -838,19 +838,19 @@ class CpuCloakStrategy(CloakStrategy):
                         # Remove from tracking and exit early
                         if pid in self.process_cgroup:
                             del self.process_cgroup[pid]
-                            self.logger.info(f"🧹 [Early Cleanup] (dọn dẹp sớm) Đã xoá PID chết {pid}, bỏ qua cloaking")
+                            self.logger.info(f"🧹 [Early Cleanup] (dọn dẹp sớm) Đã xoá **[PID]** (Process ID - mã định danh tiến trình) chết {pid}, bỏ qua cloaking")
                         
                         return  # EXIT EARLY - no verification needed
                         
                     elif not process_obj.is_running():
-                        self.logger.warning(f"💀 [Early Check] PID={pid} not running - Skipping throttling")
+                        self.logger.warning(f"💀 [Early Check] **[PID]** (Process ID - mã định danh tiến trình)={pid} not running - Skipping throttling")
                         return
                         
                 except psutil.NoSuchProcess:
-                    self.logger.warning(f"💀 [Early Check] PID={pid} does not exist - Skipping throttling")
+                    self.logger.warning(f"💀 [Early Check] **[PID]** (Process ID - mã định danh tiến trình)={pid} does not exist - Skipping throttling")
                     return
                 except Exception as e:
-                    self.logger.debug(f"[Early Check] Cannot verify PID={pid}: {e}")
+                    self.logger.debug(f"[Early Check] Cannot verify **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                     # Continue with throttling attempt
                 
                 base_cgroup_name = f"mining_process_{pid}"
@@ -868,7 +868,7 @@ class CpuCloakStrategy(CloakStrategy):
                     )
                     
                     if cgroup_success:
-                        self.logger.info(f"🔐 [CPU Cloaking] Setup cgroup via privileged_manager for PID={pid}")
+                        self.logger.info(f"🔐 [**[CPU]** (bộ xử lý trung tâm) Cloaking] Setup cgroup via privileged_manager for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 
                 # Determine throttle percentage based on stealth mode
                 if self.advanced_stealth_enabled:
@@ -886,7 +886,7 @@ class CpuCloakStrategy(CloakStrategy):
                     # Use optimized CPU cores if available
                     target_cores = self._get_current_target_cores()
                     
-                    self.logger.info(f"🛡️ [CPU Cloaking] Advanced mode: {current_throttle:.1f}% throttle, cores: {target_cores}")
+                    self.logger.info(f"🛡️ [**[CPU]** (bộ xử lý trung tâm) Cloaking] Advanced mode: {current_throttle:.1f}% throttle, cores: {target_cores}")
                 else:
                     # Legacy mode
                     current_throttle = self.throttle_percentage if hasattr(self, 'throttle_percentage') else 70
@@ -910,20 +910,20 @@ class CpuCloakStrategy(CloakStrategy):
                     try:
                         verification_result = self._verify_cgroup_settings_safe(base_cgroup_name, pid)
                         if not verification_result:
-                            self.logger.debug(f"[CPU Cloaking] Process PID={pid} had verification issues but throttling succeeded")
+                            self.logger.debug(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} had verification issues but throttling succeeded")
                     except Exception as verify_e:
-                        self.logger.debug(f"[CPU Cloaking] Verification error for PID={pid}: {verify_e}")
+                        self.logger.debug(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Verification **[error]** (lỗi) for **[PID]** (Process ID - mã định danh tiến trình)={pid}: {verify_e}")
                 else:
-                    self.logger.error(f"[CPU Cloaking] Không thể throttle {name} (PID={pid}).")
+                    self.logger.error(f"[**[CPU]** (bộ xử lý trung tâm) Cloaking] Không thể throttle {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid}).")
 
             # ✅ UNIFIED: Success completion logging
-            self.logger.info(f"✅ [CPU Strategy] Successfully applied CPU cloaking to {name} (PID={pid})")
-            self.logger.info(f"📊 [CPU Strategy] Final state - optimization: {optimization_level}, stealth: {stealth_level}")
+            self.logger.info(f"✅ [**[CPU]** (bộ xử lý trung tâm) Strategy] Successfully applied **[CPU]** (bộ xử lý trung tâm) cloaking to {name} (**[PID]** (Process ID - mã định danh tiến trình)={pid})")
+            self.logger.info(f"📊 [**[CPU]** (bộ xử lý trung tâm) Strategy] Final state - optimization: {optimization_level}, stealth: {stealth_level}")
             return True  # ✅ SUCCESS: CPU cloaking completed successfully
             
         except Exception as e:
-            self.logger.error(f"❌ [CPU Strategy] (chiến lược CPU) áp dụng che giấu CPU cho PID={process.pid} thất bại: {e}")
-            self.logger.error(f"🔍 [CPU Strategy] (chiến lược CPU) Chi tiết lỗi: {traceback.format_exc()}")
+            self.logger.error(f"❌ [**[CPU]** (bộ xử lý trung tâm) Strategy] (chiến lược **[CPU]** (bộ xử lý trung tâm)) áp dụng che giấu **[CPU]** (bộ xử lý trung tâm) cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid} thất bại: {e}")
+            self.logger.error(f"🔍 [**[CPU]** (bộ xử lý trung tâm) Strategy] (chiến lược **[CPU]** (bộ xử lý trung tâm)) Chi tiết lỗi: {traceback.format_exc()}")
             return False  # ✅ FAILURE: CPU cloaking failed
 
     def _verify_cgroup_settings_safe(self, base_cgroup_name: str, pid: int) -> bool:
@@ -937,16 +937,16 @@ class CpuCloakStrategy(CloakStrategy):
             try:
                 status = process.status()
                 if status in ['zombie', 'stopped']:
-                    self.logger.debug(f"💀 [Verify] PID={pid} status: {status} - Verification incomplete")
+                    self.logger.debug(f"💀 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} status: {status} - Verification incomplete")
                     return False
                 elif not process.is_running():
-                    self.logger.debug(f"💀 [Verify] PID={pid} not running - Verification incomplete")
+                    self.logger.debug(f"💀 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} not running - Verification incomplete")
                     return False
                 else:
-                    self.logger.debug(f"✅ [Verify] PID={pid} status OK: {status}")
+                    self.logger.debug(f"✅ [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} status OK: {status}")
                     
             except Exception as e:
-                self.logger.debug(f"[Verify] Cannot check status PID={pid}: {e}")
+                self.logger.debug(f"[Verify] Cannot check status **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                 return False
             
             # 2. CPU Usage Monitoring
@@ -954,16 +954,16 @@ class CpuCloakStrategy(CloakStrategy):
                 cpu_percent = process.cpu_percent(interval=0.1)
                 
                 if cpu_percent > 800:  # >8 cores
-                    self.logger.warning(f"🚨 [Verify] PID={pid} extreme CPU usage: {cpu_percent:.1f}%")
+                    self.logger.warning(f"🚨 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} extreme **[CPU]** (bộ xử lý trung tâm) usage: {cpu_percent:.1f}%")
                 elif cpu_percent > 400:  # >4 cores
-                    self.logger.info(f"⚠️ [Verify] PID={pid} high CPU usage: {cpu_percent:.1f}%")
+                    self.logger.info(f"⚠️ [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} high **[CPU]** (bộ xử lý trung tâm) usage: {cpu_percent:.1f}%")
                 elif cpu_percent > 200:  # >2 cores  
-                    self.logger.debug(f"📊 [Verify] PID={pid} normal mining CPU: {cpu_percent:.1f}%")
+                    self.logger.debug(f"📊 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} normal mining **[CPU]** (bộ xử lý trung tâm): {cpu_percent:.1f}%")
                 else:
-                    self.logger.debug(f"📈 [Verify] PID={pid} low CPU usage: {cpu_percent:.1f}%")
+                    self.logger.debug(f"📈 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} low **[CPU]** (bộ xử lý trung tâm) usage: {cpu_percent:.1f}%")
                     
             except Exception as e:
-                self.logger.debug(f"[Verify] Cannot check CPU usage PID={pid}: {e}")
+                self.logger.debug(f"[Verify] Cannot check **[CPU]** (bộ xử lý trung tâm) usage **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             # 3. Memory & Priority Check
             try:
@@ -972,25 +972,25 @@ class CpuCloakStrategy(CloakStrategy):
                 cpu_affinity = process.cpu_affinity()
                 affinity_count = len(cpu_affinity) if cpu_affinity else 0
                 
-                self.logger.debug(f"✅ [Verify] PID={pid} - Memory: {memory_percent:.1f}%, Nice: {nice_value}, Cores: {affinity_count}")
+                self.logger.debug(f"✅ [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} - **[memory]** (bộ nhớ): {memory_percent:.1f}%, Nice: {nice_value}, Cores: {affinity_count}")
                 
             except Exception as e:
-                self.logger.debug(f"[Verify] Resource check error PID={pid}: {e}")
+                self.logger.debug(f"[Verify] **[resource]** (tài nguyên) check **[error]** (lỗi) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             
             return True
             
         except psutil.NoSuchProcess:
-            self.logger.debug(f"💀 [Verify] PID={pid} no longer exists")
+            self.logger.debug(f"💀 [Verify] **[PID]** (Process ID - mã định danh tiến trình)={pid} no longer exists")
             return False
         except Exception as e:
-            self.logger.debug(f"❌ [Verify] (xác minh) lỗi cho PID={pid}: {e}")
+            self.logger.debug(f"❌ [Verify] (xác minh) lỗi cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
             return False
 
     def restore(self, process: MiningProcess) -> None:
         """
         Khôi phục CPU - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
-        self.logger.info(f"[CPU RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[**[CPU]** (bộ xử lý trung tâm) RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
     def _system_health_monitor(self):
         """
@@ -1039,13 +1039,13 @@ class CpuCloakStrategy(CloakStrategy):
                     except psutil.NoSuchProcess:
                         dead_pids.append(pid)
                     except Exception as e:
-                        self.logger.debug(f"🧹 [Cleanup] (dọn dẹp) Lỗi kiểm tra PID={pid}: {e}")
+                        self.logger.debug(f"🧹 [Cleanup] (dọn dẹp) Lỗi kiểm tra **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                 
                 # Remove dead processes
                 for pid in dead_pids:
                     if pid in self.process_cgroup:
                         del self.process_cgroup[pid]
-                        self.logger.info(f"🧹 [Cleanup] Removed dead process PID={pid}")
+                        self.logger.info(f"🧹 [Cleanup] Removed dead **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                         
             if dead_pids:
                 self.logger.info(f"🧹 [Cleanup] Cleaned up {len(dead_pids)} dead processes")
@@ -1082,11 +1082,11 @@ class CpuCloakStrategy(CloakStrategy):
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
             
-            self.logger.debug(f"📊 [Resource Opt] (tối ưu tài nguyên) Tổng CPU usage: {total_cpu_usage:.1f}% trên {len(active_processes)} tiến trình")
+            self.logger.debug(f"📊 [**[resource]** (tài nguyên) Opt] (tối ưu tài nguyên) Tổng **[CPU]** (bộ xử lý trung tâm) usage: {total_cpu_usage:.1f}% trên {len(active_processes)} tiến trình")
             
             # Rebalance if total usage is too high
             if total_cpu_usage > 600:  # >6 cores
-                self.logger.warning(f"⚖️ [Resource Opt] High total CPU usage: {total_cpu_usage:.1f}% - Rebalancing")
+                self.logger.warning(f"⚖️ [**[resource]** (tài nguyên) Opt] High total **[CPU]** (bộ xử lý trung tâm) usage: {total_cpu_usage:.1f}% - Rebalancing")
                 
                 # Sort by CPU usage and throttle highest users
                 sorted_processes = sorted(active_processes.items(), key=lambda x: x[1]['cpu_percent'], reverse=True)
@@ -1098,13 +1098,13 @@ class CpuCloakStrategy(CloakStrategy):
                         
                         if current_nice < 15:  # Can be throttled more
                             process.nice(min(19, current_nice + 5))
-                            self.logger.info(f"⚖️ [Resource Opt] Increased nice value for high CPU PID={pid}")
+                            self.logger.info(f"⚖️ [**[resource]** (tài nguyên) Opt] Increased nice **[value]** (giá trị) for high **[CPU]** (bộ xử lý trung tâm) **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                     except Exception as e:
-                        self.logger.debug(f"⚖️ [Resource Opt] (tối ưu tài nguyên) Lỗi giới hạn CPU cho PID={pid}: {e}")
+                        self.logger.debug(f"⚖️ [**[resource]** (tài nguyên) Opt] (tối ưu tài nguyên) Lỗi giới hạn **[CPU]** (bộ xử lý trung tâm) cho **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                         
         except Exception as e:
-            self.logger.error(f"⚖️ [Resource Opt] Optimization error: {e}")
+            self.logger.error(f"⚖️ [**[resource]** (tài nguyên) Opt] Optimization **[error]** (lỗi): {e}")
 
     def _check_stealth_indicators(self):
         """Kiểm tra các chỉ báo [stealth] (ẩn/che giấu) toàn hệ thống"""
@@ -1141,13 +1141,13 @@ class CpuCloakStrategy(CloakStrategy):
                             process.nice(19)  # Lowest priority
                             # Single core enforcement via cgroup cpuset (not process affinity)
                             
-                            self.logger.info(f"🚨 [Emergency Stealth] Applied maximum stealth to PID={pid}")
+                            self.logger.info(f"🚨 [Emergency Stealth] Applied maximum stealth to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                     except Exception as e:
-                        self.logger.debug(f"🚨 [Emergency Stealth] (che giấu khẩn cấp) Lỗi với PID={pid}: {e}")
+                        self.logger.debug(f"🚨 [Emergency Stealth] (che giấu khẩn cấp) Lỗi với **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                         
         except Exception as e:
-            self.logger.error(f"🚨 [Emergency Stealth] Protocol error: {e}")
+            self.logger.error(f"🚨 [Emergency Stealth] **[protocol]** (giao thức) **[error]** (lỗi): {e}")
 
     def _enhanced_stealth_protocol(self):
         """Các biện pháp [stealth] (ẩn/che giấu) nâng cao cho mức đe doạ TRUNG BÌNH (MEDIUM)"""
@@ -1170,13 +1170,13 @@ class CpuCloakStrategy(CloakStrategy):
                                 limited_affinity = current_affinity[:2]
                                 # Should apply via cgroup cpuset instead of process affinity
                                 
-                            self.logger.info(f"⚠️ [Enhanced Stealth] Applied enhanced stealth to PID={pid}")
+                            self.logger.info(f"⚠️ [Enhanced Stealth] Applied enhanced stealth to **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                             
                     except Exception as e:
-                        self.logger.debug(f"⚠️ [Enhanced Stealth] (che giấu nâng cao) Lỗi với PID={pid}: {e}")
+                        self.logger.debug(f"⚠️ [Enhanced Stealth] (che giấu nâng cao) Lỗi với **[PID]** (Process ID - mã định danh tiến trình)={pid}: {e}")
                         
         except Exception as e:
-            self.logger.error(f"⚠️ [Enhanced Stealth] Protocol error: {e}")
+            self.logger.error(f"⚠️ [Enhanced Stealth] **[protocol]** (giao thức) **[error]** (lỗi): {e}")
 
     def _system_memory_cleanup(self):
         """Dọn dẹp bộ nhớ hệ thống và tối ưu hoá"""
@@ -1188,7 +1188,7 @@ class CpuCloakStrategy(CloakStrategy):
             # Check system memory usage
             memory = psutil.virtual_memory()
             if memory.percent > 80:
-                self.logger.warning(f"🧠 [Memory Cleanup] High system memory usage: {memory.percent:.1f}%")
+                self.logger.warning(f"🧠 [**[memory]** (bộ nhớ) Cleanup] High system **[memory]** (bộ nhớ) usage: {memory.percent:.1f}%")
                 
                 # Try to free up memory from managed processes
                 for pid in list(self.process_cgroup.keys()):
@@ -1196,14 +1196,14 @@ class CpuCloakStrategy(CloakStrategy):
                         process = psutil.Process(pid)
                         if process.is_running() and process.memory_percent() > 20:
                             # Could implement memory pressure techniques here
-                            self.logger.info(f"🧠 [Memory Cleanup] High memory process PID={pid}: {process.memory_percent():.1f}%")
+                            self.logger.info(f"🧠 [**[memory]** (bộ nhớ) Cleanup] High **[memory]** (bộ nhớ) **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid}: {process.memory_percent():.1f}%")
                     except:
                         continue
                         
-            self.logger.debug(f"🧠 [Memory Cleanup] System memory usage: {memory.percent:.1f}%")
+            self.logger.debug(f"🧠 [**[memory]** (bộ nhớ) Cleanup] System **[memory]** (bộ nhớ) usage: {memory.percent:.1f}%")
             
         except Exception as e:
-            self.logger.error(f"🧠 [Memory Cleanup] (dọn dẹp bộ nhớ) Lỗi: {e}")
+            self.logger.error(f"🧠 [**[memory]** (bộ nhớ) Cleanup] (dọn dẹp bộ nhớ) Lỗi: {e}")
 
 
 ###############################################################################
@@ -1268,7 +1268,7 @@ class NetworkCloakStrategy(CloakStrategy):
 
             ok_mark = self.network_resource_manager.mark_packets(pid, mark)
             if not ok_mark:
-                self.logger.error(f"[Net Cloaking] Không thể MARK iptables cho PID={pid}.")
+                self.logger.error(f"[Net Cloaking] Không thể MARK iptables cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False  # ✅ FAILURE: Cannot mark packets
 
             ok_limit = self.network_resource_manager.limit_bandwidth(
@@ -1279,7 +1279,7 @@ class NetworkCloakStrategy(CloakStrategy):
                 return False  # ✅ FAILURE: Cannot limit bandwidth
 
             self.process_marks[pid] = mark
-            self.logger.info(f"[Net Cloaking] Limit={self.bandwidth_reduction_mbps}Mbps cho PID={pid}, iface={self.network_interface}.")
+            self.logger.info(f"[Net Cloaking] Limit={self.bandwidth_reduction_mbps}Mbps cho **[PID]** (Process ID - mã định danh tiến trình)={pid}, iface={self.network_interface}.")
 
             # Rollback mark_packets
             self.network_resource_manager.unmark_packets(pid, mark)
@@ -1313,7 +1313,7 @@ class NetworkCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"Net Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            self.logger.error(f"Net Cloaking: Không đủ quyền cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
             # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
@@ -1337,7 +1337,7 @@ class NetworkCloakStrategy(CloakStrategy):
         """
         Khôi phục Network - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
-        self.logger.info(f"[NETWORK RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[**[network]** (mạng) RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
 #            DISK IO STRATEGY: DiskIoCloakStrategy                            #
@@ -1385,10 +1385,10 @@ class DiskIoCloakStrategy(CloakStrategy):
             pid, name = process.pid, process.name
             ok = self.disk_io_resource_manager.set_io_weight(pid, self.io_weight)
             if ok:
-                self.logger.info(f"[DiskIO Cloaking] PID={pid}, io_weight={self.io_weight}.")
+                self.logger.info(f"[DiskIO Cloaking] **[PID]** (Process ID - mã định danh tiến trình)={pid}, io_weight={self.io_weight}.")
                 return True  # ✅ SUCCESS: Disk I/O cloaking applied successfully
             else:
-                self.logger.error(f"[DiskIO Cloaking] Không thể set io_weight cho PID={pid}.")
+                self.logger.error(f"[DiskIO Cloaking] Không thể **[set]** (tập hợp) io_weight cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False  # ✅ FAILURE: Cannot set I/O weight
         except psutil.NoSuchProcess as e:
             # ✅ ERROR REPORTING: Lỗi không tìm thấy tiến trình (Process not found)
@@ -1418,7 +1418,7 @@ class DiskIoCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"DiskIO Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            self.logger.error(f"DiskIO Cloaking: Không đủ quyền cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
             # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
@@ -1442,7 +1442,7 @@ class DiskIoCloakStrategy(CloakStrategy):
         """
         Khôi phục DiskIO - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
-        self.logger.info(f"[DISKIO RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[DISKIO RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
 #            CACHE STRATEGY: CacheCloakStrategy                               #
@@ -1492,10 +1492,10 @@ class CacheCloakStrategy(CloakStrategy):
             pid, name = process.pid, process.name
             ok = self.cache_resource_manager.limit_cache_usage(self.cache_limit_percent, pid)
             if ok:
-                self.logger.info(f"[Cache Cloaking] PID={pid}, cache_limit={self.cache_limit_percent}%.")
+                self.logger.info(f"[**[cache]** (bộ nhớ đệm) Cloaking] **[PID]** (Process ID - mã định danh tiến trình)={pid}, cache_limit={self.cache_limit_percent}%.")
                 return True  # ✅ SUCCESS: Cache cloaking applied successfully
             else:
-                self.logger.error(f"[Cache Cloaking] Không thể set cache_limit cho PID={pid}.")
+                self.logger.error(f"[**[cache]** (bộ nhớ đệm) Cloaking] Không thể **[set]** (tập hợp) cache_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False  # ✅ FAILURE: Cannot set cache limit
         except psutil.NoSuchProcess as e:
             # ✅ ERROR REPORTING: Lỗi không tìm thấy tiến trình (Process not found)
@@ -1510,7 +1510,7 @@ class CacheCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"Cache Cloaking: Tiến trình không tồn tại: {e}")
+            self.logger.error(f"**[cache]** (bộ nhớ đệm) Cloaking: Tiến trình không tồn tại: {e}")
             return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             # ✅ ERROR REPORTING: Lỗi bị từ chối truy cập (Access denied)
@@ -1525,7 +1525,7 @@ class CacheCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"Cache Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            self.logger.error(f"**[cache]** (bộ nhớ đệm) Cloaking: Không đủ quyền cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
             # ✅ ERROR REPORTING: Lỗi chung khi áp dụng chiến lược
@@ -1549,7 +1549,7 @@ class CacheCloakStrategy(CloakStrategy):
         """
         Khôi phục Cache - CHÚ Ý: Tính năng [restore] (khôi phục) đã bị vô hiệu hoá trong phiên bản này.
         """
-        self.logger.info(f"[CACHE RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[**[cache]** (bộ nhớ đệm) RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
 #            MEMORY STRATEGY: MemoryCloakStrategy                             #
@@ -1602,15 +1602,15 @@ class MemoryCloakStrategy(CloakStrategy):
 
             ok_mem = self.memory_resource_manager.set_memory_limit(pid, self.memory_limit_mb)
             if not ok_mem:
-                self.logger.error(f"[Memory Cloaking] Không thể set memory_limit cho PID={pid}.")
+                self.logger.error(f"[**[memory]** (bộ nhớ) Cloaking] Không thể **[set]** (tập hợp) memory_limit cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
                 return False  # ✅ FAILURE: Cannot set memory limit
             
-            self.logger.info(f"[Memory Cloaking] PID={pid}, memory_limit={self.memory_limit_mb}MB.")
+            self.logger.info(f"[**[memory]** (bộ nhớ) Cloaking] **[PID]** (Process ID - mã định danh tiến trình)={pid}, memory_limit={self.memory_limit_mb}MB.")
 
             # Cũng có thể drop cache (nếu muốn)
             ok_cache = self.cache_resource_manager.drop_caches()
             if ok_cache:
-                self.logger.info(f"[Memory Cloaking] Đã drop caches cho PID={pid}.")
+                self.logger.info(f"[**[memory]** (bộ nhớ) Cloaking] Đã drop caches cho **[PID]** (Process ID - mã định danh tiến trình)={pid}.")
             
             return True  # ✅ SUCCESS: Memory cloaking applied successfully
 
@@ -1627,7 +1627,7 @@ class MemoryCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"Memory Cloaking: Tiến trình không tồn tại: {e}")
+            self.logger.error(f"**[memory]** (bộ nhớ) Cloaking: Tiến trình không tồn tại: {e}")
             return False  # ✅ FAILURE: Process does not exist
         except psutil.AccessDenied as e:
             # ✅ ERROR REPORTING: Access denied error
@@ -1642,7 +1642,7 @@ class MemoryCloakStrategy(CloakStrategy):
                 context_data={'process_name': process.name, 'error': str(e)},
                 exception=e
             )
-            self.logger.error(f"Memory Cloaking: Không đủ quyền cho PID={process.pid}: {e}")
+            self.logger.error(f"**[memory]** (bộ nhớ) Cloaking: Không đủ quyền cho **[PID]** (Process ID - mã định danh tiến trình)={process.pid}: {e}")
             return False  # ✅ FAILURE: Access denied
         except Exception as e:
             # ✅ ERROR REPORTING: General strategy application failure
@@ -1666,7 +1666,7 @@ class MemoryCloakStrategy(CloakStrategy):
         """
         Khôi phục Memory - CHÚ Ý: Tính năng restore đã bị vô hiệu hóa trong phiên bản này.
         """
-        self.logger.info(f"[MEMORY RESTORE DISABLED] Restore request for PID={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
+        self.logger.info(f"[**[memory]** (bộ nhớ) RESTORE DISABLED] Restore **[request]** (yêu cầu) for **[PID]** (Process ID - mã định danh tiến trình)={process.pid} bị bỏ qua - chế độ chỉ cloaking.")
 
 ###############################################################################
 #                    DEPRECATED: CloakStrategyFactory REMOVED                 #
@@ -1696,22 +1696,22 @@ def _register_strategy_recovery_handlers() -> None:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
                 
-                cloak_logger.info(f"🔧 [Recovery] Attempting recovery for {strategy_name} strategy PID={pid}")
+                cloak_logger.info(f"🔧 [Recovery] Attempting recovery for {strategy_name} strategy **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 
                 # Kiểm tra process có thật sự không tồn tại
                 if psutil.pid_exists(pid):
-                    cloak_logger.info(f"✅ [Recovery] Process PID={pid} actually exists - retry strategy")
+                    cloak_logger.info(f"✅ [Recovery] **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} actually exists - retry strategy")
                     return True  # Tiến trình tồn tại, có thể thử lại
                 
                 # Nếu tiến trình thật sự không tồn tại, dọn dẹp các tài nguyên liên quan
-                cloak_logger.info(f"❗ [Recovery] Process PID={pid} confirmed dead - cleaning up resources")
+                cloak_logger.info(f"❗ [Recovery] **[process]** (tiến trình) **[PID]** (Process ID - mã định danh tiến trình)={pid} confirmed dead - cleaning up resources")
                 
                 # TODO: Add cleanup logic here based on strategy type
                 # For now, just log successful cleanup
                 return True
                 
             except Exception as e:
-                cloak_logger.error(f"❌ [Recovery] Process recovery failed: {e}")
+                cloak_logger.error(f"❌ [Recovery] **[process]** (tiến trình) recovery failed: {e}")
                 return False
         
         # ✅ RECOVERY HANDLER: Strategy application timeout recovery
@@ -1721,11 +1721,11 @@ def _register_strategy_recovery_handlers() -> None:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
                 
-                cloak_logger.info(f"🔧 [Recovery] Timeout recovery for {strategy_name} strategy PID={pid}")
+                cloak_logger.info(f"🔧 [Recovery] Timeout recovery for {strategy_name} strategy **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 
                 # Thực thi áp dụng chiến lược dự phòng với tham số giảm nhẹ
                 # Hiện tại, chỉ ghi nhận đã thực hiện nỗ lực phục hồi
-                cloak_logger.info(f"✅ [Recovery] Applied fallback strategy for PID={pid}")
+                cloak_logger.info(f"✅ [Recovery] Applied fallback strategy for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 return True
                 
             except Exception as e:
@@ -1739,15 +1739,15 @@ def _register_strategy_recovery_handlers() -> None:
                 pid = error_context.process_id
                 strategy_name = error_context.strategy_name
                 
-                cloak_logger.info(f"🔧 [Recovery] Resource allocation recovery for {strategy_name} PID={pid}")
+                cloak_logger.info(f"🔧 [Recovery] **[resource]** (tài nguyên) allocation recovery for {strategy_name} **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 
                 # Thử phương pháp phân bổ tài nguyên thay thế
                 # Hiện tại, chỉ ghi nhận đã áp dụng phân bổ tài nguyên dự phòng
-                cloak_logger.info(f"✅ [Recovery] Applied alternative resource allocation for PID={pid}")
+                cloak_logger.info(f"✅ [Recovery] Applied alternative **[resource]** (tài nguyên) allocation for **[PID]** (Process ID - mã định danh tiến trình)={pid}")
                 return True
                 
             except Exception as e:
-                cloak_logger.error(f"❌ [Recovery] Resource allocation recovery failed: {e}")
+                cloak_logger.error(f"❌ [Recovery] **[resource]** (tài nguyên) allocation recovery failed: {e}")
                 return False
         
         # ✅ REGISTER HANDLERS: Register all recovery handlers
