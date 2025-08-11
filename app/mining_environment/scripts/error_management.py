@@ -1,6 +1,6 @@
 """
-✅ CENTRALIZED ERROR MANAGEMENT SYSTEM
-Standardized error handling, propagation và recovery mechanisms cho mining environment.
+**[Centralized Error Management System]** (hệ thống quản lý lỗi tập trung)
+**[Standardized Error Handling]** (xử lý lỗi chuẩn hóa), **[Error Propagation]** (lan truyền lỗi) và **[Recovery Mechanisms]** (cơ chế phục hồi) cho **[Mining Environment]** (môi trường khai thác)
 """
 
 import logging
@@ -22,52 +22,52 @@ except ImportError:
     from unified_logging import get_unified_logger
 
 class ErrorSeverity(Enum):
-    """✅ STANDARDIZED: Error severity levels cho consistent categorization"""
-    CRITICAL = "CRITICAL"    # System-breaking errors, immediate attention required
-    HIGH = "HIGH"            # Major functionality affected, urgent fix needed
-    MEDIUM = "MEDIUM"        # Moderate impact, fix in next iteration
-    LOW = "LOW"              # Minor issues, cosmetic problems
-    INFO = "INFO"            # Informational messages, not actual errors
+    """**[Error Severity Levels]** (các mức độ nghiêm trọng của lỗi) cho **[Consistent Categorization]** (phân loại nhất quán)"""
+    CRITICAL = "CRITICAL"    # **[System-breaking Errors]** (lỗi phá vỡ hệ thống), cần **[Immediate Attention]** (chú ý ngay lập tức)
+    HIGH = "HIGH"            # **[Major Functionality]** (chức năng chính) bị ảnh hưởng, cần **[Urgent Fix]** (sửa chữa khẩn cấp)
+    MEDIUM = "MEDIUM"        # **[Moderate Impact]** (tác động vừa phải), sửa trong **[Next Iteration]** (lần lặp tiếp theo)
+    LOW = "LOW"              # **[Minor Issues]** (vấn đề nhỏ), **[Cosmetic Problems]** (vấn đề thẩm mỹ)
+    INFO = "INFO"            # **[Informational Messages]** (thông điệp thông tin), không phải lỗi thực sự
 
 class ErrorCode(Enum):
-    """✅ STANDARDIZED: Standardized error codes cho system-wide error identification"""
+    """**[Standardized Error Codes]** (mã lỗi chuẩn hóa) cho **[System-wide Error Identification]** (nhận diện lỗi toàn hệ thống)"""
     
-    # Strategy-related errors (1000-1999)
+    # **[Strategy-related Errors]** (lỗi liên quan đến chiến lược) (1000-1999)
     STRATEGY_APPLICATION_FAILED = 1001
     STRATEGY_NOT_FOUND = 1002
     STRATEGY_VALIDATION_FAILED = 1003
     STRATEGY_TIMEOUT = 1004
     
-    # Resource management errors (2000-2999)
+    # **[Resource Management Errors]** (lỗi quản lý tài nguyên) (2000-2999)
     RESOURCE_MANAGER_INIT_FAILED = 2001
     RESOURCE_ALLOCATION_FAILED = 2002
     RESOURCE_CLEANUP_FAILED = 2003
     RESOURCE_VALIDATION_FAILED = 2004
     
-    # Process-related errors (3000-3999)
+    # **[Process-related Errors]** (lỗi liên quan đến tiến trình) (3000-3999)
     PROCESS_NOT_FOUND = 3001
     PROCESS_ACCESS_DENIED = 3002
     PROCESS_MONITORING_FAILED = 3003
     PROCESS_TERMINATION_FAILED = 3004
     
-    # System-level errors (4000-4999)
+    # **[System-level Errors]** (lỗi cấp hệ thống) (4000-4999)
     SYSTEM_RESOURCE_EXHAUSTED = 4001
     SYSTEM_CONFIGURATION_INVALID = 4002
     SYSTEM_DEPENDENCY_MISSING = 4003
     SYSTEM_PERMISSION_DENIED = 4004
     
-    # Communication errors (5000-5999)
+    # **[Communication Errors]** (lỗi giao tiếp) (5000-5999)
     EVENTBUS_COMMUNICATION_FAILED = 5001
     EVENTBUS_SUBSCRIPTION_FAILED = 5002
     EVENTBUS_PUBLISH_FAILED = 5003
     
-    # Unknown/Generic errors (9000-9999)
+    # **[Unknown/Generic Errors]** (lỗi không xác định/chung) (9000-9999)
     UNKNOWN_ERROR = 9001
     INTERNAL_ERROR = 9002
 
 @dataclass
 class ErrorContext:
-    """✅ STANDARDIZED: Rich error context object cho detailed error information"""
+    """**[Rich Error Context Object]** (đối tượng ngữ cảnh lỗi phong phú) cho **[Detailed Error Information]** (thông tin lỗi chi tiết)"""
     
     error_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: float = field(default_factory=time.time)
@@ -86,7 +86,7 @@ class ErrorContext:
     recovery_actions: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert error context to dictionary for serialization"""
+        """Chuyển đổi **[Error Context]** (ngữ cảnh lỗi) thành **[Dictionary]** (từ điển) cho **[Serialization]** (tuần tự hóa)"""
         return {
             'error_id': self.error_id,
             'timestamp': self.timestamp,
@@ -107,36 +107,36 @@ class ErrorContext:
 
 class CentralizedErrorReporter:
     """
-    ✅ CENTRALIZED: Central error reporting system với EventBus integration.
-    Handles error collection, propagation, recovery coordination.
+    **[Central Error Reporting System]** (hệ thống báo lỗi trung tâm) với **[EventBus Integration]** (tích hợp EventBus).
+    Xử lý **[Error Collection]** (thu thập lỗi), **[Error Propagation]** (lan truyền lỗi), **[Recovery Coordination]** (điều phối phục hồi).
     """
     
     def __init__(self, event_bus: Optional[Any] = None):
-        """Initialize centralized error reporter"""
+        """Khởi tạo **[Centralized Error Reporter]** (bộ báo lỗi tập trung)"""
         self.logger = get_unified_logger('error_management')
         self.event_bus = event_bus
         
-        # ✅ ERROR STORAGE: In-memory error storage với recent error tracking
+        # **[Error Storage]** (lưu trữ lỗi): **[In-memory Storage]** (lưu trữ trong bộ nhớ) với **[Recent Error Tracking]** (theo dõi lỗi gần đây)
         self.error_history: List[ErrorContext] = []
         self.error_lock = threading.RLock()
         self.max_history_size = 1000
         
-        # ✅ RECOVERY HANDLERS: Registered recovery mechanisms
+        # **[Recovery Handlers]** (bộ xử lý phục hồi): **[Registered Recovery Mechanisms]** (cơ chế phục hồi đã đăng ký)
         self.recovery_handlers: Dict[ErrorCode, List[Callable]] = {}
         
-        # ✅ ERROR METRICS: Track error statistics
+        # **[Error Metrics]** (số liệu lỗi): Theo dõi **[Error Statistics]** (thống kê lỗi)
         self.error_metrics = {
             'total_errors': 0,
             'errors_by_severity': {sev.value: 0 for sev in ErrorSeverity},
             'errors_by_code': {code.value: 0 for code in ErrorCode},
             'recovery_success_rate': 0.0,
-            'recent_errors': []  # Last 10 errors for quick access
+            'recent_errors': []  # 10 lỗi gần nhất cho **[Quick Access]** (truy cập nhanh)
         }
         
-        # ✅ THREAD POOL: For async error handling
+        # **[Thread Pool]** (bể luồng): Cho **[Async Error Handling]** (xử lý lỗi bất đồng bộ)
         self.error_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ErrorHandler")
         
-        self.logger.info("✅ [ErrorReporter] Centralized error reporter initialized")
+        self.logger.info("✅ [ErrorReporter] **[Centralized Error Reporter]** (bộ báo lỗi tập trung) đã khởi tạo")
     
     def report_error(
         self, 
@@ -151,21 +151,21 @@ class CentralizedErrorReporter:
         exception: Optional[Exception] = None
     ) -> ErrorContext:
         """
-        ✅ PRIMARY METHOD: Report error với comprehensive context.
+        **[Primary Method]** (phương thức chính): Báo lỗi với **[Comprehensive Context]** (ngữ cảnh toàn diện).
         
-        :param error_code: Standardized error code
-        :param message: Human-readable error message
-        :param severity: Error severity level
-        :param module: Module where error occurred
-        :param function: Function where error occurred
-        :param process_id: Related process ID (if applicable)
-        :param strategy_name: Related strategy name (if applicable)
-        :param context_data: Additional context information
-        :param exception: Python exception object (if available)
-        :return: ErrorContext object với unique error ID
+        :param error_code: **[Standardized Error Code]** (mã lỗi chuẩn hóa)
+        :param message: **[Human-readable Error Message]** (thông điệp lỗi dễ đọc)
+        :param severity: **[Error Severity Level]** (mức độ nghiêm trọng của lỗi)
+        :param module: **[Module]** (mô-đun) nơi xảy ra lỗi
+        :param function: **[Function]** (hàm) nơi xảy ra lỗi
+        :param process_id: **[Related Process ID]** (ID tiến trình liên quan) (nếu có)
+        :param strategy_name: **[Related Strategy Name]** (tên chiến lược liên quan) (nếu có)
+        :param context_data: **[Additional Context Information]** (thông tin ngữ cảnh bổ sung)
+        :param exception: **[Python Exception Object]** (đối tượng ngoại lệ Python) (nếu có)
+        :return: **[ErrorContext Object]** (đối tượng ngữ cảnh lỗi) với **[Unique Error ID]** (ID lỗi duy nhất)
         """
         try:
-            # ✅ CREATE ERROR CONTEXT
+            # Tạo **[Error Context]** (ngữ cảnh lỗi)
             error_context = ErrorContext(
                 error_code=error_code,
                 severity=severity,
@@ -178,7 +178,7 @@ class CentralizedErrorReporter:
                 stack_trace=traceback.format_exc() if exception else None
             )
             
-            # ✅ ENHANCED CONTEXT: Add stack frame information
+            # **[Enhanced Context]** (ngữ cảnh nâng cao): Thêm **[Stack Frame Information]** (thông tin khung ngăn xếp)
             import inspect
             frame = inspect.currentframe()
             if frame and frame.f_back:
@@ -189,15 +189,15 @@ class CentralizedErrorReporter:
                 if not error_context.module:
                     error_context.module = caller_frame.f_code.co_filename.split('/')[-1]
             
-            # ✅ STORE ERROR
+            # Lưu trữ **[Error]** (lỗi)
             with self.error_lock:
                 self.error_history.append(error_context)
                 
-                # ✅ CLEANUP: Maintain history size limit
+                # **[Cleanup]** (dọn dẹp): Duy trì **[History Size Limit]** (giới hạn kích thước lịch sử)
                 if len(self.error_history) > self.max_history_size:
                     self.error_history.pop(0)
                 
-                # ✅ UPDATE METRICS
+                # Cập nhật **[Metrics]** (số liệu)
                 self._update_metrics(error_context)
             
             # ✅ LOG ERROR

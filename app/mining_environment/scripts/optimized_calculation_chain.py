@@ -41,7 +41,7 @@ class OptimizedCalculationChain:
         self.global_sleep: float = 0.001  # 1 ms mặc định
         self.desired_throttle_pct: float = 0.0  # Lưu % throttle mục tiêu
         
-        # Log to both console and file
+        # **[Log to both console and file]** (ghi log vào cả console và file – xuất thông tin khởi tạo)
         init_msg = "🔧 Initializing OptimizedCalculationChain..."
         self.logger.info(init_msg)
         print(f"[INFO] {init_msg}")
@@ -58,11 +58,11 @@ class OptimizedCalculationChain:
             self.logger.info(init_msg)
             print(f"[INFO] {init_msg}")
             
-            # Setup calculation parameters
+            # **[Setup calculation parameters]** (thiết lập tham số tính toán – cấu hình hiệu suất)
             self.cpu_cores = os.cpu_count() or 4
             self.optimal_threads = min(self.cpu_cores * 2, 16)  # 2x cores, max 16
             
-            # Initialize optimization settings
+            # **[Initialize optimization settings]** (khởi tạo cài đặt tối ưu hoá – điều chỉnh hiệu suất)
             self.optimization_config = {
                 'use_avx2': True,
                 'parallel_processing': True,
@@ -71,12 +71,12 @@ class OptimizedCalculationChain:
                 'thread_count': self.optimal_threads
             }
             
-            # Log configuration
+            # **[Log configuration]** (ghi lại cấu hình – xuất thông tin thiết lập)
             config_msg = f"📊 Configuration: {self.optimal_threads} threads, {self.cpu_cores} cores"
             self.logger.info(config_msg)
             print(f"[INFO] {config_msg}")
             
-            # Start calculation chains
+            # **[Start calculation chains]** (khởi động chuỗi tính toán – bắt đầu xử lý)
             self._start_calculation_chains()
             
             self.initialized = True
@@ -149,7 +149,7 @@ class OptimizedCalculationChain:
                         cps = calculations_count / elapsed
                         self.performance_metrics['calculations_per_second'] = cps
                         
-                        # Log performance update
+                        # **[Log performance update]** (cập nhật log hiệu suất – ghi chỉ số hoạt động)
                         perf_msg = f"⚡ Chain {chain_id}: {cps:.1f} calc/sec"
                         self.logger.debug(perf_msg)
                 
@@ -165,8 +165,8 @@ class OptimizedCalculationChain:
         """
         Perform optimized calculations (placeholder for actual mining logic)
         """
-        # Placeholder for actual mining calculations
-        # This would contain the actual mining algorithm
+        # **[Placeholder for actual mining calculations]** (khối lệnh giữ chỗ cho tính toán khai thác thực tế)
+        # **[This would contain the actual mining algorithm]** (đây sẽ chứa thuật toán khai thác thực tế)
         result = sum(i * i for i in range(100))  # Simple calculation
         return result
     
@@ -233,14 +233,14 @@ class OptimizedCalculationChain:
             self.logger.info(shutdown_msg)
             print(f"[INFO] {shutdown_msg}")
             
-            # Signal all threads to stop
+            # **[Signal all threads to stop]** (gửi tín hiệu dừng tất cả luồng – yêu cầu kết thúc)
             self.stop_event.set()
             
-            # Wait for all threads to finish
+            # **[Wait for all threads to finish]** (chờ tất cả luồng hoàn thành – đồng bộ kết thúc)
             for thread in self.calculation_threads:
                 thread.join(timeout=5.0)
             
-            # Clear thread list
+            # **[Clear thread list]** (xóa danh sách luồng – dọen dẹp tài nguyên)
             self.calculation_threads.clear()
             self.performance_metrics['active_chains'] = 0
             

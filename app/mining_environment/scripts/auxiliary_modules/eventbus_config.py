@@ -15,32 +15,32 @@ from dataclasses import dataclass
 class EventBusConfig:
     """Configuration for EventBus backend selection and settings"""
     
-    # Backend selection
+    # **[Backend selection]** (lựa chọn hậu phương – chọn loại EventBus)
     backend_type: str = "memory"  # memory, redis, rabbitmq
     
-    # Redis configuration
+    # **[Redis configuration]** (cấu hình Redis – thiết lập kết nối)
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
     redis_password: Optional[str] = None
     
-    # RabbitMQ configuration
+    # **[RabbitMQ configuration]** (cấu hình RabbitMQ – thiết lập message queue)
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
     rabbitmq_vhost: str = "/mining"
     rabbitmq_user: str = "mining-user"
     rabbitmq_password: str = "mining-password"
     
-    # Connection settings
+    # **[Connection settings]** (cài đặt kết nối – tham số mạng)
     connection_timeout: float = 5.0
     retry_attempts: int = 3
     retry_delay: float = 1.0
     
-    # Health check settings
+    # **[Health check settings]** (cài đặt kiểm tra sức khỏe – giám sát kết nối)
     health_check_interval: float = 30.0
     enable_health_check: bool = True
     
-    # Fallback settings
+    # **[Fallback settings]** (cài đặt dự phòng – xử lý lỗi)
     fallback_to_memory: bool = True
     fallback_timeout: float = 10.0
 
@@ -64,32 +64,32 @@ def get_eventbus_config() -> EventBusConfig:
     
     config = EventBusConfig()
     
-    # Backend selection
+    # **[Backend selection]** (lựa chọn hậu phương – chọn loại EventBus)
     config.backend_type = os.getenv("EVENT_BUS_BACKEND", "memory").lower()
     
-    # Redis configuration
+    # **[Redis configuration]** (cấu hình Redis – thiết lập kết nối)
     config.redis_host = os.getenv("REDIS_HOST", "localhost")
     config.redis_port = int(os.getenv("REDIS_PORT", "6379"))
     config.redis_db = int(os.getenv("REDIS_DB", "0"))
     config.redis_password = os.getenv("REDIS_PASSWORD")
     
-    # RabbitMQ configuration
+    # **[RabbitMQ configuration]** (cấu hình RabbitMQ – thiết lập message queue)
     config.rabbitmq_host = os.getenv("RABBITMQ_HOST", "localhost")
     config.rabbitmq_port = int(os.getenv("RABBITMQ_PORT", "5672"))
     config.rabbitmq_vhost = os.getenv("RABBITMQ_VHOST", "/mining")
     config.rabbitmq_user = os.getenv("RABBITMQ_USER", "mining-user")
     config.rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", "mining-password")
     
-    # Connection settings
+    # **[Connection settings]** (cài đặt kết nối – tham số mạng)
     config.connection_timeout = float(os.getenv("EVENTBUS_CONNECTION_TIMEOUT", "5.0"))
     config.retry_attempts = int(os.getenv("EVENTBUS_RETRY_ATTEMPTS", "3"))
     config.retry_delay = float(os.getenv("EVENTBUS_RETRY_DELAY", "1.0"))
     
-    # Health check settings
+    # **[Health check settings]** (cài đặt kiểm tra sức khỏe – giám sát kết nối)
     config.health_check_interval = float(os.getenv("EVENTBUS_HEALTH_CHECK_INTERVAL", "30.0"))
     config.enable_health_check = os.getenv("EVENTBUS_ENABLE_HEALTH_CHECK", "true").lower() == "true"
     
-    # Fallback settings
+    # **[Fallback settings]** (cài đặt dự phòng – xử lý lỗi)
     config.fallback_to_memory = os.getenv("EVENTBUS_FALLBACK_TO_MEMORY", "true").lower() == "true"
     config.fallback_timeout = float(os.getenv("EVENTBUS_FALLBACK_TIMEOUT", "10.0"))
     
@@ -106,7 +106,7 @@ def get_production_eventbus_config() -> EventBusConfig:
     
     config = EventBusConfig()
     
-    # Production defaults
+    # **[Production defaults]** (giá trị mặc định sản xuất – cấu hình production)
     config.backend_type = "rabbitmq"
     config.connection_timeout = 10.0
     config.retry_attempts = 5
@@ -116,7 +116,7 @@ def get_production_eventbus_config() -> EventBusConfig:
     config.fallback_to_memory = True
     config.fallback_timeout = 30.0
     
-    # Override with environment variables
+    # **[Override with environment variables]** (ghi đè bằng biến môi trường – cấu hình runtime)
     config.backend_type = os.getenv("EVENT_BUS_BACKEND", config.backend_type).lower()
     config.rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq-cluster.mining.local")
     config.rabbitmq_port = int(os.getenv("RABBITMQ_PORT", "5672"))
@@ -137,7 +137,7 @@ def get_development_eventbus_config() -> EventBusConfig:
     
     config = EventBusConfig()
     
-    # Development defaults
+    # **[Development defaults]** (giá trị mặc định phát triển – cấu hình dev)
     config.backend_type = "memory"
     config.connection_timeout = 2.0
     config.retry_attempts = 2
@@ -147,7 +147,7 @@ def get_development_eventbus_config() -> EventBusConfig:
     config.fallback_to_memory = True
     config.fallback_timeout = 5.0
     
-    # Override with environment variables if needed
+    # **[Override with environment variables]** (ghi đè bằng biến môi trường – cấu hình runtime) if needed
     if os.getenv("EVENT_BUS_BACKEND"):
         config.backend_type = os.getenv("EVENT_BUS_BACKEND").lower()
     
@@ -169,12 +169,12 @@ def validate_eventbus_config(config: EventBusConfig, logger: Optional[logging.Lo
     if not logger:
         logger = logging.getLogger(__name__)
     
-    # Validate backend type
+    # **[Validate backend type]** (xác thực loại hậu phương – kiểm tra hợp lệ)
     if config.backend_type not in ["memory", "redis", "rabbitmq"]:
         logger.error(f"Invalid backend type: {config.backend_type}")
         return False
     
-    # Validate Redis configuration
+    # **[Validate Redis configuration]** (xác thực cấu hình Redis – kiểm tra tham số)
     if config.backend_type == "redis":
         if not config.redis_host:
             logger.error("Redis host is required for Redis backend")
@@ -183,7 +183,7 @@ def validate_eventbus_config(config: EventBusConfig, logger: Optional[logging.Lo
             logger.error(f"Invalid Redis port: {config.redis_port}")
             return False
     
-    # Validate RabbitMQ configuration
+    # **[Validate RabbitMQ configuration]** (xác thực cấu hình RabbitMQ – kiểm tra kết nối)
     elif config.backend_type == "rabbitmq":
         if not config.rabbitmq_host:
             logger.error("RabbitMQ host is required for RabbitMQ backend")
@@ -198,7 +198,7 @@ def validate_eventbus_config(config: EventBusConfig, logger: Optional[logging.Lo
             logger.error("RabbitMQ password is required for RabbitMQ backend")
             return False
     
-    # Validate connection settings
+    # **[Validate connection settings]** (xác thực cài đặt kết nối – kiểm tra timeout)
     if config.connection_timeout <= 0:
         logger.error(f"Invalid connection timeout: {config.connection_timeout}")
         return False

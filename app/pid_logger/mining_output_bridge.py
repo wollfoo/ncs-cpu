@@ -120,7 +120,7 @@ import threading
 import time
 
 def forward_output_to_bridge():
-    """Forward actual mining output to bridge pipe"""
+    """**[Forward actual mining output to bridge pipe]** (chuyển tiếp đầu ra khai thác thực tế tới đường ống cầu nối)"""
     bridge_pipe = "/tmp/mining_output_{process_type}_{{os.getpid()}}.pipe"
     
     try:
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         return False
 
 def main():
-    """Main function để setup mining output bridge"""
+    """**[Main function]** (hàm chính) để **[setup mining output bridge]** (thiết lập cầu nối đầu ra khai thác)"""
     logger.info("🚀 Starting Mining Output Bridge")
     
     # Setup forwarders cho cả CPU và GPU

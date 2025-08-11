@@ -125,7 +125,7 @@ class RedisEventBusBackend(EventBusBackend):
             
             # Kiểm tra kết nối ([Test connection])
             self._redis_client.ping()
-            self._logger.info("Kết nối [Redis] (hệ quản trị key-value) được thiết lập thành công")},{
+            self._logger.info("Kết nối **[Redis]** (hệ quản trị key-value) được thiết lập thành công")
             
             # Initialize pubsub
             self._pubsub = self._redis_client.pubsub()

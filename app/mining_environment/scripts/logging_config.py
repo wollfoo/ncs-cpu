@@ -95,7 +95,7 @@ class ObfuscatedEncryptedFileHandler(logging.Handler):
             record (logging.LogRecord): Bản ghi log cần xử lý.
         """
         try:
-            # Format message
+            # **[Format message]** (định dạng thông điệp – chuẩn hoá hiển thị log)
             msg = self.format(record)
             # Thêm chuỗi ngẫu nhiên để làm rối
             random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
@@ -141,12 +141,12 @@ class ObfuscatedEncryptedFileHandler(logging.Handler):
 #     Thiết lập logger cho module, hỗ trợ mã hóa log bằng ObfuscatedEncryptedFileHandler
 #     (có tính năng xóa file nếu vượt dung lượng) và thêm Correlation ID vào mỗi bản ghi log.
     
-#     Args:
+#     **[Args]** (tham số đầu vào):
 #         module_name (str): Tên module (tên logger).
 #         log_file (str): Đường dẫn đến tệp log.
 #         log_level (str, optional): Mức log (DEBUG, INFO, WARN, ERROR...). Mặc định là 'INFO'.
     
-#     Returns:
+#     **[Returns]** (giá trị trả về):
 #         Logger: Đối tượng logger đã được thiết lập.
 #     """
 #     logger = logging.getLogger(module_name)

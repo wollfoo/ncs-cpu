@@ -65,7 +65,7 @@ class AuditIntegrationManager:
         self._log_initialization()
     
     def _setup_audit_logger(self) -> logging.Logger:
-        """Setup audit logger."""
+        """**[Setup audit logger]** (thiết lập trình ghi audit – theo dõi hoạt động hệ thống)."""
         logger = logging.getLogger(f"audit.{self.system_name}")
         logger.setLevel(getattr(logging, self.audit_level))
         
@@ -90,7 +90,7 @@ class AuditIntegrationManager:
         return logger
     
     def _log_initialization(self):
-        """Log audit system initialization."""
+        """**[Log audit system initialization]** (ghi lại việc khởi tạo hệ thống audit – theo dõi khởi động)."""
         init_info = {
             'session_id': self.session_id,
             'system_name': self.system_name,
@@ -330,7 +330,7 @@ class AuditIntegrationManager:
             self.logger.error(f"❌ Failed to audit CPU metrics for PID {pid}: {e}")
     
     def get_audit_summary(self) -> Dict[str, Any]:
-        """Get comprehensive audit summary."""
+        """**[Get comprehensive audit summary]** (lấy tóm tắt audit toàn diện – báo cáo hoạt động tổng thể)."""
         session_duration = time.time() - self.session_start
         
         # Analyze events by type
@@ -434,7 +434,7 @@ class AuditIntegrationManager:
             return None
     
     def cleanup_audit_session(self):
-        """Cleanup audit session resources."""
+        """**[Cleanup audit session resources]** (dọen dẹp tài nguyên phiên audit – giải phóng bộ nhớ)."""
         try:
             # Export final report
             export_path = self.export_comprehensive_audit_report()
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     
     @create_comprehensive_audit_decorator('cloaking_lib', 'test_component')
     def test_cloaking_function(pid: int, operation: str = "test") -> bool:
-        """Test function với comprehensive audit."""
+        """**[Test function]** (hàm kiểm tra) với **[comprehensive audit]** (kiểm tra audit toàn diện)."""
         time.sleep(0.1)  # Simulate work
         
         # Simulate some metrics

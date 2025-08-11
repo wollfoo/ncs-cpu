@@ -1,6 +1,6 @@
-"""cpu_plugins.core.interfaces
+"""**[CPU Plugins Core Interfaces]** (giao diện cốt lõi plugin CPU)
 
-Định nghĩa giao diện plugin cho cpu_plugins.
+Định nghĩa **[Plugin Interface]** (giao diện plugin) cho **[CPU Plugins]** (plugin CPU).
 """
 from __future__ import annotations
 
@@ -9,22 +9,22 @@ from typing import Protocol, Dict, Any, runtime_checkable
 
 @runtime_checkable
 class ICpuTechnique(Protocol):
-    """Giao diện tối thiểu cho các plugin CPU."""
+    """**[Minimal Interface]** (giao diện tối thiểu) cho **[CPU Plugins]** (các plugin CPU)."""
 
-    # Tên duy nhất, dễ đọc (ví dụ: "adaptive_cloak")
+    # **[Unique Name]** (tên duy nhất), dễ đọc (ví dụ: "adaptive_cloak")
     name: str
     
-    # Giá trị thấp hơn => ưu tiên cao hơn (0 = critical)
+    # Giá trị thấp hơn => **[Higher Priority]** (ưu tiên cao hơn) (0 = **[Critical]** (nghiêm trọng))
     priority: int
 
     def init(self, engine: Any, config: Dict[str, Any] | None = None) -> bool:
-        """Được gọi một lần sau khi đối tượng plugin được tạo."""
+        """Được gọi một lần sau khi **[Plugin Object]** (đối tượng plugin) được tạo."""
         ...
 
     def apply(self, pid: int) -> bool:
-        """Áp dụng kỹ thuật cho một PID cụ thể."""
+        """Áp dụng **[Technique]** (kỹ thuật) cho một **[PID]** (ID tiến trình) cụ thể."""
         ...
 
     def stop(self) -> bool:
-        """Giải phóng tài nguyên khi engine dừng."""
+        """Giải phóng **[Resources]** (tài nguyên) khi **[Engine]** (bộ máy) dừng."""
         ... 

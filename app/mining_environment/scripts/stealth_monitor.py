@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
-# Add project root to path
+# **[Add project root to path]** (thêm đường dẫn gốc dự án – để import module)
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -39,7 +39,7 @@ class StealthMonitor:
         # Expected binary names (to detect when stealth fails)
         self.binary_names = {"ml-inference", "inference-cuda"}
         
-        # Stealth name patterns
+        # **[Stealth name patterns]** (các mẫu tên ẩn danh – giả mạo danh tính tiến trình)
         self.cpu_stealth_names = {
             "systemd-sleep", "kworker/0:1H", "migration/0", 
             "rcu_gp", "systemd-journal", "cron"
@@ -126,13 +126,13 @@ class StealthMonitor:
             "time_period": "last_1_hour"
         }
         
-        # Count CPU warnings
+        # **[Count CPU warnings]** (đếm cảnh báo CPU – tính toán lỗi ẩn danh)
         if self.cpu_log.exists():
             try:
                 with open(self.cpu_log, 'r') as f:
                     for line in f:
                         if "🚫 [SAFE_DISGUISE]" in line and "access_denied" in line:
-                            # Extract timestamp
+                            # **[Extract timestamp]** (trích xuất timestamp – thời gian ghi log)
                             timestamp_match = re.search(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', line)
                             if timestamp_match:
                                 try:
@@ -185,7 +185,7 @@ class StealthMonitor:
             "performance_overhead": self.measure_stealth_performance_overhead()
         }
         
-        # Calculate overall SUCCESS CRITERIA compliance
+        # **[Calculate overall SUCCESS CRITERIA compliance]** (tính toán tuân thủ tiêu chí thành công tổng thể)
         stealth_ok = report["stealth_effectiveness"]["effectiveness_percentage"] >= 90.0
         log_ok = report["log_pollution"]["total_warnings"] == 0
         performance_ok = report["performance_overhead"]["stealth_overhead_estimate"] < 1.0
@@ -236,7 +236,7 @@ class StealthMonitor:
         status_3 = "✅ PASS" if report["success_criteria"]["performance_overhead_ok"] else "❌ FAIL"
         print(f"   └─ Status: {status_3} (Target: <1% overhead)")
         
-        # OVERALL STATUS
+        # **[OVERALL STATUS]** (trạng thái tổng quát của hệ thống)
         overall = "🎯 **SUCCESS**" if report["success_criteria"]["overall_success"] else "⚠️ **NEEDS IMPROVEMENT**"
         print(f"\n{overall}")
         print("=" * 70)

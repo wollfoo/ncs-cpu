@@ -1,6 +1,6 @@
 """
-System Facade - Unified system management interface
-Provides simplified interface for system operations and resource management
+**[System Facade]** (giao diện hệ thống - giao diện quản lý hệ thống thống nhất)
+Cung cấp **[Simplified Interface]** (giao diện đơn giản hóa) cho **[System Operations]** (thao tác hệ thống) và **[Resource Management]** (quản lý tài nguyên)
 """
 
 import logging
@@ -14,25 +14,25 @@ from .resource_manager import ResourceManager
 
 class SystemFacade:
     """
-    Unified system management facade
-    Provides simplified interface for system operations and resource management
+    **[Unified System Management Facade]** (facade quản lý hệ thống thống nhất)
+    Cung cấp **[Simplified Interface]** (giao diện đơn giản hóa) cho **[System Operations]** (thao tác hệ thống) và **[Resource Management]** (quản lý tài nguyên)
     """
     
     def __init__(self, config: ConfigModel, event_bus: EventBus, resource_logger: logging.Logger):
         """
-        Initialize SystemFacade with configuration and event bus
+        Khởi tạo **[SystemFacade]** (facade hệ thống) với **[Configuration]** (cấu hình) và **[Event Bus]** (bus sự kiện)
         
         Args:
-            config: System configuration model
-            event_bus: Event bus for system-wide communication
-            resource_logger: Logger for resource management
+            config: **[System Configuration Model]** (mô hình cấu hình hệ thống)
+            event_bus: **[Event Bus]** (bus sự kiện) cho **[System-wide Communication]** (giao tiếp toàn hệ thống)
+            resource_logger: **[Logger]** (bộ ghi log) cho **[Resource Management]** (quản lý tài nguyên)
         """
         self.config = config
         self.event_bus = event_bus
         self.resource_logger = resource_logger
         self.logger = logging.getLogger(self.__class__.__name__)
         
-        # System state tracking
+        # **[System State Tracking]** (theo dõi trạng thái hệ thống)
         self.system_state = {
             'initialized': False,
             'status': 'starting',
@@ -40,34 +40,34 @@ class SystemFacade:
             'performance': {}
         }
         
-        # Initialize ResourceManager instance
+        # Khởi tạo **[ResourceManager Instance]** (thực thể ResourceManager)
         self.resource_manager = None
         self.resource_manager_thread = None
         
-        self.logger.info("SystemFacade initialized")
+        self.logger.info("**[SystemFacade]** (facade hệ thống) đã được khởi tạo")
     
     def initialize_system(self) -> bool:
         """
-        Initialize system components including ResourceManager
+        Khởi tạo **[System Components]** (thành phần hệ thống) bao gồm **[ResourceManager]** (trình quản lý tài nguyên)
         
         Returns:
-            bool: True if initialization successful
+            bool: True nếu khởi tạo thành công
         """
         try:
-            self.logger.info("🔧 Initializing system components...")
+            self.logger.info("🔧 Đang khởi tạo **[System Components]** (thành phần hệ thống)...")
             
-            # Initialize ResourceManager
+            # Khởi tạo **[ResourceManager]** (trình quản lý tài nguyên)
             init_msg = "🚀 Initializing ResourceManager through SystemFacade..."
             self.logger.info(init_msg)
             self.resource_logger.info(init_msg)
             
-            # Create ResourceManager instance
+            # Tạo **[ResourceManager Instance]** (thực thể ResourceManager)
             progress_msg = "📋 Step 1/4: Creating ResourceManager instance..."
             self.logger.info(progress_msg)
             self.resource_logger.info(progress_msg)
             self.resource_manager = ResourceManager(self.config, self.event_bus, self.resource_logger)
             
-            # Start ResourceManager in separate thread (non-blocking)
+            # Khởi động **[ResourceManager]** trong **[Separate Thread]** (luồng riêng biệt - không chặn)
             progress_msg = "📋 Step 2/4: Starting ResourceManager thread..."
             self.logger.info(progress_msg)
             self.resource_logger.info(progress_msg)
@@ -78,12 +78,12 @@ class SystemFacade:
             )
             self.resource_manager_thread.start()
             
-            # Wait with progress updates for ResourceManager to initialize
+            # Chờ với **[Progress Updates]** (cập nhật tiến độ) để **[ResourceManager]** khởi tạo
             progress_msg = "📋 Step 3/4: Waiting for ResourceManager initialization..."
             self.logger.info(progress_msg)
             self.resource_logger.info(progress_msg)
             
-            # Wait with progress logging (up to 35 seconds with progress updates)
+            # Chờ với **[Progress Logging]** (ghi log tiến độ - tối đa 35 giây với cập nhật tiến độ)
             max_wait_time = 35
             check_interval = 5
             waited_time = 0
@@ -99,7 +99,7 @@ class SystemFacade:
                 else:
                     break
             
-            # Verify ResourceManager is running
+            # Xác minh **[ResourceManager]** đang chạy
             progress_msg = "📋 Step 4/4: Verifying ResourceManager status..."
             self.logger.info(progress_msg)
             self.resource_logger.info(progress_msg)
@@ -111,18 +111,18 @@ class SystemFacade:
             else:
                 raise RuntimeError("ResourceManager thread failed to start")
             
-            # Initialize system state
+            # Khởi tạo **[System State]** (trạng thái hệ thống)
             self.system_state['initialized'] = True
             self.system_state['status'] = 'ready'
             
-            # Publish initialization event
+            # Phát **[Initialization Event]** (sự kiện khởi tạo)
             self.event_bus.publish('system.initialized', {
                 'timestamp': time.time(),
                 'status': 'ready',
                 'resource_manager_active': True
             })
             
-            self.logger.info("✅ System initialization completed successfully")
+            self.logger.info("✅ Khởi tạo **[System]** (hệ thống) hoàn tất thành công")
             return True
             
         except Exception as e:
@@ -134,10 +134,10 @@ class SystemFacade:
     
     def get_system_status(self) -> Dict[str, Any]:
         """
-        Get current system status
+        Lấy **[Current System Status]** (trạng thái hệ thống hiện tại)
         
         Returns:
-            Dict containing system status information
+            Dict chứa **[System Status Information]** (thông tin trạng thái hệ thống)
         """
         return {
             'state': self.system_state,
@@ -147,18 +147,18 @@ class SystemFacade:
     
     def shutdown_system(self) -> bool:
         """
-        Shutdown system components gracefully including ResourceManager
+        Tắt **[System Components]** (thành phần hệ thống) một cách **[Gracefully]** (nhẹ nhàng) bao gồm **[ResourceManager]** (trình quản lý tài nguyên)
         
         Returns:
-            bool: True if shutdown successful
+            bool: True nếu tắt thành công
         """
         try:
-            self.logger.info("🛑 Shutting down system components...")
+            self.logger.info("🛑 Đang tắt **[System Components]** (thành phần hệ thống)...")
             
-            # Update system state
+            # Cập nhật **[System State]** (trạng thái hệ thống)
             self.system_state['status'] = 'shutting_down'
             
-            # Shutdown ResourceManager
+            # Tắt **[ResourceManager]** (trình quản lý tài nguyên)
             if self.resource_manager:
                 shutdown_msg = "🛑 Shutting down ResourceManager..."
                 self.logger.info(shutdown_msg)
@@ -167,7 +167,7 @@ class SystemFacade:
                 try:
                     self.resource_manager.shutdown()
                     
-                    # Wait for ResourceManager thread to complete
+                    # Chờ **[ResourceManager Thread]** (luồng ResourceManager) hoàn tất
                     if self.resource_manager_thread and self.resource_manager_thread.is_alive():
                         self.resource_manager_thread.join(timeout=10)
                         
@@ -180,17 +180,17 @@ class SystemFacade:
                     self.logger.error(error_msg)
                     self.resource_logger.error(error_msg)
             
-            # Publish shutdown event
+            # Phát **[Shutdown Event]** (sự kiện tắt)
             self.event_bus.publish('system.shutdown', {
                 'timestamp': time.time(),
                 'status': 'shutting_down'
             })
             
-            # Clean up resources
+            # Dọn dẹp **[Resources]** (tài nguyên)
             self.system_state['initialized'] = False
             self.system_state['status'] = 'stopped'
             
-            self.logger.info("✅ System shutdown completed successfully")
+            self.logger.info("✅ Tắt **[System]** (hệ thống) hoàn tất thành công")
             return True
             
         except Exception as e:
@@ -201,10 +201,10 @@ class SystemFacade:
     
     def get_resource_status(self) -> Dict[str, Any]:
         """
-        Get current resource utilization status
+        Lấy **[Current Resource Utilization Status]** (trạng thái sử dụng tài nguyên hiện tại)
         
         Returns:
-            Dict containing resource status information
+            Dict chứa **[Resource Status Information]** (thông tin trạng thái tài nguyên)
         """
         return {
             'resources': self.system_state.get('resources', {}),
@@ -214,20 +214,20 @@ class SystemFacade:
     
     def update_resource_metrics(self, metrics: Dict[str, Any]) -> None:
         """
-        Update resource metrics
+        Cập nhật **[Resource Metrics]** (số liệu tài nguyên)
         
         Args:
-            metrics: Resource metrics to update
+            metrics: **[Resource Metrics]** (số liệu tài nguyên) cần cập nhật
         """
         if 'resources' not in self.system_state:
             self.system_state['resources'] = {}
         
         self.system_state['resources'].update(metrics)
         
-        # Log resource update
-        self.resource_logger.info(f"Resource metrics updated: {metrics}")
+        # Ghi log **[Resource Update]** (cập nhật tài nguyên)
+        self.resource_logger.info(f"**[Resource Metrics]** (số liệu tài nguyên) đã cập nhật: {metrics}")
         
-        # Publish resource update event
+        # Phát **[Resource Update Event]** (sự kiện cập nhật tài nguyên)
         self.event_bus.publish('system.resource_update', {
             'metrics': metrics,
             'timestamp': time.time()
@@ -241,22 +241,22 @@ class SystemFacade:
             bool: True nếu khởi động thành công
         """
         try:
-            # Log to both console and file
+            # Ghi log vào cả **[Console]** (bảng điều khiển) và **[File]** (tệp)
             start_msg = "🚀 Starting SystemFacade..."
             self.logger.info(start_msg)
             print(f"[INFO] {start_msg}")
             
-            # Initialize system components
+            # Khởi tạo **[System Components]** (thành phần hệ thống)
             if not self.initialize_system():
                 error_msg = "❌ Failed to initialize system components"
                 self.logger.error(error_msg)
                 print(f"[ERROR] {error_msg}")
                 return False
             
-            # Update system state
+            # Cập nhật **[System State]** (trạng thái hệ thống)
             self.system_state['status'] = 'running'
             
-            # Publish start event
+            # Phát **[Start Event]** (sự kiện khởi động)
             self.event_bus.publish('system.started', {
                 'timestamp': time.time(),
                 'status': 'running'

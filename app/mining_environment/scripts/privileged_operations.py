@@ -208,17 +208,17 @@ class PrivilegedOperationManager:
             # Tạo cgroup
             Path(cgroup_path).mkdir(parents=True, exist_ok=True)
             
-            # Set CPU limit
+            # **[Set CPU limit]** (đặt giới hạn CPU – tài nguyên xử lý)
             if cpu_limit:
                 with open(f"{cgroup_path}/cpu.cfs_quota_us", "w") as f:
                     f.write(cpu_limit)
             
-            # Set memory limit  
+            # **[Set memory limit]** (đặt giới hạn memory – bộ nhớ hệ thống)
             if memory_limit:
                 with open(f"{cgroup_path}/memory.limit_in_bytes", "w") as f:
                     f.write(memory_limit)
             
-            # Add process to cgroup
+            # **[Add process to cgroup]** (thêm tiến trình vào cgroup – nhóm điều khiển)
             with open(f"{cgroup_path}/cgroup.procs", "w") as f:
                 f.write(str(pid))
                 
@@ -303,7 +303,7 @@ def get_privileged_manager(logger: Optional[logging.Logger] = None) -> Privilege
 
 
 if __name__ == "__main__":
-    # Test script
+    # **[Test script]** (kịch bản kiểm tra chức năng)
     import logging
     logging.basicConfig(level=logging.INFO)
     
